@@ -1,0 +1,9 @@
+{
+  "//": "Index of installed themes, for when the shell is opened in a plain browser and cannot list a directory. The native host scans the theme folders instead and ignores this file, so a theme dropped into the user themes folder works without touching anything here. Add your theme's folder name to the list to see it in the browser.",
+  "default": "smoked-petrol",
+  "themes": [
+    "smoked-petrol",
+    "paper-recto",
+    "carbon-signal"
+  ]
+}

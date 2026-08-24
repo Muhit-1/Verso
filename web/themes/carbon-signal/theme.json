@@ -1,0 +1,13 @@
+{
+  "id": "carbon-signal",
+  "name": "Carbon Signal",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Near-black, steel hairlines, one signal orange. Hard corners and a mono-forward stack, so the desk reads as equipment.",
+  "scheme": "dark",
+  "stylesheet": "theme.css",
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+  ],
+  "minShellVersion": "0.1.0"
+}

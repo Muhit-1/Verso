@@ -1,0 +1,50 @@
+<Project>
+
+  <!--
+    Every Verso project inherits this. The target framework lives here and
+    nowhere else, so moving between .NET versions is a one-line change.
+
+    Why net10.0-windows: .NET 10 is the current LTS. .NET 8 leaves support
+    in Nov 2026, which lands mid-project. If a dependency ever objects,
+    change VersoTargetFramework to net8.0-windows and rebuild.
+
+    Why the 10.0.26100.0 platform version: it is the Windows 11 SDK that
+    exposes the WinRT surface we need (Windows.Media.Control for the
+    now-playing widget). SupportedOSPlatformVersion stays at 10.0.17763.0
+    so the app still runs on Windows 10 1809+.
+  -->
+  <PropertyGroup>
+    <VersoTargetFramework>net10.0-windows10.0.26100.0</VersoTargetFramework>
+    <TargetFramework>$(VersoTargetFramework)</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable</WarningsAsErrors>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Product>Verso</Product>
+    <Company>Verso</Company>
+    <Authors>Verso</Authors>
+    <Version>0.1.0</Version>
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- One build output root, so .gitignore stays short and dist is easy to zip. -->
+  <PropertyGroup>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    <UseArtifactsOutput>true</UseArtifactsOutput>
+  </PropertyGroup>
+
+</Project>

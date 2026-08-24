@@ -1,0 +1,13 @@
+{
+  "id": "paper-recto",
+  "name": "Paper Recto",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "The other side of the leaf. Warm laid paper, ink, printer's red-brown, and a deep press green for what is live.",
+  "scheme": "light",
+  "stylesheet": "theme.css",
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+  ],
+  "minShellVersion": "0.1.0"
+}

@@ -1,0 +1,43 @@
+# CsWin32 input. One API or constant per line; the source generator writes the
+# P/Invoke. Add a name here rather than hand-writing a DllImport anywhere else.
+
+# --- finding and re-parenting the wallpaper window (Phase 0) ---
+FindWindowW
+FindWindowExW
+SendMessageTimeout
+EnumWindows
+SetParent
+GetClassNameW
+IsWindowVisible
+ShowWindow
+SetWindowPos
+GetShellWindow
+
+# --- window state, for the pause rules (Phase 1/4) ---
+GetForegroundWindow
+GetWindowRect
+GetWindowLongPtrW
+SHQueryUserNotificationState
+GetSystemPowerStatus
+
+# --- monitors and DPI (Phase 4, but the manifest matters from day one) ---
+EnumDisplayMonitors
+GetMonitorInfoW
+MonitorFromWindow
+GetDpiForWindow
+
+# --- input forwarding (Phase 2) ---
+# Read docs/plan.md before using these: the low-level mouse hook is the single
+# biggest antivirus-false-positive risk in the whole app, and there is a
+# layered-window alternative that avoids it.
+SetWindowsHookExW
+UnhookWindowsHookEx
+CallNextHookEx
+GetCursorPos
+WindowFromPoint
+GetPhysicalCursorPos
+
+# --- messages we send or listen for ---
+WM_SETTINGCHANGE
+WM_DISPLAYCHANGE
+WM_DPICHANGED

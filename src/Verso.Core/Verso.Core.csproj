@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Contracts and plain data. No Win32, no WPF, no WebView2.
+    Everything the host and the widgets agree on lives here, which is
+    what makes a future macOS/Linux host a rewrite of Verso.App only.
+  -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>Verso.Core</RootNamespace>
+    <AssemblyName>Verso.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>

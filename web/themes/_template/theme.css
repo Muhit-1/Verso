@@ -1,0 +1,127 @@
+/* ==================================================================
+   <YOUR THEME NAME>
+
+   Copy this folder, rename it, fill the values in. Nothing outside
+   this folder needs to change.
+
+   Every token below has to be defined — the shell falls back to the
+   values in web/shell/css/base.css for anything you leave out, which
+   means a half-finished theme renders as a confusing mix of two.
+   Fill them all in, even if some end up identical.
+
+   Rules of the contract:
+     - a theme contains tokens, and nothing else. No selectors, no
+       layout, no widget names.
+     - --lume is the one colour that means "live, now, active": the
+       current minute, the seconds, the playhead, a ticked task.
+       Give it exactly one job.
+     - --brass is structure: rules, indices, counts, hairlines.
+     - anything else stays uncoloured. Two accents is the design.
+     - every font stack must end in a face that is already on a
+       Windows machine. The desk has to read correctly at boot,
+       before any network exists.
+
+   Full reference: docs/theme-spec.md
+================================================================== */
+
+:root{
+  /* ---- ground -----------------------------------------------------
+     --ink        the base colour behind everything
+     --ink-deep   the darkest (or, in a light theme, the heaviest) shade
+     --ink-panel  panel fill; keep it translucent or the blur does nothing
+  ------------------------------------------------------------------ */
+  --ink:          #0B1416;
+  --ink-deep:     #05090B;
+  --ink-panel:    rgba(14, 27, 30, 0.42);
+
+  /* --stage is a full CSS background value, so it can be gradients, a
+     colour, or anything else. It is composited over --photo. */
+  --stage:
+    radial-gradient(1600px 1100px at 50% 50%, #12222A 0%, #0B1416 48%, #05090B 100%);
+
+  /* Set --photo to url('your-image.jpg') to sit the desk over a
+     picture. Paths are relative to this file. */
+  --photo:        none;
+
+  /* The grain layer dithers gradient banding on 8-bit panels. Around
+     0.04-0.06 is right; overlay for dark themes, multiply for light. */
+  --grain:        0.045;
+  --grain-blend:  overlay;
+
+  /* ---- primary accent: live, now, active --------------------------
+     --lume-wash  the faintest wash, used for row hover
+     --lume-glow  the colour of glows and shadows around --lume
+     --lume-hot   the hover state of a solid --lume button
+     --on-lume    text/icon colour that sits ON a solid --lume fill.
+                  This one is a contrast decision, not a taste one.
+  ------------------------------------------------------------------ */
+  --lume:         #9FE0C4;
+  --lume-dim:     rgba(159, 224, 196, 0.30);
+  --lume-wash:    rgba(159, 224, 196, 0.045);
+  --lume-glow:    rgba(159, 224, 196, 0.55);
+  --lume-hot:     #B6EAD3;
+  --on-lume:      #05090B;
+
+  /* ---- secondary accent: structure ------------------------------- */
+  --brass:        #C9A96A;
+  --brass-dim:    rgba(201, 169, 106, 0.22);
+  --brass-hair:   rgba(201, 169, 106, 0.14);
+
+  /* ---- type -------------------------------------------------------
+     --chalk      primary text
+     --slate      secondary text: labels, artists, dates
+     --slate-deep tertiary: timestamps, done tasks, empty states
+  ------------------------------------------------------------------ */
+  --chalk:        #E6EEEC;
+  --slate:        #7C9198;
+  --slate-deep:   #4C5F66;
+
+  /* ---- structure --------------------------------------------------
+     --rule-faint       separators between rows
+     --track            the unfilled part of the progress bar
+     --tick             a minute not yet reached
+     --tick-major       every fifth minute, not yet reached
+     --tick-spent       a minute already spent
+     --tick-spent-major every fifth minute, already spent
+  ------------------------------------------------------------------ */
+  --rule-faint:       rgba(124, 145, 152, 0.09);
+  --track:            rgba(124, 145, 152, 0.16);
+  --tick:             rgba(124, 145, 152, 0.28);
+  --tick-major:       rgba(201, 169, 106, 0.32);
+  --tick-spent:       rgba(201, 169, 106, 0.42);
+  --tick-spent-major: rgba(201, 169, 106, 0.64);
+
+  /* ---- panels -----------------------------------------------------
+     Geometry is a theme's business too. --panel-radius:0 makes the
+     desk read as equipment; 12px makes it read as software.
+  ------------------------------------------------------------------ */
+  --panel-blur:   blur(22px) saturate(120%);
+  --panel-radius: 3px;
+  --panel-shadow: 0 8px 26px rgba(3, 9, 11, 0.55);
+  --dial-shadow:  0 2px 60px rgba(4, 12, 14, 0.75);
+
+  /* ---- type stacks ------------------------------------------------
+     --font-display  the clock, and only the clock
+     --font-sans     body copy: tasks, track titles
+     --font-mono     labels, numbers, anything tabular
+
+     Declare any webfonts in theme.json's "fonts" array; the shell
+     injects them before this stylesheet. Never @import them here —
+     an @import blocks the first paint of the whole desk.
+  ------------------------------------------------------------------ */
+  --font-display: 'Bodoni Moda', Didot, 'Bodoni MT', Georgia, serif;
+  --font-sans:    'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* ---- layout (optional) ------------------------------------------
+     Proportions, not colour, so most themes leave these alone. Set
+     them if your composition needs different ones.
+
+     --safe     left column kept empty for desktop icons
+     --rail     width of the panel rail on the right
+     --taskbar  strip kept clear at the bottom
+  ------------------------------------------------------------------ */
+  /* --safe:    clamp(210px, 16.5vw, 380px); */
+  /* --rail:    clamp(300px, 23vw, 440px);   */
+  /* --taskbar: 64px;                        */
+}

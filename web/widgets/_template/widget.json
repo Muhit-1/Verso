@@ -1,0 +1,13 @@
+{
+  "id": "_template",
+  "name": "Template",
+  "author": "you",
+  "version": "1.0.0",
+  "description": "Copy this folder to start a widget. Folders whose names begin with an underscore are skipped by the host.",
+  "entry": "index.html",
+  "permissions": [],
+  "defaultSize": { "w": 4, "h": 3 },
+  "interactive": false,
+  "tickMs": 1000,
+  "minShellVersion": "0.1.0"
+}

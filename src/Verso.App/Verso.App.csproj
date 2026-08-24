@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The host. A tray app that owns one wallpaper window per display, each
+    containing a WebView2 running the web layer.
+
+    This is the only project that will ever need rewriting to reach macOS or
+    Linux. Keep platform knowledge in here and in Verso.Interop; keep contracts
+    and data in Verso.Core.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Verso.App</RootNamespace>
+    <AssemblyName>Verso</AssemblyName>
+    <ApplicationIcon>..\..\assets\verso.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- A wallpaper has no business flashing a console or a splash. -->
+    <UseWindowsForms>false</UseWindowsForms>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Chromium, already present on every Windows 10/11 machine. Nothing to ship. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+    <!-- Because the built-in tray icon is from 2005. -->
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Verso.Core\Verso.Core.csproj" />
+    <ProjectReference Include="..\Verso.Interop\Verso.Interop.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\verso.ico" Link="verso.ico" />
+  </ItemGroup>
+
+  <!--
+    The web layer is copied next to the executable rather than embedded, so a
+    theme or widget can be edited and reloaded without a rebuild. In a release
+    build the installer ships the same folder.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\web\**\*" LinkBase="web" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

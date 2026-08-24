@@ -1,0 +1,46 @@
+# ---- .NET ----
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+*.binlog
+
+# ---- NuGet ----
+*.nupkg
+*.snupkg
+packages/
+!packages/build/
+
+# ---- Rider / VS Code ----
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# ---- Node (web tooling only; the web layer itself has no build step) ----
+node_modules/
+
+# ---- Verso runtime output ----
+# Local user state lives in %APPDATA%\Verso, never in the repo. These
+# patterns are anchored to the root on purpose: unanchored, they would also
+# swallow .vscode/settings.json and any settings.json a project picks up
+# later, which is the kind of thing you discover months afterwards.
+/local/
+*.local.json
+/settings.json
+/tasks.json
+
+# ---- Installer output ----
+/dist/
+/installer/Output/
+
+# ---- OS ----
+Thumbs.db
+desktop.ini

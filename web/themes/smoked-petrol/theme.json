@@ -1,0 +1,13 @@
+{
+  "id": "smoked-petrol",
+  "name": "Smoked Petrol",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "A dark watch dial. Deep petrol ground, gilt indices, one pale luminova green that means now.",
+  "scheme": "dark",
+  "stylesheet": "theme.css",
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+  ],
+  "minShellVersion": "0.1.0"
+}

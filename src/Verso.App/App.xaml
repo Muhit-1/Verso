@@ -1,0 +1,11 @@
+<Application x:Class="Verso.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+  <!--
+    No StartupUri. Verso has no main window: it starts as a tray icon and
+    creates wallpaper windows itself. ShutdownMode is explicit so closing the
+    last window does not quit the app.
+  -->
+  <Application.Resources />
+</Application>

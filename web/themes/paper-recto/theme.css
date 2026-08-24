@@ -1,0 +1,67 @@
+/* ==================================================================
+   PAPER RECTO — the light theme
+
+   The other side of the leaf. Warm laid paper, ink, and a printer's
+   red-brown for structure; the live accent is a deep press green.
+
+   Written mainly to prove the token contract holds in both
+   directions. A light theme is where a design that leaned on glows
+   falls apart, so note what changes: --grain blends multiply rather
+   than overlay, the glows collapse to near-nothing, and --on-lume
+   flips to the pale side. Nothing outside this file needed editing.
+================================================================== */
+
+:root{
+  /* ---- ground ---- */
+  --ink:          #EFE9DD;
+  --ink-deep:     #DFD5C2;
+  --ink-panel:    rgba(255, 252, 246, 0.58);
+
+  --stage:
+    radial-gradient(1000px 720px at 72% 14%, rgba(214, 199, 172, 0.55), transparent 60%),
+    radial-gradient(880px 880px at 18% 92%,  rgba(198, 190, 170, 0.45), transparent 62%),
+    radial-gradient(1500px 1100px at 50% 50%, #F6F1E7 0%, #EFE9DD 46%, #E3DACA 100%);
+
+  --photo:        none;
+  /* paper wants its tooth to sit *in* the sheet, not glow on top of it */
+  --grain:        0.055;
+  --grain-blend:  multiply;
+
+  /* ---- primary accent: press green ---- */
+  --lume:         #1F6B4F;
+  --lume-dim:     rgba(31, 107, 79, 0.34);
+  --lume-wash:    rgba(31, 107, 79, 0.06);
+  --lume-glow:    rgba(31, 107, 79, 0.16);
+  --lume-hot:     #17563F;
+  --on-lume:      #F6F1E7;
+
+  /* ---- secondary accent: red-brown ---- */
+  --brass:        #9C5B2C;
+  --brass-dim:    rgba(156, 91, 44, 0.28);
+  --brass-hair:   rgba(90, 66, 44, 0.20);
+
+  /* ---- type ---- */
+  --chalk:        #1E1A16;
+  --slate:        #6A6153;
+  --slate-deep:   #9A9083;
+
+  /* ---- structure ---- */
+  --rule-faint:       rgba(60, 52, 42, 0.10);
+  --track:            rgba(60, 52, 42, 0.14);
+  --tick:             rgba(60, 52, 42, 0.20);
+  --tick-major:       rgba(156, 91, 44, 0.30);
+  --tick-spent:       rgba(156, 91, 44, 0.45);
+  --tick-spent-major: rgba(156, 91, 44, 0.70);
+
+  /* ---- panels ---- */
+  --panel-blur:   blur(16px) saturate(108%);
+  --panel-radius: 2px;
+  --panel-shadow: 0 6px 20px rgba(80, 66, 46, 0.16);
+  /* a drop shadow under the dial would read as emboss on paper */
+  --dial-shadow:  none;
+
+  /* ---- type stacks ---- */
+  --font-display: 'Playfair Display', 'Bodoni MT', Didot, Georgia, serif;
+  --font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

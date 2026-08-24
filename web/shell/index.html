@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso</title>
+
+<!--
+  VERSO — a live wallpaper that is also a widget desk.
+
+  This page is the shell: the ground, the composition, and the three
+  built-in complications. It is openable directly in a browser — no
+  build step, no server needed — and it runs identically inside the
+  native host, because everything it can do to the machine goes
+  through the one bridge in js/host.js.
+
+  LAYOUT CONTRACT
+    The left column is left empty on purpose — that is where the
+    desktop icons live. The bottom 64px is kept clear for the
+    taskbar. Nothing scrolls.
+
+  THEME
+    No colour is decided in this file or in css/. The palette comes
+    from web/themes/<id>/theme.css, swapped at runtime by js/theme.js.
+    Press T to cycle. See docs/theme-spec.md.
+
+  HOST
+    window.chrome.webview.hostObjects.VersoHost when the native host
+    is present; a self-contained demo implementation otherwise. See
+    docs/host-api.md.
+
+  Fonts are injected by the theme, not linked here — which theme is
+  active is not known until js/theme.js has run.
+-->
+
+<link rel="icon" type="image/png" href="favicon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/desk.css">
+</head>
+<body>
+
+<div class="stage" aria-hidden="true"></div>
+
+<div class="minute-track" id="minuteTrack" aria-hidden="true"></div>
+
+<main class="frame">
+
+  <!-- Left column stays empty: this is where the desktop icons sit. -->
+  <div class="icon-zone"></div>
+
+  <!-- REGISTER 1 — the dial -->
+  <section class="dial">
+    <p class="eyebrow" id="weekday">Monday</p>
+
+    <div class="readout">
+      <span class="hhmm" id="hhmm">00:00</span>
+      <span class="seconds" id="secs">00</span>
+    </div>
+
+    <div class="datum">
+      <span id="dateLine">1 January 2026</span>
+      <span class="rule"></span>
+      <span class="week" id="weekNo">Week 01</span>
+    </div>
+  </section>
+
+  <!-- REGISTERS 2 & 3 — the complications rail -->
+  <aside class="rail">
+
+    <section class="comp" aria-labelledby="tasksHead">
+      <div class="comp-head" id="tasksHead">
+        <span>Tasks</span>
+        <span class="count" id="taskCount">0 open</span>
+      </div>
+
+      <ul class="tasks" id="taskList"></ul>
+      <p class="empty" id="taskEmpty" hidden>Nothing queued.</p>
+
+      <div class="add-task">
+        <span class="plus" aria-hidden="true">+</span>
+        <input id="taskInput" type="text" placeholder="Add a task" maxlength="120"
+               autocomplete="off" spellcheck="false" aria-label="Add a task">
+      </div>
+    </section>
+
+    <section class="comp" id="playerPanel" aria-labelledby="playHead">
+      <div class="comp-head" id="playHead">
+        <span>Now playing</span>
+        <span class="live" aria-hidden="true"></span>
+      </div>
+
+      <div class="now">
+        <div class="art" id="art"></div>
+        <div class="track-meta">
+          <div class="track-title" id="trackTitle">Nothing playing</div>
+          <div class="track-artist" id="trackArtist">Start something</div>
+        </div>
+      </div>
+
+      <div class="scrub">
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="times">
+          <span id="tPos">0:00</span>
+          <span id="tDur">0:00</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="tbtn" id="prevBtn" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h2.5v14H7zM19 5v14l-9.5-7z"/></svg>
+        </button>
+        <button class="tbtn primary" id="playBtn" aria-label="Play">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>
+        </button>
+        <button class="tbtn" id="nextBtn" aria-label="Next track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 5h-2.5v14H17zM5 5v14l9.5-7z"/></svg>
+        </button>
+      </div>
+
+      <ul class="queue" id="queue"></ul>
+    </section>
+
+  </aside>
+</main>
+
+<!-- Shown for a moment after T is pressed, and at no other time. -->
+<div class="theme-toast" id="themeToast" role="status" aria-live="polite">
+  <span class="key">T</span>
+  <span id="themeName">Smoked Petrol</span>
+</div>
+
+<script type="module" src="js/desk.js"></script>
+</body>
+</html>

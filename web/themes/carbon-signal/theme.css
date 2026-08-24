@@ -1,0 +1,64 @@
+/* ==================================================================
+   CARBON SIGNAL — the instrument theme
+
+   Near-black, steel hairlines, one signal orange. Hard corners, a
+   thinner blur and a mono-forward type stack, so the desk reads as
+   equipment rather than as stationery.
+
+   The third theme exists to prove the tokens carry geometry and type
+   as well as colour: --panel-radius goes to 0 and --font-display
+   stops being a serif, and again nothing outside this file changed.
+================================================================== */
+
+:root{
+  /* ---- ground ---- */
+  --ink:          #0A0A0B;
+  --ink-deep:     #030304;
+  --ink-panel:    rgba(19, 20, 23, 0.55);
+
+  --stage:
+    radial-gradient(1200px 700px at 78% 8%,  rgba(58, 42, 30, 0.42), transparent 58%),
+    radial-gradient(900px 900px at 12% 96%,  rgba(28, 32, 38, 0.70), transparent 60%),
+    radial-gradient(1600px 1100px at 50% 50%, #141518 0%, #0A0A0B 52%, #030304 100%);
+
+  --photo:        none;
+  --grain:        0.06;
+  --grain-blend:  overlay;
+
+  /* ---- primary accent: signal orange ---- */
+  --lume:         #FF6B2C;
+  --lume-dim:     rgba(255, 107, 44, 0.30);
+  --lume-wash:    rgba(255, 107, 44, 0.055);
+  --lume-glow:    rgba(255, 107, 44, 0.50);
+  --lume-hot:     #FF8551;
+  --on-lume:      #0A0A0B;
+
+  /* ---- secondary accent: steel ---- */
+  --brass:        #7E8792;
+  --brass-dim:    rgba(126, 135, 146, 0.24);
+  --brass-hair:   rgba(126, 135, 146, 0.16);
+
+  /* ---- type ---- */
+  --chalk:        #F1F3F5;
+  --slate:        #8B929B;
+  --slate-deep:   #545A63;
+
+  /* ---- structure ---- */
+  --rule-faint:       rgba(139, 146, 155, 0.10);
+  --track:            rgba(139, 146, 155, 0.18);
+  --tick:             rgba(139, 146, 155, 0.26);
+  --tick-major:       rgba(126, 135, 146, 0.38);
+  --tick-spent:       rgba(255, 107, 44, 0.34);
+  --tick-spent-major: rgba(255, 107, 44, 0.58);
+
+  /* ---- panels ---- */
+  --panel-blur:   blur(14px) saturate(115%);
+  --panel-radius: 0px;
+  --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+  --dial-shadow:  0 2px 48px rgba(0, 0, 0, 0.8);
+
+  /* ---- type stacks ---- */
+  --font-display: 'Space Grotesk', 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-sans:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}

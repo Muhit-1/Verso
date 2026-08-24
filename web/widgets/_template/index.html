@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Template widget</title>
+
+<!--
+  A VERSO WIDGET
+
+  Copy this folder, rename it, and edit these three files. That is the
+  whole format — no build step, no framework, no registration.
+
+  Open this file directly in a browser and it works. That is not a
+  convenience, it is the contract: a widget that needs the host in
+  order to render is a widget nobody else can develop.
+
+  FOUR RULES
+
+  1. Reach the machine only through window.VersoHost.
+     Never fetch a local file, never touch chrome.webview directly,
+     never assume a .NET object exists. If the host is absent, degrade
+     to something sensible and keep rendering.
+
+  2. Never set a colour, a font or a radius of your own.
+     Use the theme tokens. They are inherited from the shell, so a
+     widget written today is correctly themed by a theme written next
+     year. See docs/theme-spec.md for the full list.
+
+  3. Do not draw your own panel.
+     The shell draws the background, border, blur and padding around
+     you. Drawing your own gives a double frame, and the blur will not
+     work anyway.
+
+  4. Repaint only when something changed, and declare how often you
+     intend to in widget.json's tickMs. The host uses it to throttle
+     you when you are not visible. A widget that repaints 60 times a
+     second forever is why live wallpapers get uninstalled.
+-->
+
+<style>
+  /* Transparent: the shell has already painted the panel behind you. */
+  html, body{
+    margin:0;
+    background:transparent;
+    color:var(--chalk);
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  .head{
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+  }
+
+  /* --brass is structure. Rules, indices, counts — never content. */
+  .head .count{ color:var(--brass); letter-spacing:0.14em; }
+
+  .body{
+    margin-top:14px;
+    font-size:15px;
+    line-height:1.45;
+  }
+
+  /* --lume is the one colour that means live, now, active.
+     Give it exactly one job in your widget too. */
+  .value{
+    font-family:var(--font-mono);
+    font-variant-numeric:tabular-nums;
+    color:var(--lume);
+  }
+
+  .muted{ color:var(--slate-deep); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="head">
+  <span>Template</span>
+  <span class="count" id="count">—</span>
+</div>
+
+<div class="body">
+  <p>Elapsed since load: <span class="value" id="elapsed">0:00</span></p>
+  <p class="muted" id="hostKind">checking host…</p>
+</div>
+
+<script type="module">
+  /*
+    The host, or a stand-in for it.
+
+    In the shell this object is already set up. Standalone, there is no
+    host at all — so check for it rather than assuming, and carry on
+    without it.
+  */
+  const host = window.VersoHost ?? null;
+
+  document.getElementById("hostKind").textContent = host
+    ? "connected to the Verso host"
+    : "no host — running standalone, which is fine";
+
+  const started = Date.now();
+  const elapsed = document.getElementById("elapsed");
+  const count = document.getElementById("count");
+
+  let last = "";
+
+  function paint() {
+    const total = Math.floor((Date.now() - started) / 1000);
+    const text = Math.floor(total / 60) + ":" + String(total % 60).padStart(2, "0");
+
+    // Rule 4: touch the DOM only when the value actually changed.
+    if (text !== last) {
+      elapsed.textContent = text;
+      last = text;
+    }
+    count.textContent = total + "s";
+  }
+
+  paint();
+  setInterval(paint, 1000);   // must match tickMs in widget.json
+</script>
+</body>
+</html>

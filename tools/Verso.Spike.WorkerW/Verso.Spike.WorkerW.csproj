@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    PHASE 0. The gate for the whole project.
+
+    Run it. If a red sheet fills your desktop and your icons stay on top of it,
+    Verso is real and Phase 1 can start. If it does not, you have lost a weekend
+    instead of a month.
+
+        dotnet run  (see README, Phase 0)
+
+    Press Esc to quit.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Verso.Spike.WorkerW</RootNamespace>
+    <AssemblyName>Verso.Spike.WorkerW</AssemblyName>
+    <StartupObject>Verso.Spike.WorkerW.Program</StartupObject>
+    <EnableDefaultApplicationDefinition>false</EnableDefaultApplicationDefinition>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Verso.Interop\Verso.Interop.csproj" />
+  </ItemGroup>
+
+</Project>

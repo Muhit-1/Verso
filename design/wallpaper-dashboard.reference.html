@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<!--
+  VERSE — a live wallpaper that is also a widget desk.
+  Your background plays video, an image or an interactive page; on top
+  of it sit small panels for the things you glance at all day — the
+  time, your task list, what is playing. Widgets are ordinary web
+  pages, so anyone can write one.
+  ------------------------------------------------------------------
+  Drop this file into Lively Wallpaper (Add Wallpaper > browse > this
+  file) and it becomes your desktop. Everything is self-contained;
+  no build step, no network needed except Google Fonts (there are
+  real fallbacks if it's offline).
+
+  LAYOUT CONTRACT
+    Left column is left empty on purpose - that's where desktop icons
+    live. Bottom 64px is kept clear for the taskbar. Nothing scrolls.
+
+  HOST API
+    Widgets never talk to the OS directly. They call window.VerseHost.
+    If that object doesn't exist (i.e. you're in a plain browser or in
+    Lively today) a demo implementation takes over, so the same file
+    runs everywhere. When you build the C# host, expose an object with
+    this shape via WebView2's AddHostObjectToScript / postMessage:
+
+      VerseHost.loadTasks()            -> [{id, text, done}]
+      VerseHost.saveTasks(tasks)       -> void
+      VerseHost.getNowPlaying()        -> {title, artist, album,
+                                               durationMs, positionMs,
+                                               isPlaying, art:[hexA,hexB]}
+      VerseHost.getQueue()             -> [{title, artist}]
+      VerseHost.play() / .pause() / .next() / .previous()
+      VerseHost.onNowPlayingChanged(cb)
+
+    On Windows the now-playing half maps straight onto
+    GlobalSystemMediaTransportControlsSessionManager, which reports
+    whatever Spotify / YouTube Music / anything else is playing.
+
+  CUSTOMISING
+    - Accent, ground and type are all CSS variables in :root below.
+    - To sit this over a photo instead of the generated gradient, set
+      --photo to url('yourfile.jpg') and it composites underneath.
+-->
+
+<style>
+/* ------------------------------------------------------------------
+   TOKENS
+   A wallpaper is the backdrop, not a document - it deliberately
+   commits to one visual world rather than following a light/dark
+   theme. Every colour is therefore painted explicitly.
+------------------------------------------------------------------ */
+:root{
+  /* smoked petrol ground, the colour of a dark watch dial */
+  --ink:        #0B1416;
+  --ink-deep:   #05090B;
+  --ink-panel:  rgba(14, 27, 30, 0.42);
+
+  /* pale luminova green - live, active, "now" */
+  --lume:       #9FE0C4;
+  --lume-dim:   rgba(159, 224, 196, 0.30);
+
+  /* gilt indices and hairlines */
+  --brass:      #C9A96A;
+  --brass-dim:  rgba(201, 169, 106, 0.22);
+  --brass-hair: rgba(201, 169, 106, 0.14);
+
+  /* type */
+  --chalk:      #E6EEEC;
+  --slate:      #7C9198;
+  --slate-deep: #4C5F66;
+
+  --photo:      none;
+
+  --safe:       clamp(210px, 16.5vw, 380px);  /* desktop-icon zone   */
+  --rail:       clamp(300px, 23vw, 440px);    /* complications rail  */
+  --taskbar:    64px;
+
+  --font-display:'Bodoni Moda', Didot, 'Bodoni MT', 'Playfair Display', Georgia, serif;
+  --font-sans:  'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:  'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+}
+
+*, *::before, *::after{ box-sizing:border-box; }
+
+html, body{
+  height:100%;
+  margin:0;
+  overflow:hidden;
+}
+
+body{
+  background:var(--ink);
+  color:var(--chalk);
+  font-family:var(--font-sans);
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+  cursor:default;
+}
+
+/* ------------------------------------------------------------------
+   GROUND
+   Two off-centre glows over a deep vignette, plus a fine grain layer.
+   The grain matters: large flat dark gradients band badly on 8-bit
+   panels and the noise dithers it away.
+------------------------------------------------------------------ */
+.stage{
+  position:fixed;
+  inset:0;
+  isolation:isolate;
+}
+
+.stage::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(1100px 780px at 68% 18%, rgba(38, 82, 84, 0.55), transparent 62%),
+    radial-gradient(900px 900px at 22% 88%,  rgba(24, 46, 58, 0.60), transparent 60%),
+    radial-gradient(1600px 1100px at 50% 50%, #12222A 0%, var(--ink) 48%, var(--ink-deep) 100%),
+    var(--photo);
+  background-size:cover;
+  background-position:center;
+  animation:drift 90s ease-in-out infinite alternate;
+  z-index:0;
+}
+
+.stage::after{
+  content:"";
+  position:absolute;
+  inset:-50%;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity:0.045;
+  mix-blend-mode:overlay;
+  pointer-events:none;
+  z-index:1;
+}
+
+@keyframes drift{
+  from{ transform:scale(1.02) translate3d(0,0,0); }
+  to  { transform:scale(1.06) translate3d(-1.4%, 1%, 0); }
+}
+
+/* ------------------------------------------------------------------
+   SIGNATURE — the minute track
+   Sixty ticks across the top edge, one per minute of the hour, every
+   fifth one long. The current minute is lit; minutes already spent
+   are brass, minutes still to come are barely there. It sweeps left
+   to right over the hour, so you read how far into the hour you are
+   without reading anything at all.
+------------------------------------------------------------------ */
+.minute-track{
+  position:absolute;
+  top:0; left:0; right:0;
+  height:34px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  padding:0 26px;
+  z-index:3;
+  pointer-events:none;
+}
+
+.tick{
+  width:1px;
+  height:8px;
+  background:rgba(124, 145, 152, 0.28);
+  transition:background 700ms ease, height 700ms ease, box-shadow 700ms ease;
+}
+.tick.major{ height:16px; background:rgba(201, 169, 106, 0.32); }
+.tick.spent{ background:rgba(201, 169, 106, 0.42); }
+.tick.spent.major{ background:rgba(201, 169, 106, 0.64); }
+.tick.now{
+  height:20px;
+  width:2px;
+  background:var(--lume);
+  box-shadow:0 0 12px 1px rgba(159, 224, 196, 0.55);
+}
+
+/* ------------------------------------------------------------------
+   FRAME
+------------------------------------------------------------------ */
+.frame{
+  position:relative;
+  z-index:2;
+  height:100%;
+  display:grid;
+  grid-template-columns:var(--safe) minmax(0, 1fr) var(--rail);
+  align-items:center;
+  gap:clamp(24px, 3vw, 64px);
+  padding:56px clamp(28px, 3vw, 64px) var(--taskbar);
+}
+
+/* the icon zone. intentionally empty. */
+.icon-zone{ min-width:0; }
+
+/* ------------------------------------------------------------------
+   REGISTER 1 — the dial
+------------------------------------------------------------------ */
+.dial{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:clamp(10px, 1vw, 20px);
+}
+
+.eyebrow{
+  font-family:var(--font-mono);
+  font-size:clamp(10px, 0.72vw, 14px);
+  font-weight:500;
+  letter-spacing:0.34em;
+  text-transform:uppercase;
+  color:var(--slate);
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.eyebrow::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:linear-gradient(90deg, var(--brass-hair), transparent);
+}
+
+.readout{
+  display:flex;
+  align-items:baseline;
+  gap:clamp(12px, 1.2vw, 26px);
+}
+
+.hhmm{
+  font-family:var(--font-display);
+  font-size:clamp(92px, 11vw, 330px);
+  font-weight:400;
+  line-height:0.82;
+  letter-spacing:-0.02em;
+  font-variant-numeric:tabular-nums;
+  color:var(--chalk);
+  text-shadow:0 2px 60px rgba(4, 12, 14, 0.75);
+}
+
+/* seconds get their own small register, as on a regulator dial */
+.seconds{
+  font-family:var(--font-mono);
+  font-size:clamp(15px, 1.5vw, 40px);
+  font-weight:400;
+  font-variant-numeric:tabular-nums;
+  color:var(--lume);
+  opacity:0.72;
+  letter-spacing:0.04em;
+  padding-bottom:clamp(6px, 0.8vw, 22px);
+}
+
+.datum{
+  display:flex;
+  align-items:center;
+  gap:clamp(12px, 1.2vw, 22px);
+  font-family:var(--font-mono);
+  font-size:clamp(11px, 0.82vw, 17px);
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--slate);
+}
+
+.datum .rule{
+  width:clamp(24px, 3vw, 70px);
+  height:1px;
+  background:var(--brass-dim);
+}
+
+.datum .week{ color:var(--brass); }
+
+/* ------------------------------------------------------------------
+   REGISTER 2+3 — the complications rail
+------------------------------------------------------------------ */
+.rail{
+  min-width:0;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:clamp(14px, 1.4vw, 26px);
+}
+
+.comp{
+  background:var(--ink-panel);
+  border:1px solid var(--brass-hair);
+  border-radius:3px;
+  backdrop-filter:blur(22px) saturate(120%);
+  -webkit-backdrop-filter:blur(22px) saturate(120%);
+  padding:clamp(16px, 1.3vw, 26px);
+  display:flex;
+  flex-direction:column;
+  gap:clamp(12px, 1vw, 18px);
+  min-height:0;
+}
+
+.comp-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-family:var(--font-mono);
+  font-size:clamp(9.5px, 0.66vw, 13px);
+  font-weight:500;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+  color:var(--slate);
+}
+
+.comp-head .count{
+  color:var(--brass);
+  letter-spacing:0.14em;
+  font-variant-numeric:tabular-nums;
+}
+
+/* --- tasks --- */
+.tasks{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  overflow-y:auto;
+  max-height:34vh;
+  scrollbar-width:thin;
+  scrollbar-color:var(--brass-dim) transparent;
+}
+
+.task{
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  padding:9px 4px;
+  border-top:1px solid rgba(124, 145, 152, 0.09);
+  cursor:pointer;
+  transition:background 160ms ease;
+}
+.task:first-child{ border-top:0; }
+.task:hover{ background:rgba(159, 224, 196, 0.045); }
+.task:focus-visible{
+  outline:1px solid var(--lume);
+  outline-offset:1px;
+}
+
+.box{
+  flex:0 0 auto;
+  width:13px;
+  height:13px;
+  margin-top:3px;
+  border:1px solid var(--slate-deep);
+  border-radius:2px;
+  position:relative;
+  transition:border-color 180ms ease, background 180ms ease;
+}
+.task:hover .box{ border-color:var(--lume-dim); }
+
+.box::after{
+  content:"";
+  position:absolute;
+  left:3.5px; top:0.5px;
+  width:4px; height:8px;
+  border:solid var(--ink-deep);
+  border-width:0 1.6px 1.6px 0;
+  transform:rotate(45deg) scale(0.4);
+  opacity:0;
+  transition:opacity 180ms ease, transform 180ms ease;
+}
+
+.task.done .box{ background:var(--lume); border-color:var(--lume); }
+.task.done .box::after{ opacity:1; transform:rotate(45deg) scale(1); }
+
+.task-text{
+  font-size:clamp(12.5px, 0.92vw, 18px);
+  line-height:1.42;
+  color:var(--chalk);
+  transition:color 180ms ease;
+  word-break:break-word;
+}
+.task.done .task-text{
+  color:var(--slate-deep);
+  text-decoration:line-through;
+  text-decoration-color:var(--brass-dim);
+}
+
+.add-task{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border-top:1px solid var(--brass-hair);
+  padding-top:12px;
+}
+
+.add-task .plus{
+  color:var(--brass);
+  font-family:var(--font-mono);
+  font-size:14px;
+  line-height:1;
+}
+
+.add-task input{
+  flex:1;
+  min-width:0;
+  background:transparent;
+  border:0;
+  padding:2px 0;
+  color:var(--chalk);
+  font-family:var(--font-sans);
+  font-size:clamp(12.5px, 0.92vw, 18px);
+}
+.add-task input::placeholder{ color:var(--slate-deep); }
+.add-task input:focus{ outline:none; }
+.add-task:focus-within{ border-top-color:var(--lume-dim); }
+
+.empty{
+  padding:10px 4px 2px;
+  font-size:clamp(12.5px, 0.9vw, 17px);
+  color:var(--slate-deep);
+  font-style:italic;
+}
+
+/* --- player --- */
+.now{
+  display:flex;
+  gap:clamp(12px, 1vw, 18px);
+  align-items:center;
+}
+
+.art{
+  flex:0 0 auto;
+  width:clamp(52px, 4.6vw, 88px);
+  aspect-ratio:1;
+  border-radius:2px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 8px 26px rgba(3, 9, 11, 0.55);
+}
+.art::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(148deg, rgba(255,255,255,0.20), transparent 46%);
+}
+
+.track-meta{ min-width:0; display:flex; flex-direction:column; gap:4px; }
+
+.track-title{
+  font-size:clamp(13px, 1vw, 20px);
+  font-weight:600;
+  color:var(--chalk);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.track-artist{
+  font-size:clamp(11.5px, 0.84vw, 16px);
+  color:var(--slate);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.scrub{ display:flex; flex-direction:column; gap:7px; }
+
+.bar{
+  height:2px;
+  background:rgba(124, 145, 152, 0.16);
+  border-radius:2px;
+  overflow:hidden;
+}
+.bar .fill{
+  height:100%;
+  width:0%;
+  background:var(--lume);
+  box-shadow:0 0 8px rgba(159, 224, 196, 0.5);
+  transition:width 900ms linear;
+}
+
+.times{
+  display:flex;
+  justify-content:space-between;
+  font-family:var(--font-mono);
+  font-size:clamp(9.5px, 0.66vw, 13px);
+  color:var(--slate-deep);
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0.06em;
+}
+
+.transport{
+  display:flex;
+  align-items:center;
+  gap:clamp(8px, 0.8vw, 16px);
+}
+
+.tbtn{
+  appearance:none;
+  background:transparent;
+  border:0;
+  padding:6px;
+  border-radius:2px;
+  color:var(--slate);
+  cursor:pointer;
+  display:grid;
+  place-items:center;
+  transition:color 160ms ease, background 160ms ease;
+}
+.tbtn:hover{ color:var(--chalk); background:rgba(159, 224, 196, 0.07); }
+.tbtn:focus-visible{ outline:1px solid var(--lume); outline-offset:1px; }
+.tbtn svg{ width:15px; height:15px; display:block; }
+
+.tbtn.primary{
+  color:var(--ink-deep);
+  background:var(--lume);
+  width:32px; height:32px;
+  border-radius:50%;
+  padding:0;
+}
+.tbtn.primary:hover{ background:#B6EAD3; color:var(--ink-deep); }
+.tbtn.primary svg{ width:13px; height:13px; }
+
+/* --- queue --- */
+.queue{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  border-top:1px solid var(--brass-hair);
+}
+
+.qrow{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:baseline;
+  gap:10px;
+  padding:7px 2px;
+  font-size:clamp(11.5px, 0.84vw, 16px);
+  color:var(--slate);
+}
+.qrow:first-child{ padding-top:11px; }
+
+.qrow .idx{
+  font-family:var(--font-mono);
+  font-size:clamp(9.5px, 0.64vw, 12px);
+  color:var(--slate-deep);
+  font-variant-numeric:tabular-nums;
+}
+.qrow .qt{
+  color:var(--chalk);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  opacity:0.82;
+}
+.qrow .qa{
+  font-family:var(--font-mono);
+  font-size:clamp(9.5px, 0.64vw, 12px);
+  color:var(--slate-deep);
+  white-space:nowrap;
+}
+
+/* live dot on a playing panel */
+.live{
+  width:5px; height:5px;
+  border-radius:50%;
+  background:var(--slate-deep);
+  transition:background 300ms ease, box-shadow 300ms ease;
+}
+.playing .live{
+  background:var(--lume);
+  box-shadow:0 0 8px 1px rgba(159, 224, 196, 0.6);
+}
+
+/* ------------------------------------------------------------------
+   SHORT SCREENS / SMALL PANELS
+------------------------------------------------------------------ */
+@media (max-width: 1100px){
+  :root{ --safe:0px; --rail:clamp(260px, 38vw, 360px); }
+  .frame{ grid-template-columns:minmax(0,1fr) var(--rail); }
+  .icon-zone{ display:none; }
+}
+
+@media (max-width: 760px){
+  :root{ --rail:0px; }
+  .frame{
+    grid-template-columns:minmax(0,1fr);
+    align-content:center;
+    gap:28px;
+    padding:52px 24px 32px;
+    overflow-y:auto;
+  }
+  html, body{ overflow:auto; }
+  .rail{ height:auto; }
+  .tasks{ max-height:none; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="stage" aria-hidden="true"></div>
+
+<div class="minute-track" id="minuteTrack" aria-hidden="true"></div>
+
+<main class="frame">
+
+  <!-- Left column stays empty: this is where the desktop icons sit. -->
+  <div class="icon-zone"></div>
+
+  <!-- REGISTER 1 -->
+  <section class="dial">
+    <p class="eyebrow" id="weekday">Monday</p>
+
+    <div class="readout">
+      <span class="hhmm" id="hhmm">00:00</span>
+      <span class="seconds" id="secs">00</span>
+    </div>
+
+    <div class="datum">
+      <span id="dateLine">1 January 2026</span>
+      <span class="rule"></span>
+      <span class="week" id="weekNo">Week 01</span>
+    </div>
+  </section>
+
+  <!-- REGISTERS 2 & 3 -->
+  <aside class="rail">
+
+    <section class="comp" aria-labelledby="tasksHead">
+      <div class="comp-head" id="tasksHead">
+        <span>Tasks</span>
+        <span class="count" id="taskCount">0 open</span>
+      </div>
+
+      <ul class="tasks" id="taskList"></ul>
+      <p class="empty" id="taskEmpty" hidden>Nothing queued.</p>
+
+      <div class="add-task">
+        <span class="plus" aria-hidden="true">+</span>
+        <input id="taskInput" type="text" placeholder="Add a task" maxlength="120"
+               autocomplete="off" spellcheck="false" aria-label="Add a task">
+      </div>
+    </section>
+
+    <section class="comp" id="playerPanel" aria-labelledby="playHead">
+      <div class="comp-head" id="playHead">
+        <span>Now playing</span>
+        <span class="live" aria-hidden="true"></span>
+      </div>
+
+      <div class="now">
+        <div class="art" id="art"></div>
+        <div class="track-meta">
+          <div class="track-title" id="trackTitle">Nothing playing</div>
+          <div class="track-artist" id="trackArtist">Start something</div>
+        </div>
+      </div>
+
+      <div class="scrub">
+        <div class="bar"><div class="fill" id="fill"></div></div>
+        <div class="times">
+          <span id="tPos">0:00</span>
+          <span id="tDur">0:00</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="tbtn" id="prevBtn" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h2.5v14H7zM19 5v14l-9.5-7z"/></svg>
+        </button>
+        <button class="tbtn primary" id="playBtn" aria-label="Play">
+          <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>
+        </button>
+        <button class="tbtn" id="nextBtn" aria-label="Next track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 5h-2.5v14H17zM5 5v14l9.5-7z"/></svg>
+        </button>
+      </div>
+
+      <ul class="queue" id="queue"></ul>
+    </section>
+
+  </aside>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================================================================
+     HOST BRIDGE
+     Everything below talks to `host`, never to the OS. In Lively or a
+     browser that's the demo implementation; in the native app it's
+     the real one injected by WebView2.
+  ================================================================ */
+
+  var STORE_KEY = "verse.tasks.v1";
+
+  function readStore(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch(e){ return null; }
+  }
+
+  function writeStore(tasks){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(tasks)); }
+    catch(e){ /* private window or storage disabled - run in memory */ }
+  }
+
+  var DemoHost = (function(){
+    var seeded = [
+      { id:"t1", text:"Prototype the WorkerW host window", done:false },
+      { id:"t2", text:"Decide: libmpv or Media Foundation", done:false },
+      { id:"t3", text:"Read Lively's input-forwarding code", done:true  },
+      { id:"t4", text:"Sketch the widget manifest format", done:false }
+    ];
+
+    var library = [
+      { title:"Ricercar",        artist:"Nils Frahm",      album:"Solo",      art:["#2E5F63","#7FB7A8"], durationMs:5*60000+42000 },
+      { title:"Ambre",           artist:"Nils Frahm",      album:"Felt",      art:["#4A3E5C","#9E88B8"], durationMs:4*60000+11000 },
+      { title:"Says",            artist:"Nils Frahm",      album:"Spaces",    art:["#5C4A32","#C9A96A"], durationMs:8*60000+56000 },
+      { title:"An Ending",       artist:"Brian Eno",       album:"Apollo",    art:["#22404F","#6FA3B8"], durationMs:4*60000+21000 },
+      { title:"Avril 14th",      artist:"Aphex Twin",      album:"Drukqs",    art:["#3A5240","#8FBF95"], durationMs:2*60000+ 5000 }
+    ];
+
+    var idx = 0;
+    var positionMs = 74000;
+    var isPlaying = true;
+    var listeners = [];
+    var last = Date.now();
+
+    // advance the playhead the way a real player would
+    setInterval(function(){
+      var now = Date.now(), delta = now - last;
+      last = now;
+      if(!isPlaying) return;
+      positionMs += delta;
+      if(positionMs >= library[idx].durationMs){ next(); }
+    }, 500);
+
+    function emit(){ listeners.forEach(function(cb){ cb(getNowPlaying()); }); }
+
+    function getNowPlaying(){
+      var t = library[idx];
+      return {
+        title:t.title, artist:t.artist, album:t.album,
+        durationMs:t.durationMs, positionMs:Math.min(positionMs, t.durationMs),
+        isPlaying:isPlaying, art:t.art
+      };
+    }
+
+    function next(){ idx = (idx + 1) % library.length; positionMs = 0; emit(); }
+    function previous(){
+      if(positionMs > 4000){ positionMs = 0; }
+      else { idx = (idx - 1 + library.length) % library.length; positionMs = 0; }
+      emit();
+    }
+
+    return {
+      loadTasks: function(){ return readStore() || seeded.slice(); },
+      saveTasks: writeStore,
+      getNowPlaying: getNowPlaying,
+      getQueue: function(){
+        return [1,2,3].map(function(o){
+          var t = library[(idx + o) % library.length];
+          return { title:t.title, artist:t.artist };
+        });
+      },
+      play:  function(){ isPlaying = true;  last = Date.now(); emit(); },
+      pause: function(){ isPlaying = false; emit(); },
+      next: next,
+      previous: previous,
+      onNowPlayingChanged: function(cb){ listeners.push(cb); }
+    };
+  })();
+
+  var host = window.VerseHost || DemoHost;
+
+  /* ================================================================
+     REGISTER 1 — clock, date, minute track
+     The DOM is only touched when a value actually changes. On a
+     wallpaper that runs for eight hours straight, that's the
+     difference between idle and a warm laptop.
+  ================================================================ */
+
+  var MONTHS = ["January","February","March","April","May","June",
+                "July","August","September","October","November","December"];
+  var DAYS   = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+  var elWeekday = document.getElementById("weekday");
+  var elHHMM    = document.getElementById("hhmm");
+  var elSecs    = document.getElementById("secs");
+  var elDate    = document.getElementById("dateLine");
+  var elWeek    = document.getElementById("weekNo");
+  var trackEl   = document.getElementById("minuteTrack");
+
+  var ticks = [];
+  for(var i = 0; i < 60; i++){
+    var t = document.createElement("span");
+    t.className = "tick" + (i % 5 === 0 ? " major" : "");
+    trackEl.appendChild(t);
+    ticks.push(t);
+  }
+
+  function isoWeek(d){
+    var t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    var day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    var yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+  }
+
+  function pad(n){ return n < 10 ? "0" + n : "" + n; }
+
+  var prev = { hhmm:"", secs:"", day:"", minute:-1 };
+
+  function paintClock(){
+    var d  = new Date();
+    var hh = pad(d.getHours());
+    var mm = pad(d.getMinutes());
+    var ss = pad(d.getSeconds());
+
+    var hhmm = hh + ":" + mm;
+    if(hhmm !== prev.hhmm){ elHHMM.textContent = hhmm; prev.hhmm = hhmm; }
+    if(ss !== prev.secs){ elSecs.textContent = ss; prev.secs = ss; }
+
+    var dayKey = d.toDateString();
+    if(dayKey !== prev.day){
+      elWeekday.textContent = DAYS[d.getDay()];
+      elDate.textContent = d.getDate() + " " + MONTHS[d.getMonth()] + " " + d.getFullYear();
+      elWeek.textContent = "Week " + pad(isoWeek(d));
+      prev.day = dayKey;
+    }
+
+    var minute = d.getMinutes();
+    if(minute !== prev.minute){
+      for(var i = 0; i < 60; i++){
+        var el = ticks[i];
+        el.classList.toggle("spent", i < minute);
+        el.classList.toggle("now",   i === minute);
+      }
+      prev.minute = minute;
+    }
+  }
+
+  paintClock();
+  setInterval(paintClock, 1000);
+
+  /* ================================================================
+     REGISTER 2 — tasks
+  ================================================================ */
+
+  var listEl  = document.getElementById("taskList");
+  var emptyEl = document.getElementById("taskEmpty");
+  var countEl = document.getElementById("taskCount");
+  var inputEl = document.getElementById("taskInput");
+
+  var tasks = [];
+  try{ tasks = host.loadTasks() || []; }catch(e){ tasks = []; }
+
+  function persist(){
+    try{ host.saveTasks(tasks); }catch(e){ /* host offline; keep in memory */ }
+  }
+
+  function renderTasks(){
+    listEl.textContent = "";
+
+    tasks.forEach(function(task){
+      var li = document.createElement("li");
+      li.className = "task" + (task.done ? " done" : "");
+      li.tabIndex = 0;
+      li.setAttribute("role", "checkbox");
+      li.setAttribute("aria-checked", task.done ? "true" : "false");
+
+      var box = document.createElement("span");
+      box.className = "box";
+
+      var text = document.createElement("span");
+      text.className = "task-text";
+      text.textContent = task.text;
+
+      li.appendChild(box);
+      li.appendChild(text);
+
+      function toggle(){
+        task.done = !task.done;
+        persist();
+        renderTasks();
+      }
+
+      li.addEventListener("click", toggle);
+      li.addEventListener("keydown", function(ev){
+        if(ev.key === "Enter" || ev.key === " "){ ev.preventDefault(); toggle(); }
+      });
+
+      listEl.appendChild(li);
+    });
+
+    var open = tasks.filter(function(t){ return !t.done; }).length;
+    countEl.textContent = open + " open";
+    emptyEl.hidden = tasks.length > 0;
+  }
+
+  inputEl.addEventListener("keydown", function(ev){
+    if(ev.key !== "Enter") return;
+    var value = inputEl.value.trim();
+    if(!value) return;
+    tasks.push({ id:"t" + Date.now(), text:value, done:false });
+    inputEl.value = "";
+    persist();
+    renderTasks();
+  });
+
+  renderTasks();
+
+  /* ================================================================
+     REGISTER 3 — player
+  ================================================================ */
+
+  var panelEl  = document.getElementById("playerPanel");
+  var artEl    = document.getElementById("art");
+  var titleEl  = document.getElementById("trackTitle");
+  var artistEl = document.getElementById("trackArtist");
+  var fillEl   = document.getElementById("fill");
+  var posEl    = document.getElementById("tPos");
+  var durEl    = document.getElementById("tDur");
+  var playBtn  = document.getElementById("playBtn");
+  var playIcon = document.getElementById("playIcon");
+  var queueEl  = document.getElementById("queue");
+
+  var PLAY_PATH  = "M7 4l13 8-13 8z";
+  var PAUSE_PATH = "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z";
+
+  function clock(ms){
+    var total = Math.max(0, Math.floor(ms / 1000));
+    return Math.floor(total / 60) + ":" + pad(total % 60);
+  }
+
+  var lastTrackKey = "";
+
+  function paintPlayer(){
+    var np;
+    try{ np = host.getNowPlaying(); }catch(e){ return; }
+    if(!np) return;
+
+    var key = np.title + "|" + np.artist;
+    if(key !== lastTrackKey){
+      titleEl.textContent  = np.title  || "Nothing playing";
+      artistEl.textContent = np.artist || "Start something";
+      var a = (np.art && np.art[0]) || "#2E5F63";
+      var b = (np.art && np.art[1]) || "#7FB7A8";
+      artEl.style.background =
+        "radial-gradient(120% 120% at 18% 12%, " + b + ", " + a + " 72%)";
+      lastTrackKey = key;
+      renderQueue();
+    }
+
+    var pct = np.durationMs ? (np.positionMs / np.durationMs) * 100 : 0;
+    fillEl.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    posEl.textContent = clock(np.positionMs);
+    durEl.textContent = clock(np.durationMs);
+
+    panelEl.classList.toggle("playing", !!np.isPlaying);
+    playIcon.firstChild.setAttribute("d", np.isPlaying ? PAUSE_PATH : PLAY_PATH);
+    playBtn.setAttribute("aria-label", np.isPlaying ? "Pause" : "Play");
+  }
+
+  function renderQueue(){
+    var items = [];
+    try{ items = host.getQueue() || []; }catch(e){ items = []; }
+
+    queueEl.textContent = "";
+    items.forEach(function(item, i){
+      var li = document.createElement("li");
+      li.className = "qrow";
+
+      var idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = pad(i + 1);
+
+      var t = document.createElement("span");
+      t.className = "qt";
+      t.textContent = item.title;
+
+      var a = document.createElement("span");
+      a.className = "qa";
+      a.textContent = item.artist;
+
+      li.appendChild(idx); li.appendChild(t); li.appendChild(a);
+      queueEl.appendChild(li);
+    });
+  }
+
+  playBtn.addEventListener("click", function(){
+    var np = host.getNowPlaying();
+    if(np && np.isPlaying){ host.pause(); } else { host.play(); }
+    paintPlayer();
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", function(){
+    host.next(); paintPlayer();
+  });
+
+  document.getElementById("prevBtn").addEventListener("click", function(){
+    host.previous(); paintPlayer();
+  });
+
+  if(typeof host.onNowPlayingChanged === "function"){
+    host.onNowPlayingChanged(paintPlayer);
+  }
+
+  paintPlayer();
+  setInterval(paintPlayer, 1000);
+
+})();
+</script>
+</body>
+</html>
