@@ -23,8 +23,10 @@ later.
 
 > **Revision note.** This document was originally written under the working
 > name *Verse*. The name is **Verso** — including `window.VersoHost` and the
-> `verso.tasks.v1` storage key. Seven other amendments are marked
-> **[amended]** where they appear and summarised at the end.
+> `verso.tasks.v1` storage key. Nine other amendments are marked
+> **[amended]** where they appear and summarised at the end. Phases 0-2 are
+> now built; where the plan's assumptions did not survive contact with
+> Windows, the section says so.
 
 ---
 
@@ -141,13 +143,27 @@ Everything else is ordinary app work. These are not.
 
 ### 1. Getting a window behind the desktop icons
 
-You send message `0x052C` to the `Progman` window, which makes Explorer
-spawn a `WorkerW` window. You find that `WorkerW` and `SetParent` your
-window into it. Roughly 50 lines. It's undocumented, so Windows feature
-updates can break it and you'll need to re-test each release.
+The plan: send message `0x052C` to `Progman`, which makes Explorer spawn a
+`WorkerW`; find it and `SetParent` your window into it. Roughly 50 lines,
+undocumented, and Windows updates can break it.
 
-*Done.* `src/Verso.Interop/DesktopLayer.cs`, proven by
-`tools/Verso.Spike.WorkerW`.
+**They did.** On Windows 11 build 26200 the desktop never splits, and
+attaching into Progman's own child `WorkerW` reports success at every step
+while drawing nothing. This cost most of Phase 0 to establish and is the
+single most important thing in this repo to know:
+
+> A window can be parented into the `WorkerW`, report `IsWindowVisible`,
+> be full-size, receive `WM_PAINT` four times a second, paint on every
+> one — and never appear on screen.
+
+`DesktopLayer.DetectLayout()` exists solely so no future code trusts
+`Attach()` on its own. Verso now uses a bottom-most window it owns, reshaped
+by a window region. Full measurements and the two dead ends (WPF refusing
+`WS_EX_LAYERED`; colour keys not reaching WebView2's DirectComposition
+output) are in [desktop-layer.md](desktop-layer.md).
+
+*Built:* `Verso.Interop/DesktopLayer.cs`, `DesktopSurface.cs`,
+`SurfaceRegion.cs`, `BottomMostLayer.cs`.
 
 ### 2. Making widgets clickable
 
@@ -172,9 +188,21 @@ biggest antivirus-false-positive risk in the app — a global mouse hook plus
 `SetParent` into another process is, structurally, exactly what malware
 does.
 
-The original plan assumed (a) without stating it was a choice. Read how
-Lively solved it either way; it's open source and this is the exact problem
-it solved.
+The original plan assumed (a) without stating it was a choice.
+
+**Resolved: neither, in the end.** (b) was chosen — and once the desk became
+a window reshaped to its own panels, the problem dissolved. The desk is a
+real window, so it receives real mouse *and keyboard* input; outside the
+region, the input was never ours to intercept. Explorer keeps it.
+
+No `WH_MOUSE_LL`, no synthetic event forwarding, and none of the antivirus
+surface that comes with a global hook. Two days, not a week.
+
+One trade worth knowing: the surface is deliberately **not**
+`WS_EX_NOACTIVATE`. A window that never activates never takes keyboard focus,
+and the task field has to be typable — measured: with the flag set, clicks
+work and typing silently does nothing. So clicking the desk raises it, and
+the re-pin is skipped while the desk is foreground.
 
 ### 3. Not being a battery hog
 
@@ -214,39 +242,59 @@ when it does, you can see what changed in one line.
 
 ## The plan
 
-### Phase 0 — prove the hard part (1 weekend)
-
-Do this before anything else. A window attached to `WorkerW`, painted solid
-red. If red fills your desktop behind the icons, the project is real. If it
-doesn't, you've lost a weekend instead of a month.
+### Phase 0 — prove the hard part ✅ *done, and it failed*
 
 ```
 dotnet run --project tools/Verso.Spike.WorkerW
 ```
 
-**This is the gate. Run it before Phase 1.**
+**Result on this machine (Windows 11 build 26200): the WorkerW technique does
+not work.** Explorer never splits the desktop, and a window parented into
+Progman's child `WorkerW` reports success at every step — visible, full-size,
+receiving `WM_PAINT` — while drawing nothing on screen.
 
-### Phase 1 — wallpaper only (4–6 days)
+This is Phase 0 doing its job. The full measurements are in
+[desktop-layer.md](desktop-layer.md).
 
-Swap the red window for a WebView2 pointed at `web/shell/index.html`. Then
-add a libmpv surface for video wallpapers. Add a tray icon so you can quit
-it. No settings, no UI, file paths hardcoded.
+The consequence: Verso uses a **bottom-most window it owns**, reshaped by a
+window region to exactly the rectangles it draws in. The desktop stays fully
+usable everywhere the desk is not. `DesktopLayer.DetectLayout()` still checks
+for a splittable desktop and takes the WorkerW route where one exists, so
+older builds get the real thing.
 
-**[amended]** Also in Phase 1, because retrofitting them is miserable:
+### Phase 1 — on the desktop ✅ *done, except video*
 
-- `PerMonitorV2` DPI awareness in the app manifest — *already done*
-- pause on fullscreen, pause on lock
+- `DesktopSurface` — our own HWND, because WPF refuses `WS_EX_LAYERED`
+- WebView2 hosted through the Win32 API, showing `web/shell/index.html`
+- tray icon: hide/show the desk, reload, open the data and theme folders, exit
+- `PerMonitorV2` DPI awareness in the manifest
+- `PowerGate` — pause on fullscreen, on lock, on monitor-off, on low battery
 
-At the end of this you're running your own wallpaper app.
+**Not done: video wallpaper.** `libmpv` needs `libmpv-2.dll`, a ~40 MB binary
+that is not in the repo and that I did not download unprompted. It also wants
+the WorkerW to be useful, and on this build there isn't one — a full-screen
+video overlay would cover the desktop icons. Worth deciding deliberately
+rather than building on the assumption.
 
-### Phase 2 — make it clickable (2–7 days)
+At the end of this you are running your own desk.
 
-**Decide hook vs. layered window first.** Then build it. When you can tick a
-task off your desktop, the product exists.
+### Phase 2 — make it clickable ✅ *done*
 
-### Phase 3 — real data (3–5 days)
+Decided: the **layered window**, not the mouse hook. And in the end the window
+region made even that straightforward — the desk is a real window, so it gets
+real mouse and keyboard input, and everywhere outside the region the input was
+never ours to intercept.
 
-Wire the bridge: tasks to a JSON file *(already done)*, music to the SMTC
+**No `WH_MOUSE_LL`, and none of the antivirus surface that comes with one.**
+
+Verified end to end: click the task field on the desktop, type, press Enter,
+and it lands in `%APPDATA%/Verso/tasks.json` through the bridge.
+
+*"When you can tick a task off your desktop, the product exists."*
+
+### Phase 3 — real data (2–4 days) ← **next**
+
+Wire the bridge: tasks to a JSON file *(done)*, music to the SMTC
 API. The demo fallback stays in the file — it's what makes the web layer
 runnable in a plain browser, and deleting it would end your ability to
 develop widgets without launching the app.
@@ -310,3 +358,6 @@ actually true rather than aspirational. See [theme-spec.md](theme-spec.md).
 | 5 | Power | Pause-on-fullscreen and pause-on-lock move from Phase 4 to **Phase 1** |
 | 6 | DPI | `PerMonitorV2` set **day one**, not at Phase 4 |
 | 7 | Specs | Widget manifest **and a theme spec** written now, not at Phase 5 |
+| 8 | **Desktop layer** | The WorkerW technique is **dead on Windows 11 build 26200**. Verso uses a bottom-most window it owns, reshaped by a window region. See [desktop-layer.md](desktop-layer.md) |
+| 9 | **Input** | Phase 2 needed no mouse hook at all — a window region gives real input inside the desk and true click-through outside it |
+| 10 | Video | libmpv deferred: it needs a binary that is not in the repo, and without a WorkerW a full-screen video would cover the desktop icons |

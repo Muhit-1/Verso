@@ -52,6 +52,11 @@
   --tick-spent-major: rgba(255, 107, 44, 0.58);
 
   /* ---- panels ---- */
+  /* Opaque panel fill, used in overlay mode where there is nothing behind
+     a panel but the colour key. --ink-panel is translucent by design and
+     turns purple over the key, so themes give an opaque equivalent here. */
+  --panel-solid:  #141518;
+
   --panel-blur:   blur(14px) saturate(115%);
   --panel-radius: 0px;
   --panel-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);

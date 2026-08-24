@@ -95,6 +95,11 @@
      Geometry is a theme's business too. --panel-radius:0 makes the
      desk read as equipment; 12px makes it read as software.
   ------------------------------------------------------------------ */
+  /* Opaque panel fill, used in overlay mode where there is nothing behind
+     a panel but the colour key. --ink-panel is translucent by design and
+     turns purple over the key, so themes give an opaque equivalent here. */
+  --panel-solid:  #0F1D20;
+
   --panel-blur:   blur(22px) saturate(120%);
   --panel-radius: 3px;
   --panel-shadow: 0 8px 26px rgba(3, 9, 11, 0.55);

@@ -10,9 +10,13 @@
         dotnet run  (see README, Phase 0)
 
     Press Esc to quit.
+
+    OutputType is Exe rather than WinExe on purpose: a diagnostic tool that
+    cannot print its diagnosis is not much of a diagnostic tool. WPF is happy
+    on the console subsystem, and you get a window you can read and copy from.
   -->
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <UseWPF>true</UseWPF>
     <RootNamespace>Verso.Spike.WorkerW</RootNamespace>
     <AssemblyName>Verso.Spike.WorkerW</AssemblyName>

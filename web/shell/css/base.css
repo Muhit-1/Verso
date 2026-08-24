@@ -56,6 +56,11 @@
   --tick-spent-major: rgba(201, 169, 106, 0.64);
 
   /* panels */
+  /* Opaque panel fill, used in overlay mode where there is nothing behind
+     a panel but the colour key. --ink-panel is translucent by design and
+     turns purple over the key, so themes give an opaque equivalent here. */
+  --panel-solid:  #0F1D20;
+
   --panel-blur:   blur(22px) saturate(120%);
   --panel-radius: 3px;
   --panel-shadow: 0 8px 26px rgba(3, 9, 11, 0.55);
@@ -65,6 +70,14 @@
   --font-display: 'Bodoni Moda', Didot, 'Bodoni MT', 'Playfair Display', Georgia, serif;
   --font-sans:    'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono:    'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+
+  /* ---- the colour key --------------------------------------------
+     Overlay mode paints everything Verso is NOT drawing in this exact
+     colour, and the host turns it fully transparent and click-through.
+     It must match BottomMostLayer.KeyColorHtml in the C# host exactly,
+     and no theme may ever redefine it.
+  ---------------------------------------------------------------- */
+  --key: #FF00FF;
 
   /* ---- layout ---------------------------------------------------
      Not colour, so not really a theme's business — but a theme may

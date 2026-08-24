@@ -12,6 +12,7 @@
 
 import * as Host from "./host.js";
 import * as Theme from "./theme.js";
+import * as Regions from "./regions.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -287,7 +288,26 @@ function startThemeSwitch() {
    palette. Then the host, then the widgets.
 ================================================================== */
 
+/* ==================================================================
+   LAYER
+
+   The host tells us, via ?layer=, which part of the desk this window
+   is responsible for. See the LAYERS block in css/desk.css for what
+   each one means and why overlay mode has to avoid soft edges.
+================================================================== */
+
+function applyLayer() {
+  const requested = new URLSearchParams(location.search).get("layer");
+  const layer = ["wallpaper", "overlay"].includes(requested) ? requested : "all";
+
+  document.body.classList.add("layer-" + layer);
+  document.documentElement.dataset.layer = layer;
+  return layer;
+}
+
 async function start() {
+  const layer = applyLayer();
+
   await Theme.start();
   await Host.connect();
 
@@ -297,6 +317,13 @@ async function start() {
   startThemeSwitch();
 
   document.body.dataset.host = Host.get().kind;
+  document.body.dataset.layer = layer;
+
+  // Last: the host reshapes its window to whatever we report, so the
+  // geometry has to be final before the first message goes out.
+  if (layer === "overlay") {
+    Regions.start();
+  }
 }
 
 start();

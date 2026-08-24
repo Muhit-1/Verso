@@ -467,3 +467,94 @@
   .rail{ height:auto; }
   .tasks{ max-height:none; }
 }
+
+/* ==================================================================
+   LAYERS
+
+   The shell renders in one of three modes, chosen by ?layer= :
+
+     (none)      everything. Opened in a browser, or previewing.
+     wallpaper   Verso IS the wallpaper. The stage fills the screen.
+                 Only reachable on Windows builds where Explorer still
+                 splits the desktop and we can sit behind the icons.
+     overlay     Verso sits ON the user's wallpaper. Everything it is
+                 not actually drawing is painted --key, which the host
+                 turns fully transparent AND click-through, so the real
+                 wallpaper and the desktop icons show through and stay
+                 usable. This is the default on current Windows.
+
+   THE COLOUR-KEY RULE
+   A colour key is binary: a pixel is either fully opaque or fully
+   transparent. So in overlay mode nothing may fade into the key.
+   Anything we draw sits on a panel with a crisp edge, and the dial
+   gets a backing panel it does not have in wallpaper mode - otherwise
+   the antialiasing on those huge numerals blends toward magenta and
+   every glyph wears a pink halo.
+================================================================== */
+
+/*
+  Transparent, not the colour key. The host reshapes its window to the
+  panel rectangles reported by js/regions.js, so the page background is
+  never composited anywhere — and on the sub-pixel edge where rounding
+  might expose it, transparent reads as nothing rather than as a magenta
+  hairline around every panel.
+
+  --key is kept in base.css because the colour-key path is still the
+  fallback if a future host cannot reshape its window.
+*/
+body.layer-overlay{
+  background:transparent;
+}
+
+/* The stage is the thing we cannot draw in overlay mode: it is a set of
+   soft radial gradients, and soft is exactly what a colour key cannot
+   do. The user's own wallpaper is the ground instead. */
+body.layer-overlay .stage{ display:none; }
+
+/* The dial earns a panel of its own here, purely so its type has
+   something opaque to antialias against. */
+body.layer-overlay .dial{
+  background:var(--ink-panel);
+  border:1px solid var(--brass-hair);
+  border-radius:var(--panel-radius);
+  backdrop-filter:var(--panel-blur);
+  -webkit-backdrop-filter:var(--panel-blur);
+  padding:clamp(18px, 1.6vw, 34px) clamp(22px, 2vw, 44px);
+  /* Shrink to the type rather than filling the column. */
+  align-self:center;
+  justify-self:start;
+}
+
+/* Glows bleed into the key. Off. */
+body.layer-overlay .hhmm{ text-shadow:none; }
+body.layer-overlay .tick.now{ box-shadow:none; }
+body.layer-overlay .bar .fill{ box-shadow:none; }
+body.layer-overlay .playing .live{ box-shadow:none; }
+body.layer-overlay .art{ box-shadow:none; }
+
+/* Panels must be fully OPAQUE here. --ink-panel is translucent by design,
+   which works beautifully over the stage and is a disaster over the key:
+   the magenta shows straight through and every panel turns purple. Themes
+   provide --panel-solid for exactly this case. */
+body.layer-overlay .comp,
+body.layer-overlay .dial{
+  background:var(--panel-solid);
+  /* Nothing to blur but the key, and blurring the key spreads magenta
+     into the panel edges. */
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+
+/* The minute track is 60 hairlines directly on the key. Give it a strip
+   to sit on so the ticks have crisp edges against something. */
+body.layer-overlay .minute-track{
+  height:24px;
+  padding-top:5px;
+  background:var(--panel-solid);
+  border-bottom:1px solid var(--brass-hair);
+}
+
+/* Wallpaper mode: the rail is drawn by the same window, so nothing to
+   hide. This mode exists mainly for machines that can still reach the
+   WorkerW, where Verso really is the desktop background. */
+body.layer-wallpaper .stage{ display:block; }

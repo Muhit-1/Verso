@@ -12,7 +12,12 @@ namespace Verso.Spike.WorkerW;
 /// </summary>
 /// <remarks>
 /// Nothing here is meant to survive into the real app except the call to
-/// <see cref="DesktopLayer.TryAttach"/>. It is a gate, not a foundation.
+/// <see cref="DesktopLayer.Attach"/>. It is a gate, not a foundation.
+///
+/// The verdict goes to the console as well as the window, because the one
+/// question this tool answers — which of Explorer's three desktop layouts does
+/// this machine have — is the thing you will want to paste into a bug report a
+/// year from now when a Windows update changes it.
 /// </remarks>
 internal static class Program
 {
@@ -46,14 +51,14 @@ internal static class Program
             // Cover the primary display. Real multi-monitor placement is Phase 4;
             // this only has to prove the layer works.
             WindowStartupLocation = WindowStartupLocation.Manual,
-            Left = SystemParameters.VirtualScreenLeft,
-            Top = SystemParameters.VirtualScreenTop,
+            Left = 0,
+            Top = 0,
             Width = SystemParameters.PrimaryScreenWidth,
             Height = SystemParameters.PrimaryScreenHeight
         };
 
         // Esc quits. Without this the only way out is Task Manager, because a
-        // window parented into WorkerW has no taskbar entry and cannot be focused.
+        // window in the desktop layer has no taskbar entry and cannot be focused.
         window.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)
@@ -65,27 +70,53 @@ internal static class Program
         window.SourceInitialized += (_, _) =>
         {
             var hwnd = new WindowInteropHelper(window).Handle;
-            var result = DesktopLayer.TryAttach(hwnd, out var parent);
+            var r = DesktopLayer.Attach(hwnd);
 
-            readout.Text = string.Join(Environment.NewLine,
-            [
+            var verdict = Verdict(r);
+            var lines = new[]
+            {
                 "VERSO — PHASE 0",
                 "",
-                $"result   {result}",
-                $"self     0x{hwnd:X}",
-                $"parent   0x{parent:X}  ({DesktopLayer.GetClassName(parent)})",
-                $"desktop  {DesktopLayer.DescribeDesktop()}",
+                $"attached   {r.Success}",
+                $"strategy   {r.Strategy}",
+                $"self       0x{hwnd:X}",
+                $"parent     0x{r.Parent:X}  ({DesktopLayer.GetClassName(r.Parent)})",
+                $"behind     {r.BehindIcons}",
+                $"desktop    {r.Diagnostics}",
                 "",
-                result is DesktopLayer.AttachResult.AttachedToWorkerW
-                       or DesktopLayer.AttachResult.AttachedToProgman
-                    ? "PASS — if your desktop icons are drawn on top of this red, Phase 1 can start."
-                    : "FAIL — the WorkerW technique did not work on this build. Read docs/plan.md.",
+                verdict,
                 "",
-                "Esc, or end the process, to quit."
-            ]);
+                "Esc to quit."
+            };
+
+            readout.Text = string.Join(Environment.NewLine, lines);
+            foreach (var line in lines)
+            {
+                Console.WriteLine(line);
+            }
         };
 
         app.Run(window);
         return 0;
     }
+
+    private static string Verdict(DesktopLayer.AttachOutcome r) => r switch
+    {
+        { Success: false } =>
+            "FAIL — could not reach the desktop layer at all. Is Explorer running?",
+
+        // Attached, but something is in front of us. Usually means Explorer used
+        // a layout none of the three strategies recognised.
+        { BehindIcons: false } =>
+            "PARTIAL — attached, but the desktop icons are NOT in front of this "
+            + "window. Report the 'desktop' line above.",
+
+        { Strategy: DesktopLayer.AttachStrategy.Progman } =>
+            "PASS (fallback) — attached to Progman itself. Works, but no WorkerW "
+            + "was found, so re-check after Windows feature updates.",
+
+        _ =>
+            "PASS — if your desktop icons are drawn on top of this red, Phase 1 "
+            + "can start."
+    };
 }

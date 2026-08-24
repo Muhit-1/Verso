@@ -114,6 +114,21 @@ as equipment; `12px` makes it read as software.
 
 `--panel-blur` · `--panel-radius` · `--panel-shadow` · `--dial-shadow`
 
+| token | |
+|---|---|
+| `--panel-solid` | **Opaque** panel fill, used in overlay mode. |
+
+`--panel-solid` is not a duplicate of `--ink-panel`. Over the stage a panel is
+translucent and blurred, and that is the whole look. In overlay mode there is
+no stage behind it — the window is reshaped to the panel itself — so a
+translucent fill composites against nothing and the panel loses its body.
+Give `--panel-solid` the colour the translucent panel *appears* to be over
+your stage, with no alpha.
+
+`--panel-radius` does double duty in overlay mode: the host rounds the window
+region's corners to match it, so the shape cut out of the desktop follows the
+panel exactly.
+
 ### Type stacks
 
 | token | |

@@ -12,13 +12,25 @@ IsWindowVisible
 ShowWindow
 SetWindowPos
 GetShellWindow
+GetWindow
+GetParent
+GetAncestor
 
 # --- window state, for the pause rules (Phase 1/4) ---
 GetForegroundWindow
 GetWindowRect
 GetWindowLongPtrW
+SetWindowLongPtrW
+SetLayeredWindowAttributes
+WINDOW_EX_STYLE
+WINDOW_LONG_PTR_INDEX
+IsWindowVisible
+IsIconic
+IsZoomed
 SHQueryUserNotificationState
+QUERY_USER_NOTIFICATION_STATE
 GetSystemPowerStatus
+SYSTEM_POWER_STATUS
 
 # --- monitors and DPI (Phase 4, but the manifest matters from day one) ---
 EnumDisplayMonitors
@@ -36,6 +48,25 @@ CallNextHookEx
 GetCursorPos
 WindowFromPoint
 GetPhysicalCursorPos
+
+# --- our own window (see DesktopSurface: WPF refuses WS_EX_LAYERED) ---
+RegisterClassExW
+CreateWindowExW
+DestroyWindow
+DefWindowProcW
+GetClientRect
+GetModuleHandleW
+WNDCLASSEXW
+WNDPROC
+WINDOW_STYLE
+SHOW_WINDOW_CMD
+
+# --- window region: how the desk leaves the desktop usable ---
+CreateRectRgn
+CreateRoundRectRgn
+CombineRgn
+SetWindowRgn
+DeleteObject
 
 # --- messages we send or listen for ---
 WM_SETTINGCHANGE
