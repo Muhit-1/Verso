@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Verso.App.Storage;
@@ -33,6 +34,14 @@ public sealed class ScriptBridge : IDisposable
 {
     /// <summary>Bumped when the bridge shape changes in a way widgets can notice.</summary>
     public const string ContractVersion = "0.1.0";
+
+    /// <summary>
+    /// Virtual host the picked video/interactive background is mapped under
+    /// by <see cref="Verso.App.Windows.DeskWindow"/>. Kept here, as a single
+    /// constant, so the URL built in <see cref="GetBackground"/> and the
+    /// mapping set up there can never drift apart.
+    /// </summary>
+    public const string BackgroundVirtualHost = "verso.bg.local";
 
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -106,6 +115,30 @@ public sealed class ScriptBridge : IDisposable
 
     /// <returns>JSON array of theme manifests, bundled and user-installed.</returns>
     public string GetThemes() => JsonSerializer.Serialize(_themes.Scan(), Json);
+
+    // ---- background -------------------------------------------------------
+
+    /// <returns>
+    /// JSON <c>{ kind, url }</c>. <c>url</c> is a
+    /// <c>https://verso.bg.local/...</c> address the web layer can load
+    /// directly — never the filesystem path, which script has no business
+    /// seeing. There is no <c>SetBackground</c>: the choice is made from the
+    /// tray's file picker, native-side, not from script.
+    /// </returns>
+    public string GetBackground()
+    {
+        var background = _settings.Current.Background;
+        string? url = null;
+
+        if (background.Kind is "video" or "interactive"
+            && !string.IsNullOrWhiteSpace(background.Source)
+            && File.Exists(background.Source))
+        {
+            url = $"https://{BackgroundVirtualHost}/{Uri.EscapeDataString(Path.GetFileName(background.Source))}";
+        }
+
+        return JsonSerializer.Serialize(new { kind = background.Kind, url }, Json);
+    }
 
     public void Dispose()
     {

@@ -118,7 +118,10 @@ function createDemoHost() {
     pause() { isPlaying = false; emit(); },
     next,
     previous,
-    onNowPlayingChanged: cb => listeners.push(cb)
+    onNowPlayingChanged: cb => listeners.push(cb),
+    // No host, so no chosen background either — the stage falls back to
+    // whatever the active theme's own --stage/--photo tokens paint.
+    getBackground: () => ({ kind: "none", url: null })
   };
 }
 
@@ -154,6 +157,11 @@ async function createRealHost(bridge) {
   tasks = parse(await bridge.LoadTasks(), []);
   await refreshMedia();
 
+  // Read once, at startup. Unlike media it never changes mid-session — the
+  // tray reloads the page after a new background is picked, same as it
+  // does after a theme is installed.
+  const background = parse(await bridge.GetBackground(), { kind: "none", url: null });
+
   // Until the host raises a real event (Phase 3), poll. One call a second
   // across a COM proxy costs nothing measurable, and it keeps this file
   // from having to change shape when the event arrives.
@@ -177,7 +185,8 @@ async function createRealHost(bridge) {
     next() { bridge.Next(); refreshMedia(); },
     previous() { bridge.Previous(); refreshMedia(); },
 
-    onNowPlayingChanged: cb => listeners.push(cb)
+    onNowPlayingChanged: cb => listeners.push(cb),
+    getBackground: () => background
   };
 }
 

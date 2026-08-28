@@ -22,6 +22,14 @@ public sealed class VersoSettings
     [JsonPropertyName("power")]
     public PowerSettings Power { get; set; } = new();
 
+    /// <summary>The wallpaper picked from the tray. See <see cref="BackgroundSettings"/>.</summary>
+    [JsonPropertyName("background")]
+    public BackgroundSettings Background { get; set; } = new();
+
+    /// <summary>The "clean desktop" toggles from the tray. See <see cref="DesktopCleanupSettings"/>.</summary>
+    [JsonPropertyName("desktopCleanup")]
+    public DesktopCleanupSettings DesktopCleanup { get; set; } = new();
+
     /// <summary>One entry per display, keyed by the device id Windows reports.</summary>
     [JsonPropertyName("displays")]
     public List<DisplaySettings> Displays { get; set; } = [];
@@ -51,6 +59,19 @@ public sealed class PowerSettings
     /// <summary>Ceiling for the video layer. 30 is invisible on a wallpaper and halves the cost.</summary>
     [JsonPropertyName("maxFps")]
     public int MaxFps { get; set; } = 30;
+}
+
+/// <summary>
+/// The "clean desktop" toggles from the tray: hide the taskbar, hide the
+/// desktop icons. Independent of everything else Verso draws.
+/// </summary>
+public sealed class DesktopCleanupSettings
+{
+    [JsonPropertyName("hideTaskbar")]
+    public bool HideTaskbar { get; set; }
+
+    [JsonPropertyName("hideDesktopIcons")]
+    public bool HideDesktopIcons { get; set; }
 }
 
 /// <summary>What a single monitor is showing.</summary>

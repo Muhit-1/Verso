@@ -13,6 +13,7 @@
 import * as Host from "./host.js";
 import * as Theme from "./theme.js";
 import * as Regions from "./regions.js";
+import * as Background from "./background.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"];
@@ -310,6 +311,7 @@ async function start() {
 
   await Theme.start();
   await Host.connect();
+  Background.start();
 
   startDial();
   startTasks();

@@ -5,7 +5,9 @@ using System.Windows.Controls;
 using H.NotifyIcon;
 using Verso.App.Hosting;
 using Verso.App.Storage;
+using Verso.App.Windows;
 using Verso.Core;
+using Verso.Interop;
 
 namespace Verso.App;
 
@@ -18,7 +20,23 @@ public partial class App : Application
     private SettingsStore? _settings;
     private ScriptBridge? _bridge;
     private DeskController? _desk;
+    private DesktopActions? _actions;
+    private ThemeCatalog? _themes;
     private MenuItem? _pauseItem;
+
+    /// <summary>
+    /// The dashboard is a singleton: opening it twice from the tray activates
+    /// the one already open rather than stacking a second copy.
+    /// </summary>
+    private SettingsWindow? _settingsWindow;
+
+    /// <summary>
+    /// Set once this process has actually taken the single-instance mutex.
+    /// A second copy shuts down before it ever touches the taskbar or desktop
+    /// icons, and <see cref="OnExit"/> must not restore them on its way out —
+    /// that would clobber whatever the real, first instance has hidden.
+    /// </summary>
+    private bool _isPrimaryInstance;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -33,14 +51,21 @@ public partial class App : Application
             return;
         }
 
+        _isPrimaryInstance = true;
+
         VersoPaths.EnsureCreated();
 
         _settings = new SettingsStore();
-        _bridge = new ScriptBridge(new FileTaskStore(), new ThemeCatalog(), _settings);
+        _themes = new ThemeCatalog();
+        _bridge = new ScriptBridge(new FileTaskStore(), _themes, _settings);
+
+        ApplyDesktopCleanup();
+
+        _desk = new DeskController(_bridge, _settings);
+        _actions = new DesktopActions(_settings, _desk);
 
         _tray = BuildTrayIcon();
 
-        _desk = new DeskController(_bridge, _settings);
         await _desk.StartAsync();
 
         RefreshTray();
@@ -50,9 +75,21 @@ public partial class App : Application
     {
         var menu = new ContextMenu();
 
+        menu.Items.Add(MenuItem("Settings…", OpenSettingsWindow));
+        menu.Items.Add(new Separator());
         _pauseItem = MenuItem("Hide the desk", TogglePaused);
         menu.Items.Add(_pauseItem);
         menu.Items.Add(MenuItem("Reload", () => _desk?.ReloadWeb()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(MenuItem("Set background…", () => _actions?.PickBackground(null)));
+        menu.Items.Add(MenuItem("Clear background", () => _actions?.ClearBackground()));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(CheckableMenuItem(
+            "Hide taskbar", _settings!.Current.DesktopCleanup.HideTaskbar,
+            hide => _actions?.SetTaskbarHidden(hide)));
+        menu.Items.Add(CheckableMenuItem(
+            "Hide desktop icons", _settings.Current.DesktopCleanup.HideDesktopIcons,
+            hide => _actions?.SetDesktopIconsHidden(hide)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Open data folder", () => OpenInExplorer(VersoPaths.DataRoot)));
         menu.Items.Add(MenuItem("Open themes folder", () => OpenInExplorer(VersoPaths.UserThemes)));
@@ -67,7 +104,13 @@ public partial class App : Application
                 new Uri("pack://application:,,,/verso.ico"))
         };
 
-        icon.TrayLeftMouseUp += (_, _) => RefreshTray();
+        // Left-click opens the dashboard, the way most tray apps behave.
+        // Right-click still opens this ContextMenu, unchanged.
+        icon.TrayLeftMouseUp += (_, _) =>
+        {
+            RefreshTray();
+            OpenSettingsWindow();
+        };
         icon.ForceCreate();
         return icon;
     }
@@ -81,6 +124,34 @@ public partial class App : Application
 
         _desk.SetUserPaused(_desk.IsShown);
         RefreshTray();
+    }
+
+    /// <summary>Applies the persisted taskbar/icon choice at startup, before the tray even appears.</summary>
+    private void ApplyDesktopCleanup()
+    {
+        var cleanup = _settings!.Current.DesktopCleanup;
+        DesktopChrome.SetTaskbarVisible(!cleanup.HideTaskbar);
+        DesktopChrome.SetDesktopIconsVisible(!cleanup.HideDesktopIcons);
+    }
+
+    /// <summary>Opens the dashboard, or brings the one already open to the front.</summary>
+    private void OpenSettingsWindow()
+    {
+        if (_settings is null || _desk is null || _actions is null || _themes is null)
+        {
+            return;
+        }
+
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow(_settings, _desk, _actions, _themes);
+            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Show();
+        }
+        else
+        {
+            _settingsWindow.Activate();
+        }
     }
 
     private void RefreshTray()
@@ -105,6 +176,18 @@ public partial class App : Application
         return item;
     }
 
+    /// <summary>
+    /// A menu item with a checkmark. WPF flips <see cref="MenuItem.IsChecked"/>
+    /// before <c>Click</c> fires, so <paramref name="onToggle"/> is handed the
+    /// new state directly rather than having to read and invert it.
+    /// </summary>
+    private static MenuItem CheckableMenuItem(string header, bool isChecked, Action<bool> onToggle)
+    {
+        var item = new MenuItem { Header = header, IsCheckable = true, IsChecked = isChecked };
+        item.Click += (_, _) => onToggle(item.IsChecked);
+        return item;
+    }
+
     private static void OpenInExplorer(string path)
     {
         Directory.CreateDirectory(path);
@@ -113,6 +196,15 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Only the instance that actually hid them puts them back. A second
+        // copy shutting itself down must not restore what the first,
+        // still-running instance deliberately hid.
+        if (_isPrimaryInstance)
+        {
+            DesktopChrome.SetTaskbarVisible(true);
+            DesktopChrome.SetDesktopIconsVisible(true);
+        }
+
         _desk?.Dispose();
         _tray?.Dispose();
         _bridge?.Dispose();

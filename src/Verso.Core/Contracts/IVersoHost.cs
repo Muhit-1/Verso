@@ -67,4 +67,15 @@ public interface IVersoHost
 
     /// <summary>Every installed theme, bundled and user-supplied, bundled first.</summary>
     IReadOnlyList<ThemeManifest> GetThemes();
+
+    // ---- background ----
+
+    /// <summary>
+    /// What to draw behind the widgets: none (the user's real wallpaper shows
+    /// through), or a chosen video/interactive page already resolved to a
+    /// URL. An "image" choice never appears here — it's applied straight to
+    /// the real Windows wallpaper, and the web layer has nothing to draw for
+    /// it.
+    /// </summary>
+    BackgroundInfo GetBackground();
 }

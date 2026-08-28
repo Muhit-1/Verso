@@ -63,7 +63,7 @@ internal sealed class DeskController : IDisposable
 
         foreach (var screen in Displays.All())
         {
-            var window = new DeskWindow(_bridge, mode, _layout, screen);
+            var window = new DeskWindow(_bridge, _settings, mode, _layout, screen);
             _windows.Add(window);
             await window.InitialiseAsync();
         }

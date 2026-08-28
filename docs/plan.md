@@ -308,7 +308,7 @@ and it lands in `%APPDATA%/Verso/tasks.json` through the bridge.
 
 *"When you can tick a task off your desktop, the product exists."*
 
-### Phase 3 — background picker (1–2 days) ← **next**
+### Phase 3 — background picker (1–2 days) ✅ *built*
 
 Let the wallpaper be *your* file, not just a theme's built-in photo.
 
@@ -330,7 +330,7 @@ Let the wallpaper be *your* file, not just a theme's built-in photo.
 **You'll see:** pick an mp4 off your disk, the desktop plays it on loop.
 Pick an image, it's static. Pick an `index.html`, it animates.
 
-### Phase 4 — desktop cleanup toggles (1 day)
+### Phase 4 — desktop cleanup toggles (1 day) ✅ *built*
 
 - Tray checkboxes: **Hide taskbar**, **Hide desktop icons**.
 - Taskbar: `SHAppBarMessage` (auto-hide), or toggle its visibility
@@ -348,7 +348,7 @@ Phase 3's video/interactive path further.
 **You'll see:** flip a checkbox, the taskbar or icons vanish; flip it back,
 they return.
 
-### Phase 5 — widget loader (2–3 days)
+### Phase 5 — widget loader (2–3 days) ← **next**
 
 Prove the widget contract by using it for real, on the three widgets that
 already exist.

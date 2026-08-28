@@ -360,7 +360,12 @@ public static class DesktopLayer
         return false;
     }
 
-    private static HWND FindDefView()
+    /// <summary>
+    /// The <c>SHELLDLL_DefView</c> that owns the desktop icons, wherever it
+    /// currently lives. Shared with <see cref="DesktopChrome"/>, which hides
+    /// the <c>SysListView32</c> inside it for the "hide desktop icons" toggle.
+    /// </summary>
+    internal static HWND FindDefView()
     {
         HWND found = HWND.Null;
 

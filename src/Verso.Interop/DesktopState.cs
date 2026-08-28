@@ -33,9 +33,16 @@ public readonly record struct DesktopState(
         // a merely maximised window.
         if (PInvoke.SHQueryUserNotificationState(out var state).Succeeded)
         {
-            fullscreen = state
-                is QUERY_USER_NOTIFICATION_STATE.QUNS_BUSY
-                or QUERY_USER_NOTIFICATION_STATE.QUNS_RUNNING_D3D_FULL_SCREEN;
+            // Deliberately QUNS_RUNNING_D3D_FULL_SCREEN only, not QUNS_BUSY.
+            // QUNS_BUSY is the union of "a full-screen app is running" AND "the
+            // user has notifications silenced" — Focus Assist, Do Not Disturb,
+            // or the post-install quiet-hours grace period all report QUNS_BUSY
+            // with no fullscreen app in sight. Anyone who keeps notifications
+            // off while they work — a large fraction of this app's actual
+            // audience — would see Verso pause within two seconds of every
+            // launch and never render again. QUNS_RUNNING_D3D_FULL_SCREEN is
+            // the unambiguous signal: a real exclusive-fullscreen surface.
+            fullscreen = state == QUERY_USER_NOTIFICATION_STATE.QUNS_RUNNING_D3D_FULL_SCREEN;
 
             presenting = state == QUERY_USER_NOTIFICATION_STATE.QUNS_PRESENTATION_MODE;
 

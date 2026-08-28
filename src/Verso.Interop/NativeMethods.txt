@@ -72,3 +72,8 @@ DeleteObject
 WM_SETTINGCHANGE
 WM_DISPLAYCHANGE
 WM_DPICHANGED
+
+# --- the real Windows wallpaper (Phase 3: image background) ---
+SystemParametersInfo
+SYSTEM_PARAMETERS_INFO_ACTION
+SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS

@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.Web.WebView2.Core;
 using Verso.App.Hosting;
+using Verso.App.Storage;
 using Verso.Core;
 using Verso.Interop;
 
@@ -56,6 +57,7 @@ internal sealed class DeskWindow : IDisposable
     private const string VirtualHost = "verso.local";
 
     private readonly ScriptBridge _bridge;
+    private readonly SettingsStore _settings;
     private readonly DeskMode _mode;
     private readonly DesktopSurface _surface;
 
@@ -65,11 +67,13 @@ internal sealed class DeskWindow : IDisposable
 
     public DeskWindow(
         ScriptBridge bridge,
+        SettingsStore settings,
         DeskMode mode,
         DesktopLayer.DesktopLayout layout,
         Rectangle bounds)
     {
         _bridge = bridge;
+        _settings = settings;
         _mode = mode;
 
         _surface = new DesktopSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height);
@@ -132,6 +136,8 @@ internal sealed class DeskWindow : IDisposable
             VirtualHost,
             ResolveWebRoot(),
             CoreWebView2HostResourceAccessKind.Allow);
+
+        ApplyBackgroundMapping();
 
         // The entire host integration, in one line.
         core.AddHostObjectToScript("VersoHost", _bridge);
@@ -277,8 +283,46 @@ internal sealed class DeskWindow : IDisposable
         }
     }
 
-    /// <summary>Reloads the page. Used after a theme is installed or edited.</summary>
-    public void ReloadWeb() => _controller?.CoreWebView2.Reload();
+    /// <summary>Reloads the page. Used after a theme is installed or edited, or the background is changed.</summary>
+    public void ReloadWeb()
+    {
+        ApplyBackgroundMapping();
+        _controller?.CoreWebView2.Reload();
+    }
+
+    /// <summary>
+    /// Maps the folder holding the chosen video/interactive background to
+    /// its own virtual host, so the web layer can load it as
+    /// <c>https://verso.bg.local/name.ext</c> instead of a filesystem path
+    /// script has no business seeing. A no-op for "image" and "none" — an
+    /// image is applied straight to the real Windows wallpaper, and there is
+    /// nothing to map for "none".
+    /// </summary>
+    private void ApplyBackgroundMapping()
+    {
+        if (_controller is null)
+        {
+            return;
+        }
+
+        var background = _settings.Current.Background;
+        if (background.Kind is not ("video" or "interactive")
+            || string.IsNullOrWhiteSpace(background.Source))
+        {
+            return;
+        }
+
+        var folder = Path.GetDirectoryName(background.Source);
+        if (string.IsNullOrEmpty(folder))
+        {
+            return;
+        }
+
+        _controller.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            ScriptBridge.BackgroundVirtualHost,
+            folder,
+            CoreWebView2HostResourceAccessKind.Allow);
+    }
 
     /// <summary>
     /// Where the web layer lives.
