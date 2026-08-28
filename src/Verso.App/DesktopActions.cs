@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 using Verso.App.Storage;
+using Verso.Core.Models;
 using Verso.Interop;
 
 namespace Verso.App;
@@ -11,12 +12,28 @@ namespace Verso.App;
 /// desktop-cleanup toggles.
 /// </summary>
 /// <remarks>
-/// Shared by the tray menu and <see cref="Windows.SettingsWindow"/> so
-/// neither duplicates the other's logic — there is exactly one place that
+/// Shared by the tray menu and <see cref="Windows.DashboardWindow"/> (via
+/// <see cref="Hosting.DashboardBridge"/>) so neither duplicates the other's
+/// logic — there is exactly one place that
 /// knows how to detect a background's kind or apply a cleanup toggle.
 /// </remarks>
-internal sealed class DesktopActions(SettingsStore settings, DeskController desk)
+internal sealed class DesktopActions(SettingsStore settings, DeskController desk, FileLayoutStore layout)
 {
+    /// <summary>
+    /// Forgets where the panels were dragged to and reloads the desk.
+    /// </summary>
+    /// <remarks>
+    /// The escape hatch for a panel dragged somewhere unreachable. The web
+    /// layer clamps positions on load so that should not happen, but "put it
+    /// back" is a thing a user will look for regardless, and it costs one
+    /// method.
+    /// </remarks>
+    public void ResetLayout()
+    {
+        layout.Reset();
+        desk.ReloadWeb();
+    }
+
     public void PickBackground(Window? owner)
     {
         var dialog = new OpenFileDialog
@@ -99,4 +116,60 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
         ".html" or ".htm" => "interactive",
         _ => "none"
     };
+
+    /// <summary>
+    /// Lets the user add an app to the launcher widget. Picked from a file
+    /// dialog, the same shape as <see cref="PickBackground"/> — there is no
+    /// way for a widget to add its own entry, only to launch one already
+    /// approved this way.
+    /// </summary>
+    public void AddLauncherEntry(Window? owner)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Add an app to the launcher",
+            Filter = "Programs and shortcuts (*.exe;*.lnk)|*.exe;*.lnk"
+        };
+
+        var picked = owner is not null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+        if (picked != true)
+        {
+            return;
+        }
+
+        settings.Update(s => s.Launcher.Entries.Add(new LauncherEntry
+        {
+            Id = "a" + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            Name = Path.GetFileNameWithoutExtension(dialog.FileName),
+            Path = dialog.FileName
+        }));
+
+        desk.ReloadWeb();
+    }
+
+    public void RemoveLauncherEntry(string id)
+    {
+        settings.Update(s => s.Launcher.Entries.RemoveAll(e => e.Id == id));
+        desk.ReloadWeb();
+    }
+
+    /// <summary>
+    /// Turns a widget on or off. A widget the user turns off is not just
+    /// hidden — <see cref="ScriptBridge.GetWidgets"/> stops returning it as
+    /// enabled, so the loader never creates an iframe for it and it never
+    /// touches the host at all.
+    /// </summary>
+    public void SetWidgetEnabled(string widgetId, bool enabled)
+    {
+        settings.Update(s =>
+        {
+            s.Widgets.Disabled.RemoveAll(id => id == widgetId);
+            if (!enabled)
+            {
+                s.Widgets.Disabled.Add(widgetId);
+            }
+        });
+
+        desk.ReloadWeb();
+    }
 }

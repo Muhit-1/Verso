@@ -1,0 +1,13 @@
+{
+  "id": "player",
+  "name": "Now Playing",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Whatever is playing on the machine, with transport control.",
+  "entry": "index.html",
+  "permissions": ["media"],
+  "defaultSize": { "w": 4, "h": 4 },
+  "interactive": true,
+  "tickMs": 1000,
+  "minShellVersion": "0.1.0"
+}

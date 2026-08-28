@@ -7,6 +7,16 @@ Everything a widget can do to the computer it runs on, it does through
 never opens a file, never reaches the network unless it declared that it
 would.
 
+**The dashboard uses a different, separate door.** `web/dashboard/` reaches
+`window.chrome.webview.hostObjects.VersoDashboard` — a second bridge
+(`DashboardBridge`/`IVersoDashboard`) carrying privileges no widget should
+ever have (enable a widget, hide the taskbar, pick a background file, add
+or remove a launcher entry). It is injected only into the dashboard's own
+WebView2, never the desk's, and the rest of this document — the shape,
+the three layers, the rules for adding to it — is about `VersoHost`
+specifically. See the remarks on `IVersoDashboard` in
+`Verso.Core/Contracts/IVersoDashboard.cs` for the dashboard's own contract.
+
 Two reasons this boundary is absolute. It is how the app eventually reaches
 macOS and Linux by rewriting only the host. And it is the only version of
 this that has a business in it, because it is the only version where other
@@ -31,6 +41,9 @@ VersoHost.onNowPlayingChanged(cb)
 VersoHost.getThemeId()                     // -> "smoked-petrol"
 VersoHost.setThemeId(id)
 VersoHost.getThemes()                      // -> [ThemeManifest]
+
+VersoHost.getLauncherEntries()             // -> [{id, name}]
+VersoHost.launchApp(id)
 ```
 
 ```ts
@@ -82,6 +95,20 @@ it is what lets the entire web layer be built before any C# exists.
 Check which one you got with `document.body.dataset.host` — `"host"` or
 `"demo"`.
 
+## For a widget specifically
+
+A widget's `window.VersoHost` is not the raw bridge above — it is a
+*permission-scoped* view of it, built by `web/shell/js/widgets.js` from the
+same already-connected host the shell itself uses. It carries only the
+methods the widget's `permissions` in `widget.json` declared (`tasks` →
+`loadTasks`/`saveTasks`; `media` → the transport methods); ask for nothing
+and the object has nothing beyond `hostVersion` on it.
+
+It is set on the widget's iframe **after that iframe's own script has
+already started running** — see the timing note on rule 1 in
+[widget-spec.md](widget-spec.md). Look it up fresh each time you need it,
+not once at the top of the file.
+
 ## Wiring it up, on the C# side
 
 ```csharp
@@ -102,12 +129,14 @@ and cannot load module scripts.
 |---|---|
 | tasks | **Real.** Persisted to `%APPDATA%\Verso\tasks.json`, written atomically. |
 | themes | **Real.** Scans both theme folders; the choice persists to `settings.json`. |
-| media | **Stubbed.** `getNowPlaying()` returns `null`, so the web layer falls back to its demo player. Phase 3 fills it from `GlobalSystemMediaTransportControlsSessionManager`, which reports whatever Spotify, YouTube Music or a browser tab is playing, and gives transport control back for free. |
+| widgets | **Real.** Scans both widget folders; see [widget-spec.md](widget-spec.md) and `web/shell/js/widgets.js`. |
+| launcher | **Real.** Entries are added from the dashboard, persisted to `settings.json`, launched via `Process.Start`. |
+| media | **Real.** `SmtcNowPlayingSource` wraps `GlobalSystemMediaTransportControlsSessionManager`, which reports whatever Spotify, YouTube Music or a browser tab is playing, and gives transport control back for free. `null` is still a real, correct answer — it means Windows currently has no active media session, and the web layer's demo-player fallback is exactly the right response to that. |
 
-`onNowPlayingChanged` is currently driven by a one-second poll rather than
-an event. One call a second across a COM proxy costs nothing measurable, and
-it means this file does not change shape when the real event arrives in
-Phase 3.
+`onNowPlayingChanged` is driven by a one-second poll rather than a push
+event, deliberately, even though the C# side does raise real events —
+COM events do not survive the JS boundary cleanly, and one call a second
+across the proxy costs nothing measurable.
 
 ## Rules for adding to this API
 

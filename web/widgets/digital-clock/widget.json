@@ -1,0 +1,13 @@
+{
+  "id": "digital-clock",
+  "name": "Digital Clock",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "A compact digital readout — an alternate face to the dial's large numerals.",
+  "entry": "index.html",
+  "permissions": [],
+  "defaultSize": { "w": 3, "h": 1 },
+  "interactive": false,
+  "tickMs": 1000,
+  "minShellVersion": "0.1.0"
+}

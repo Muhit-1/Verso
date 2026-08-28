@@ -16,6 +16,10 @@ and nothing to register.
 1. **Reach the machine only through `window.VersoHost`.** Never fetch a
    local file, never touch `chrome.webview` directly, never assume a .NET
    object exists. Full API in [docs/host-api.md](../../docs/host-api.md).
+   Look it up fresh every time you need it, inside `paint()` — not once at
+   the top of the file. The loader injects it after your script starts
+   running, so a cached `const` reads `null` forever even once a host
+   arrives.
 2. **Never set a colour, a font or a radius of your own.** Use the theme
    tokens — they are inherited from the shell, so a widget written today is
    correctly themed by a theme written next year.
@@ -38,6 +42,7 @@ else. Ask for nothing and the bridge you get has no methods on it.
 |---|---|
 | `tasks` | read and write the task list |
 | `media` | read what is playing and control transport |
+| `apps` | list and launch the apps the user added from the dashboard |
 | `system` | CPU, memory, battery, network |
 | `network` | reach the internet at all |
 

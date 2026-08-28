@@ -7,113 +7,24 @@
 ================================================================== */
 
 /* ------------------------------------------------------------------
-   FRAME
-   Three columns. The first is empty on purpose — that is where the
-   desktop icons live, and a wallpaper that hides them is a wallpaper
-   people turn off. The bottom --taskbar is kept clear for the same
-   reason. Nothing scrolls.
------------------------------------------------------------------- */
-.frame{
-  position:relative;
-  z-index:2;
-  height:100%;
-  display:grid;
-  grid-template-columns:var(--safe) minmax(0, 1fr) var(--rail);
-  align-items:center;
-  gap:clamp(24px, 3vw, 64px);
-  padding:56px clamp(28px, 3vw, 64px) var(--taskbar);
-}
+   PANEL CHROME
 
-.icon-zone{ min-width:0; }
+   Every widget — the clock, tasks and player included; see
+   web/widgets/dial, /tasks, /player — is loaded into one of these two
+   wrapper shapes by js/widgets.js. Nothing about a panel's own
+   content lives here any more; a widget draws that itself, inside
+   its own iframe, using theme tokens the loader injects. This is
+   only the frame around it.
 
-/* ------------------------------------------------------------------
-   REGISTER 1 — the dial
+   .dial is the one exception with a shape of its own: naked in
+   wallpaper mode, boxed only in overlay mode — see the LAYERS block
+   below for why. Every other widget always gets the full .comp box.
 ------------------------------------------------------------------ */
 .dial{
   min-width:0;
   display:flex;
   flex-direction:column;
   gap:clamp(10px, 1vw, 20px);
-}
-
-.eyebrow{
-  font-family:var(--font-mono);
-  font-size:clamp(10px, 0.72vw, 14px);
-  font-weight:500;
-  letter-spacing:0.34em;
-  text-transform:uppercase;
-  color:var(--slate);
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin:0;
-}
-
-.eyebrow::after{
-  content:"";
-  flex:1;
-  height:1px;
-  background:linear-gradient(90deg, var(--brass-hair), transparent);
-}
-
-.readout{
-  display:flex;
-  align-items:baseline;
-  gap:clamp(12px, 1.2vw, 26px);
-}
-
-.hhmm{
-  font-family:var(--font-display);
-  font-size:clamp(92px, 11vw, 330px);
-  font-weight:400;
-  line-height:0.82;
-  letter-spacing:-0.02em;
-  font-variant-numeric:tabular-nums;
-  color:var(--chalk);
-  text-shadow:var(--dial-shadow);
-}
-
-/* seconds get their own small register, as on a regulator dial */
-.seconds{
-  font-family:var(--font-mono);
-  font-size:clamp(15px, 1.5vw, 40px);
-  font-weight:400;
-  font-variant-numeric:tabular-nums;
-  color:var(--lume);
-  opacity:0.72;
-  letter-spacing:0.04em;
-  padding-bottom:clamp(6px, 0.8vw, 22px);
-}
-
-.datum{
-  display:flex;
-  align-items:center;
-  gap:clamp(12px, 1.2vw, 22px);
-  font-family:var(--font-mono);
-  font-size:clamp(11px, 0.82vw, 17px);
-  letter-spacing:0.2em;
-  text-transform:uppercase;
-  color:var(--slate);
-}
-
-.datum .rule{
-  width:clamp(24px, 3vw, 70px);
-  height:1px;
-  background:var(--brass-dim);
-}
-
-.datum .week{ color:var(--brass); }
-
-/* ------------------------------------------------------------------
-   REGISTERS 2+3 — the complications rail
------------------------------------------------------------------- */
-.rail{
-  min-width:0;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:clamp(14px, 1.4vw, 26px);
 }
 
 /*
@@ -135,282 +46,96 @@
   min-height:0;
 }
 
-.comp-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  font-family:var(--font-mono);
-  font-size:clamp(9.5px, 0.66vw, 13px);
-  font-weight:500;
-  letter-spacing:0.28em;
-  text-transform:uppercase;
-  color:var(--slate);
+/* ------------------------------------------------------------------
+   LOADED WIDGETS (Phase 5)
+
+   The .comp chrome above already gives a loaded widget the right
+   background/border/blur/padding — this only adds what a plain
+   markup panel does not need: a place to grab it from, and a frame
+   that actually fills the space.
+------------------------------------------------------------------ */
+.widget-frame{
+  min-height:120px;
 }
 
-.comp-head .count{
-  color:var(--brass);
-  letter-spacing:0.14em;
-  font-variant-numeric:tabular-nums;
-}
-
-/* --- tasks --- */
-.tasks{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:flex;
-  flex-direction:column;
-  overflow-y:auto;
-  max-height:34vh;
-  scrollbar-width:thin;
-  scrollbar-color:var(--brass-dim) transparent;
-}
-
-.task{
-  display:flex;
-  align-items:flex-start;
-  gap:12px;
-  padding:9px 4px;
-  border-top:1px solid var(--rule-faint);
-  cursor:pointer;
-  transition:background 160ms ease;
-}
-.task:first-child{ border-top:0; }
-.task:hover{ background:var(--lume-wash); }
-.task:focus-visible{
-  outline:1px solid var(--lume);
-  outline-offset:1px;
-}
-
-.box{
+.widget-frame .handle{
   flex:0 0 auto;
-  width:13px;
-  height:13px;
-  margin-top:3px;
-  border:1px solid var(--slate-deep);
+  height:10px;
+  margin:-4px 0 2px;
   border-radius:2px;
-  position:relative;
-  transition:border-color 180ms ease, background 180ms ease;
-}
-.task:hover .box{ border-color:var(--lume-dim); }
-
-.box::after{
-  content:"";
-  position:absolute;
-  left:3.5px; top:0.5px;
-  width:4px; height:8px;
-  border:solid var(--on-lume);
-  border-width:0 1.6px 1.6px 0;
-  transform:rotate(45deg) scale(0.4);
+  cursor:move;
+  background:var(--rule-faint);
   opacity:0;
-  transition:opacity 180ms ease, transform 180ms ease;
+  transition:opacity 160ms ease;
 }
+.widget-frame:hover .handle{ opacity:1; }
 
-.task.done .box{ background:var(--lume); border-color:var(--lume); }
-.task.done .box::after{ opacity:1; transform:rotate(45deg) scale(1); }
-
-.task-text{
-  font-size:clamp(12.5px, 0.92vw, 18px);
-  line-height:1.42;
-  color:var(--chalk);
-  transition:color 180ms ease;
-  word-break:break-word;
-}
-.task.done .task-text{
-  color:var(--slate-deep);
-  text-decoration:line-through;
-  text-decoration-color:var(--brass-dim);
-}
-
-.add-task{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  border-top:1px solid var(--brass-hair);
-  padding-top:12px;
-}
-
-.add-task .plus{
-  color:var(--brass);
-  font-family:var(--font-mono);
-  font-size:14px;
-  line-height:1;
-}
-
-.add-task input{
-  flex:1;
-  min-width:0;
-  background:transparent;
+.widget-frame iframe{
+  flex:1 1 auto;
+  width:100%;
+  min-height:0;
   border:0;
-  padding:2px 0;
-  color:var(--chalk);
-  font-family:var(--font-sans);
-  font-size:clamp(12.5px, 0.92vw, 18px);
-}
-.add-task input::placeholder{ color:var(--slate-deep); }
-.add-task input:focus{ outline:none; }
-.add-task:focus-within{ border-top-color:var(--lume-dim); }
-
-.empty{
-  margin:0;
-  padding:10px 4px 2px;
-  font-size:clamp(12.5px, 0.9vw, 17px);
-  color:var(--slate-deep);
-  font-style:italic;
+  background:transparent;
 }
 
-/* --- player --- */
-.now{
-  display:flex;
-  gap:clamp(12px, 1vw, 18px);
-  align-items:center;
-}
+/* ------------------------------------------------------------------
+   DRAGGABLE PANELS
 
-.art{
-  flex:0 0 auto;
-  width:clamp(52px, 4.6vw, 88px);
-  aspect-ratio:1;
-  border-radius:2px;
-  position:relative;
-  overflow:hidden;
-  box-shadow:var(--panel-shadow);
-}
-.art::after{
-  content:"";
+   Anything carrying data-panel can be picked up and moved; see
+   js/layout.js. The cursor is the only affordance — a visible drag
+   handle would be one more piece of chrome sitting on a wallpaper
+   that is supposed to disappear into the desktop.
+
+   Controls inside a panel keep their own cursor, because a press that
+   starts on one of them never begins a drag.
+------------------------------------------------------------------ */
+[data-panel]{ cursor:move; position:relative; }
+
+[data-panel] input,
+[data-panel] button,
+[data-panel] textarea,
+[data-panel] select,
+[data-panel] a{ cursor:auto; }
+
+/* ------------------------------------------------------------------
+   RESIZING
+
+   A small grip in the bottom-right corner; see the resizing note in
+   js/layout.js for why it has to be its own element rather than, say,
+   a CSS `resize` on the panel — a widget's content lives in an iframe,
+   and native `resize` only ever resizes the element it is set on
+   using content-driven scroll geometry, which an iframe does not
+   meaningfully have.
+------------------------------------------------------------------ */
+.resize-grip{
   position:absolute;
-  inset:0;
-  background:linear-gradient(148deg, rgba(255,255,255,0.20), transparent 46%);
+  right:2px;
+  bottom:2px;
+  width:14px;
+  height:14px;
+  z-index:5;
+  cursor:nwse-resize;
+  opacity:0;
+  transition:opacity 160ms ease;
+  background:
+    linear-gradient(135deg,
+      transparent 0 40%, var(--brass-dim) 40% 46%, transparent 46% 60%,
+      var(--brass-dim) 60% 66%, transparent 66%);
 }
+[data-panel]:hover .resize-grip{ opacity:1; }
 
-.track-meta{ min-width:0; display:flex; flex-direction:column; gap:4px; }
+[data-panel] .task{ cursor:pointer; }
+[data-panel] button{ cursor:pointer; }
 
-.track-title{
-  font-size:clamp(13px, 1vw, 20px);
-  font-weight:600;
-  color:var(--chalk);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
+/* A panel that has been placed by hand sits above the ones that have
+   not, so dropping one onto the rail does not tuck it underneath. */
+[data-panel][data-placed]{ z-index:4; }
 
-.track-artist{
-  font-size:clamp(11.5px, 0.84vw, 16px);
-  color:var(--slate);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.scrub{ display:flex; flex-direction:column; gap:7px; }
-
-.bar{
-  height:2px;
-  background:var(--track);
-  border-radius:2px;
-  overflow:hidden;
-}
-.bar .fill{
-  height:100%;
-  width:0%;
-  background:var(--lume);
-  box-shadow:0 0 8px var(--lume-glow);
-  transition:width 900ms linear;
-}
-
-.times{
-  display:flex;
-  justify-content:space-between;
-  font-family:var(--font-mono);
-  font-size:clamp(9.5px, 0.66vw, 13px);
-  color:var(--slate-deep);
-  font-variant-numeric:tabular-nums;
-  letter-spacing:0.06em;
-}
-
-.transport{
-  display:flex;
-  align-items:center;
-  gap:clamp(8px, 0.8vw, 16px);
-}
-
-.tbtn{
-  appearance:none;
-  background:transparent;
-  border:0;
-  padding:6px;
-  border-radius:2px;
-  color:var(--slate);
-  cursor:pointer;
-  display:grid;
-  place-items:center;
-  transition:color 160ms ease, background 160ms ease;
-}
-.tbtn:hover{ color:var(--chalk); background:var(--lume-wash); }
-.tbtn:focus-visible{ outline:1px solid var(--lume); outline-offset:1px; }
-.tbtn svg{ width:15px; height:15px; display:block; }
-
-.tbtn.primary{
-  color:var(--on-lume);
-  background:var(--lume);
-  width:32px; height:32px;
-  border-radius:50%;
-  padding:0;
-}
-.tbtn.primary:hover{ background:var(--lume-hot); color:var(--on-lume); }
-.tbtn.primary svg{ width:13px; height:13px; }
-
-/* --- queue --- */
-.queue{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:flex;
-  flex-direction:column;
-  border-top:1px solid var(--brass-hair);
-}
-
-.qrow{
-  display:grid;
-  grid-template-columns:auto 1fr auto;
-  align-items:baseline;
-  gap:10px;
-  padding:7px 2px;
-  font-size:clamp(11.5px, 0.84vw, 16px);
-  color:var(--slate);
-}
-.qrow:first-child{ padding-top:11px; }
-
-.qrow .idx{
-  font-family:var(--font-mono);
-  font-size:clamp(9.5px, 0.64vw, 12px);
-  color:var(--slate-deep);
-  font-variant-numeric:tabular-nums;
-}
-.qrow .qt{
-  color:var(--chalk);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  opacity:0.82;
-}
-.qrow .qa{
-  font-family:var(--font-mono);
-  font-size:clamp(9.5px, 0.64vw, 12px);
-  color:var(--slate-deep);
-  white-space:nowrap;
-}
-
-/* live dot on a playing panel */
-.live{
-  width:5px; height:5px;
-  border-radius:50%;
-  background:var(--slate-deep);
-  transition:background 300ms ease, box-shadow 300ms ease;
-}
-.playing .live{
-  background:var(--lume);
-  box-shadow:0 0 8px 1px var(--lume-glow);
+.dragging{
+  /* No transition while dragging: the panel must track the cursor
+     exactly, and a transition on left/top turns that into lag. */
+  transition:none !important;
+  z-index:6;
 }
 
 /* ------------------------------------------------------------------
@@ -444,29 +169,6 @@
 }
 .theme-toast.show{ opacity:1; transform:translateY(0); }
 .theme-toast .key{ color:var(--slate-deep); letter-spacing:0.2em; }
-
-/* ------------------------------------------------------------------
-   SHORT SCREENS / SMALL PANELS
------------------------------------------------------------------- */
-@media (max-width: 1100px){
-  :root{ --safe:0px; --rail:clamp(260px, 38vw, 360px); }
-  .frame{ grid-template-columns:minmax(0,1fr) var(--rail); }
-  .icon-zone{ display:none; }
-}
-
-@media (max-width: 760px){
-  :root{ --rail:0px; }
-  .frame{
-    grid-template-columns:minmax(0,1fr);
-    align-content:center;
-    gap:28px;
-    padding:52px 24px 32px;
-    overflow-y:auto;
-  }
-  html, body{ overflow:auto; }
-  .rail{ height:auto; }
-  .tasks{ max-height:none; }
-}
 
 /* ==================================================================
    LAYERS

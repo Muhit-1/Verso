@@ -22,6 +22,14 @@
      never assume a .NET object exists. If the host is absent, degrade
      to something sensible and keep rendering.
 
+     Look it up FRESH each time you need it — never cache it once at
+     the top of your script. The loader injects it into your iframe
+     after your own script has already started running, so a
+     one-time `const host = window.VersoHost` at the top of the file
+     reads null even when a host is about to arrive. Reading it again
+     inside paint(), which tickMs already has you calling repeatedly,
+     costs nothing and always sees the current answer.
+
   2. Never set a colour, a font or a radius of your own.
      Use the theme tokens. They are inherited from the shell, so a
      widget written today is correctly themed by a theme written next
@@ -96,25 +104,25 @@
 
 <script type="module">
   /*
-    The host, or a stand-in for it.
-
-    In the shell this object is already set up. Standalone, there is no
-    host at all — so check for it rather than assuming, and carry on
-    without it.
+    The host, or a stand-in for it. Looked up fresh on every paint —
+    see the note on rule 1 above for why this is not a one-time const.
   */
-  const host = window.VersoHost ?? null;
-
-  document.getElementById("hostKind").textContent = host
-    ? "connected to the Verso host"
-    : "no host — running standalone, which is fine";
-
   const started = Date.now();
   const elapsed = document.getElementById("elapsed");
   const count = document.getElementById("count");
+  const hostKind = document.getElementById("hostKind");
 
   let last = "";
+  let lastHostText = "";
 
   function paint() {
+    const host = window.VersoHost ?? null;
+    const hostText = host ? "connected to the Verso host" : "no host — running standalone, which is fine";
+    if (hostText !== lastHostText) {
+      hostKind.textContent = hostText;
+      lastHostText = hostText;
+    }
+
     const total = Math.floor((Date.now() - started) / 1000);
     const text = Math.floor(total / 60) + ":" + String(total % 60).padStart(2, "0");
 

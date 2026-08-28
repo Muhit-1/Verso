@@ -77,9 +77,9 @@ function collect() {
 /**
  * Sends the current geometry, but only when it has actually changed.
  * Reshaping a window forces a repaint of everything underneath it, so
- * doing it on every animation frame would make the desktop flicker.
+ * doing it more than once per frame would make the desktop flicker.
  */
-export function publish() {
+function publishNow() {
   const web = bridge();
   if (!web) return;
 
@@ -89,6 +89,25 @@ export function publish() {
   lastSignature = signature;
 
   web.postMessage({ type: "verso:regions", panels });
+}
+
+let scheduled = false;
+
+/**
+ * Coalesces to at most one publish per animation frame.
+ *
+ * Everything that can move a panel calls this, and during a drag that
+ * is every pointermove — several per frame on a high-polling mouse.
+ * Measuring and reshaping once per frame is the difference between a
+ * drag that tracks the cursor and one that stutters.
+ */
+export function publish() {
+  if (scheduled) return;
+  scheduled = true;
+  requestAnimationFrame(() => {
+    scheduled = false;
+    publishNow();
+  });
 }
 
 /**

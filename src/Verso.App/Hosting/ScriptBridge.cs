@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Verso.App.Storage;
@@ -50,13 +52,19 @@ public sealed class ScriptBridge : IDisposable
 
     private readonly ITaskStore _tasks;
     private readonly ThemeCatalog _themes;
+    private readonly WidgetCatalog _widgets;
     private readonly SettingsStore _settings;
+    private readonly FileLayoutStore _layout;
+    private readonly INowPlayingSource _media;
 
-    internal ScriptBridge(ITaskStore tasks, ThemeCatalog themes, SettingsStore settings)
+    internal ScriptBridge(ITaskStore tasks, ThemeCatalog themes, WidgetCatalog widgets, SettingsStore settings, FileLayoutStore layout, INowPlayingSource media)
     {
         _tasks = tasks;
         _themes = themes;
+        _widgets = widgets;
         _settings = settings;
+        _layout = layout;
+        _media = media;
     }
 
     // ---- identity -------------------------------------------------------
@@ -84,20 +92,21 @@ public sealed class ScriptBridge : IDisposable
     /// JSON <c>NowPlaying</c>, or <c>"null"</c> when nothing is playing.
     /// </returns>
     /// <remarks>
-    /// Phase 3 fills this from <c>GlobalSystemMediaTransportControlsSessionManager</c>.
-    /// Until then it returns null on purpose: the web layer treats a null answer
-    /// as "no host media" and falls back to its demo player, which is exactly the
-    /// behaviour we want while the rest of the app is being built.
+    /// Backed by <c>GlobalSystemMediaTransportControlsSessionManager</c> — see
+    /// <c>SmtcNowPlayingSource</c>. Null is still a real, expected answer, not
+    /// a stub: it means Windows currently has no active media session, and
+    /// the web layer correctly falls back to its demo player for exactly
+    /// that reason.
     /// </remarks>
-    public string GetNowPlaying() => "null";
+    public string GetNowPlaying() => JsonSerializer.Serialize(_media.Current, Json);
 
-    /// <returns>JSON array of <c>{title, artist}</c>. Empty until Phase 3.</returns>
-    public string GetQueue() => "[]";
+    /// <returns>JSON array of <c>{title, artist}</c>. Empty for most sources — see host-api.md.</returns>
+    public string GetQueue() => JsonSerializer.Serialize(_media.Queue, Json);
 
-    public void Play() { }
-    public void Pause() { }
-    public void Next() { }
-    public void Previous() { }
+    public void Play() => _ = _media.PlayAsync();
+    public void Pause() => _ = _media.PauseAsync();
+    public void Next() => _ = _media.NextAsync();
+    public void Previous() => _ = _media.PreviousAsync();
 
     // ---- theming --------------------------------------------------------
 
@@ -115,6 +124,54 @@ public sealed class ScriptBridge : IDisposable
 
     /// <returns>JSON array of theme manifests, bundled and user-installed.</returns>
     public string GetThemes() => JsonSerializer.Serialize(_themes.Scan(), Json);
+
+    // ---- widgets --------------------------------------------------------
+
+    /// <returns>
+    /// JSON array of widget manifests, bundled and user-installed, each
+    /// carrying whether the user has it turned on. The loader
+    /// (web/shell/js/widgets.js) skips anything not enabled — it never
+    /// even creates an iframe for it, let alone touches the host.
+    /// </returns>
+    public string GetWidgets()
+    {
+        var manifests = _widgets.Scan();
+        WidgetCatalog.ApplyEnabled(manifests, _settings.Current.Widgets.Disabled);
+        return JsonSerializer.Serialize(manifests, Json);
+    }
+
+    // ---- launcher (permission: "apps") -------------------------------------
+
+    /// <returns>JSON array of <c>{ id, name }</c>. Never the filesystem path.</returns>
+    public string GetLauncherEntries()
+    {
+        var info = _settings.Current.Launcher.Entries
+            .Select(e => new LauncherInfo { Id = e.Id, Name = e.Name })
+            .ToList();
+
+        return JsonSerializer.Serialize(info, Json);
+    }
+
+    /// <param name="id">An id from <see cref="GetLauncherEntries"/>. Anything else is silently ignored.</param>
+    public void LaunchApp(string id)
+    {
+        var entry = _settings.Current.Launcher.Entries.Find(e => e.Id == id);
+        if (entry is null || string.IsNullOrWhiteSpace(entry.Path))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(entry.Path) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
+        {
+            // The app was uninstalled or moved since it was added. A widget
+            // button that silently does nothing is a far better failure
+            // than one that throws into a COM call.
+        }
+    }
 
     // ---- background -------------------------------------------------------
 
@@ -139,6 +196,14 @@ public sealed class ScriptBridge : IDisposable
 
         return JsonSerializer.Serialize(new { kind = background.Kind, url }, Json);
     }
+
+    // ---- layout ------------------------------------------------------------
+
+    /// <returns>The stored layout JSON, or <c>"{}"</c>. Opaque — see <see cref="FileLayoutStore"/>.</returns>
+    public string GetLayout() => _layout.Load();
+
+    /// <param name="json">Opaque layout JSON. Stored verbatim, never parsed.</param>
+    public void SaveLayout(string json) => _layout.Save(json);
 
     public void Dispose()
     {

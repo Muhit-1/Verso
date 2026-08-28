@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tasks widget</title>
+
+<!--
+  TASKS — migrated from the shell's own markup into a real widget
+  folder. Needs the "tasks" permission (see docs/widget-spec.md) to
+  read and write the task list.
+
+  Draws its own head ("Tasks" + the open count) rather than leaving
+  it to the shell — rule 3 only gives the shell the background,
+  border, blur and padding around a widget, never its content.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  body{ container-type:inline-size; display:flex; flex-direction:column; }
+
+  .comp-head{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.6cqi, 13px);
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .comp-head .count{
+    color:var(--brass);
+    letter-spacing:0.14em;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .tasks{
+    flex:1 1 auto;
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    min-height:0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
+  }
+
+  .task{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:9px 4px;
+    border-top:1px solid var(--rule-faint);
+    cursor:pointer;
+    transition:background 160ms ease;
+  }
+  .task:first-child{ border-top:0; }
+  .task:hover{ background:var(--lume-wash); }
+  .task:focus-visible{
+    outline:1px solid var(--lume);
+    outline-offset:1px;
+  }
+
+  .box{
+    flex:0 0 auto;
+    width:13px;
+    height:13px;
+    margin-top:3px;
+    border:1px solid var(--slate-deep);
+    border-radius:2px;
+    position:relative;
+    transition:border-color 180ms ease, background 180ms ease;
+  }
+  .task:hover .box{ border-color:var(--lume-dim); }
+
+  .box::after{
+    content:"";
+    position:absolute;
+    left:3.5px; top:0.5px;
+    width:4px; height:8px;
+    border:solid var(--on-lume);
+    border-width:0 1.6px 1.6px 0;
+    transform:rotate(45deg) scale(0.4);
+    opacity:0;
+    transition:opacity 180ms ease, transform 180ms ease;
+  }
+
+  .task.done .box{ background:var(--lume); border-color:var(--lume); }
+  .task.done .box::after{ opacity:1; transform:rotate(45deg) scale(1); }
+
+  .task-text{
+    font-size:clamp(12.5px, 2.8cqi, 18px);
+    line-height:1.42;
+    color:var(--chalk);
+    transition:color 180ms ease;
+    word-break:break-word;
+  }
+  .task.done .task-text{
+    color:var(--slate-deep);
+    text-decoration:line-through;
+    text-decoration-color:var(--brass-dim);
+  }
+
+  .add-task{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-top:1px solid var(--brass-hair);
+    padding-top:12px;
+    margin-top:8px;
+  }
+
+  .add-task .plus{
+    color:var(--brass);
+    font-family:var(--font-mono);
+    font-size:14px;
+    line-height:1;
+  }
+
+  .add-task input{
+    flex:1;
+    min-width:0;
+    background:transparent;
+    border:0;
+    padding:2px 0;
+    color:var(--chalk);
+    font-family:var(--font-sans);
+    font-size:clamp(12.5px, 2.8cqi, 18px);
+  }
+  .add-task input::placeholder{ color:var(--slate-deep); }
+  .add-task input:focus{ outline:none; }
+  .add-task:focus-within{ border-top-color:var(--lume-dim); }
+
+  .empty{
+    margin:0;
+    padding:10px 4px 2px;
+    font-size:clamp(12.5px, 2.6cqi, 17px);
+    color:var(--slate-deep);
+    font-style:italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-head" id="tasksHead">
+  <span>Tasks</span>
+  <span class="count" id="taskCount">0 open</span>
+</div>
+
+<ul class="tasks" id="taskList"></ul>
+<p class="empty" id="taskEmpty" hidden>Nothing queued.</p>
+
+<div class="add-task">
+  <span class="plus" aria-hidden="true">+</span>
+  <input id="taskInput" type="text" placeholder="Add a task" maxlength="120"
+         autocomplete="off" spellcheck="false" aria-label="Add a task">
+</div>
+
+<script type="module">
+  const listEl = document.getElementById("taskList");
+  const emptyEl = document.getElementById("taskEmpty");
+  const countEl = document.getElementById("taskCount");
+  const inputEl = document.getElementById("taskInput");
+
+  let tasks = [];
+
+  // Look up the host fresh, every time — see the timing note on rule 1
+  // in docs/widget-spec.md. window.VersoHost is not present on the
+  // very first line of this script, only shortly after.
+  const host = () => window.VersoHost ?? null;
+
+  function persist() {
+    try { host()?.saveTasks?.(tasks); } catch { /* host offline; keep in memory */ }
+  }
+
+  function render() {
+    listEl.textContent = "";
+
+    for (const task of tasks) {
+      const li = document.createElement("li");
+      li.className = "task" + (task.done ? " done" : "");
+      li.tabIndex = 0;
+      li.setAttribute("role", "checkbox");
+      li.setAttribute("aria-checked", task.done ? "true" : "false");
+
+      const box = document.createElement("span");
+      box.className = "box";
+
+      const text = document.createElement("span");
+      text.className = "task-text";
+      text.textContent = task.text;
+
+      li.append(box, text);
+
+      const toggle = () => {
+        task.done = !task.done;
+        persist();
+        render();
+      };
+
+      li.addEventListener("click", toggle);
+      li.addEventListener("keydown", ev => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          toggle();
+        }
+      });
+
+      listEl.appendChild(li);
+    }
+
+    countEl.textContent = tasks.filter(t => !t.done).length + " open";
+    emptyEl.hidden = tasks.length > 0;
+  }
+
+  inputEl.addEventListener("keydown", ev => {
+    if (ev.key !== "Enter") return;
+    const value = inputEl.value.trim();
+    if (!value) return;
+    tasks.push({ id: "t" + Date.now(), text: value, done: false });
+    inputEl.value = "";
+    persist();
+    render();
+  });
+
+  /*
+    Loading the initial list needs the same "host arrives shortly
+    after this script starts" handling as saving it does — a short,
+    bounded poll rather than a one-time check at the top of the file.
+  */
+  let attempts = 0;
+
+  function tryLoad() {
+    const h = host();
+    if (h?.loadTasks) {
+      try { tasks = h.loadTasks() ?? []; } catch { tasks = []; }
+      render();
+      return;
+    }
+
+    attempts++;
+    if (attempts < 20) {
+      setTimeout(tryLoad, 100);
+    } else {
+      render(); // no host arrived — render the empty state, still usable
+    }
+  }
+
+  tryLoad();
+</script>
+</body>
+</html>

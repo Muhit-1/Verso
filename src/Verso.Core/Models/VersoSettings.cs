@@ -12,9 +12,17 @@ public sealed class VersoSettings
     [JsonPropertyName("schemaVersion")]
     public int SchemaVersion { get; set; } = 1;
 
-    /// <summary>Id of the active theme folder, e.g. "smoked-petrol".</summary>
+    /// <summary>Id of the active desk theme folder, e.g. "smoked-petrol".</summary>
     [JsonPropertyName("themeId")]
     public string ThemeId { get; set; } = "smoked-petrol";
+
+    /// <summary>
+    /// Id of the active dashboard theme folder, e.g. "fieldnote". A separate
+    /// choice from <see cref="ThemeId"/> — the dashboard and the desk are
+    /// skinned independently. See docs/dashboard-theme-spec.md.
+    /// </summary>
+    [JsonPropertyName("dashboardThemeId")]
+    public string DashboardThemeId { get; set; } = "fieldnote";
 
     [JsonPropertyName("startWithWindows")]
     public bool StartWithWindows { get; set; }
@@ -29,6 +37,14 @@ public sealed class VersoSettings
     /// <summary>The "clean desktop" toggles from the tray. See <see cref="DesktopCleanupSettings"/>.</summary>
     [JsonPropertyName("desktopCleanup")]
     public DesktopCleanupSettings DesktopCleanup { get; set; } = new();
+
+    /// <summary>Apps shown in the app-launcher widget. See <see cref="LauncherSettings"/>.</summary>
+    [JsonPropertyName("launcher")]
+    public LauncherSettings Launcher { get; set; } = new();
+
+    /// <summary>Which widgets are turned off. See <see cref="WidgetSettings"/>.</summary>
+    [JsonPropertyName("widgets")]
+    public WidgetSettings Widgets { get; set; } = new();
 
     /// <summary>One entry per display, keyed by the device id Windows reports.</summary>
     [JsonPropertyName("displays")]
@@ -72,6 +88,17 @@ public sealed class DesktopCleanupSettings
 
     [JsonPropertyName("hideDesktopIcons")]
     public bool HideDesktopIcons { get; set; }
+}
+
+/// <summary>
+/// Which widgets the user turned off — an allowlist of exclusions, not
+/// inclusions, so a widget added later (a new bundled one, or one dropped
+/// into the user widgets folder) defaults to on without needing an entry.
+/// </summary>
+public sealed class WidgetSettings
+{
+    [JsonPropertyName("disabled")]
+    public List<string> Disabled { get; set; } = [];
 }
 
 /// <summary>What a single monitor is showing.</summary>

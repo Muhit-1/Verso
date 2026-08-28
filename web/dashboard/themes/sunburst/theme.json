@@ -1,0 +1,14 @@
+{
+  "id": "sunburst",
+  "name": "Sunburst",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Cream and burnt orange, hard offset shadows, bold display type.",
+  "scheme": "light",
+  "stylesheet": "theme.css",
+  "preview": null,
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&display=swap"
+  ],
+  "minShellVersion": "0.1.0"
+}

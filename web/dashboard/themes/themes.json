@@ -1,0 +1,8 @@
+{
+  "//": "Index of installed dashboard themes, for when web/dashboard/index.html is opened in a plain browser and cannot list a directory. The native host scans the theme folders instead and ignores this file. Add your theme's folder name to see it in the browser.",
+  "default": "fieldnote",
+  "themes": [
+    "fieldnote",
+    "sunburst"
+  ]
+}

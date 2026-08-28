@@ -1,0 +1,12 @@
+{
+  "id": "_template",
+  "name": "Template",
+  "author": "you",
+  "version": "1.0.0",
+  "description": "Copy this folder, rename it, and edit theme.css. Folders whose names start with an underscore are skipped by the theme picker.",
+  "scheme": "light",
+  "stylesheet": "theme.css",
+  "preview": null,
+  "fonts": [],
+  "minShellVersion": "0.1.0"
+}

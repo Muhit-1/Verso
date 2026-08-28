@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Now Playing widget</title>
+
+<!--
+  NOW PLAYING — migrated from the shell's own markup into a real
+  widget folder. Needs the "media" permission (see docs/widget-spec.md)
+  to read what is playing and send transport commands.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  body{ container-type:inline-size; display:flex; flex-direction:column; }
+
+  .comp-head{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.6cqi, 13px);
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+    margin-bottom:12px;
+  }
+
+  .live{
+    width:5px; height:5px;
+    border-radius:50%;
+    background:var(--slate-deep);
+    transition:background 300ms ease, box-shadow 300ms ease;
+  }
+  body.playing .live{
+    background:var(--lume);
+    box-shadow:0 0 8px 1px var(--lume-glow);
+  }
+  /* Glows bleed past a hard region edge instead of fading — see the
+     ?layer= note in js/widgets.js. Only reachable in overlay mode. */
+  :root[data-layer="overlay"] body.playing .live{ box-shadow:none; }
+
+  .now{
+    flex:0 0 auto;
+    display:flex;
+    gap:clamp(12px, 3.6cqi, 18px);
+    align-items:center;
+  }
+
+  .art{
+    flex:0 0 auto;
+    width:clamp(48px, 18cqi, 88px);
+    aspect-ratio:1;
+    border-radius:2px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:var(--panel-shadow);
+  }
+  :root[data-layer="overlay"] .art{ box-shadow:none; }
+
+  .art::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(148deg, rgba(255,255,255,0.20), transparent 46%);
+  }
+
+  .track-meta{ min-width:0; display:flex; flex-direction:column; gap:4px; }
+
+  .track-title{
+    font-size:clamp(13px, 3.6cqi, 20px);
+    font-weight:600;
+    color:var(--chalk);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .track-artist{
+    font-size:clamp(11.5px, 3cqi, 16px);
+    color:var(--slate);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .scrub{ flex:0 0 auto; display:flex; flex-direction:column; gap:7px; margin-top:14px; }
+
+  .bar{
+    height:2px;
+    background:var(--track);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .bar .fill{
+    height:100%;
+    width:0%;
+    background:var(--lume);
+    box-shadow:0 0 8px var(--lume-glow);
+    transition:width 900ms linear;
+  }
+  :root[data-layer="overlay"] .bar .fill{ box-shadow:none; }
+
+  .times{
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.2cqi, 13px);
+    color:var(--slate-deep);
+    font-variant-numeric:tabular-nums;
+    letter-spacing:0.06em;
+  }
+
+  .transport{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:clamp(8px, 2.4cqi, 16px);
+    margin-top:10px;
+  }
+
+  .tbtn{
+    appearance:none;
+    background:transparent;
+    border:0;
+    padding:6px;
+    border-radius:2px;
+    color:var(--slate);
+    cursor:pointer;
+    display:grid;
+    place-items:center;
+    transition:color 160ms ease, background 160ms ease;
+  }
+  .tbtn:hover{ color:var(--chalk); background:var(--lume-wash); }
+  .tbtn:focus-visible{ outline:1px solid var(--lume); outline-offset:1px; }
+  .tbtn svg{ width:15px; height:15px; display:block; }
+
+  .tbtn.primary{
+    color:var(--on-lume);
+    background:var(--lume);
+    width:32px; height:32px;
+    border-radius:50%;
+    padding:0;
+  }
+  .tbtn.primary:hover{ background:var(--lume-hot); color:var(--on-lume); }
+  .tbtn.primary svg{ width:13px; height:13px; }
+
+  .queue{
+    flex:1 1 auto;
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    overflow-y:auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    border-top:1px solid var(--brass-hair);
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
+  }
+
+  .qrow{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:baseline;
+    gap:10px;
+    padding:7px 2px;
+    font-size:clamp(11.5px, 3cqi, 16px);
+    color:var(--slate);
+  }
+  .qrow:first-child{ padding-top:11px; }
+
+  .qrow .idx{
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.2cqi, 12px);
+    color:var(--slate-deep);
+    font-variant-numeric:tabular-nums;
+  }
+  .qrow .qt{
+    color:var(--chalk);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    opacity:0.82;
+  }
+  .qrow .qa{
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.2cqi, 12px);
+    color:var(--slate-deep);
+    white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-head" id="playHead">
+  <span>Now playing</span>
+  <span class="live" aria-hidden="true"></span>
+</div>
+
+<div class="now">
+  <div class="art" id="art"></div>
+  <div class="track-meta">
+    <div class="track-title" id="trackTitle">Nothing playing</div>
+    <div class="track-artist" id="trackArtist">Start something</div>
+  </div>
+</div>
+
+<div class="scrub">
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="times">
+    <span id="tPos">0:00</span>
+    <span id="tDur">0:00</span>
+  </div>
+</div>
+
+<div class="transport">
+  <button class="tbtn" id="prevBtn" aria-label="Previous track">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h2.5v14H7zM19 5v14l-9.5-7z"/></svg>
+  </button>
+  <button class="tbtn primary" id="playBtn" aria-label="Play">
+    <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg>
+  </button>
+  <button class="tbtn" id="nextBtn" aria-label="Next track">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17 5h-2.5v14H17zM5 5v14l9.5-7z"/></svg>
+  </button>
+</div>
+
+<ul class="queue" id="queue"></ul>
+
+<script type="module">
+  // Same layer signal the shell reads for itself in applyLayer() — see
+  // the ?layer= note in web/shell/js/widgets.js.
+  document.documentElement.dataset.layer = new URLSearchParams(location.search).get("layer") || "all";
+
+  const PLAY_PATH = "M7 4l13 8-13 8z";
+  const PAUSE_PATH = "M7 5h3.5v14H7zM13.5 5H17v14h-3.5z";
+
+  const artEl = document.getElementById("art");
+  const titleEl = document.getElementById("trackTitle");
+  const artistEl = document.getElementById("trackArtist");
+  const fillEl = document.getElementById("fill");
+  const posEl = document.getElementById("tPos");
+  const durEl = document.getElementById("tDur");
+  const playBtn = document.getElementById("playBtn");
+  const playIcon = document.getElementById("playIcon");
+  const queueEl = document.getElementById("queue");
+
+  // Looked up fresh, every time — see the timing note on rule 1 in
+  // docs/widget-spec.md.
+  const host = () => window.VersoHost ?? null;
+
+  const pad = n => (n < 10 ? "0" : "") + n;
+  const clock = ms => {
+    const total = Math.max(0, Math.floor(ms / 1000));
+    return Math.floor(total / 60) + ":" + pad(total % 60);
+  };
+
+  let lastTrackKey = "";
+  let subscribed = false;
+
+  function renderQueue() {
+    let items = [];
+    try { items = host()?.getQueue?.() ?? []; } catch { items = []; }
+
+    queueEl.textContent = "";
+    items.forEach((item, i) => {
+      const li = document.createElement("li");
+      li.className = "qrow";
+
+      const idx = document.createElement("span");
+      idx.className = "idx";
+      idx.textContent = pad(i + 1);
+
+      const t = document.createElement("span");
+      t.className = "qt";
+      t.textContent = item.title;
+
+      const a = document.createElement("span");
+      a.className = "qa";
+      a.textContent = item.artist;
+
+      li.append(idx, t, a);
+      queueEl.appendChild(li);
+    });
+  }
+
+  function paint() {
+    const h = host();
+    if (!h) return;
+
+    // Subscribe once, as soon as the host is actually available —
+    // the same "arrives shortly after this script starts" timing as
+    // everything else that needs window.VersoHost.
+    if (!subscribed && typeof h.onNowPlayingChanged === "function") {
+      subscribed = true;
+      h.onNowPlayingChanged(paint);
+    }
+
+    let np;
+    try { np = h.getNowPlaying?.(); } catch { return; }
+    if (!np) return;
+
+    const key = np.title + "|" + np.artist;
+    if (key !== lastTrackKey) {
+      titleEl.textContent = np.title || "Nothing playing";
+      artistEl.textContent = np.artist || "Start something";
+      const a = np.art?.[0] ?? "#2E5F63";
+      const b = np.art?.[1] ?? "#7FB7A8";
+      artEl.style.background =
+        `radial-gradient(120% 120% at 18% 12%, ${b}, ${a} 72%)`;
+      lastTrackKey = key;
+      renderQueue();
+    }
+
+    const pct = np.durationMs ? (np.positionMs / np.durationMs) * 100 : 0;
+    fillEl.style.width = Math.min(100, Math.max(0, pct)) + "%";
+    posEl.textContent = clock(np.positionMs);
+    durEl.textContent = clock(np.durationMs);
+
+    document.body.classList.toggle("playing", !!np.isPlaying);
+    playIcon.firstElementChild.setAttribute("d", np.isPlaying ? PAUSE_PATH : PLAY_PATH);
+    playBtn.setAttribute("aria-label", np.isPlaying ? "Pause" : "Play");
+  }
+
+  playBtn.addEventListener("click", () => {
+    const h = host();
+    if (!h) return;
+    const np = h.getNowPlaying?.();
+    if (np?.isPlaying) h.pause?.(); else h.play?.();
+    paint();
+  });
+
+  document.getElementById("nextBtn").addEventListener("click", () => { host()?.next?.(); paint(); });
+  document.getElementById("prevBtn").addEventListener("click", () => { host()?.previous?.(); paint(); });
+
+  paint();
+  setInterval(paint, 1000);   // matches tickMs in widget.json; also how the host is (re)found
+</script>
+</body>
+</html>

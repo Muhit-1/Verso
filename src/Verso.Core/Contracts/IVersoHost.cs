@@ -68,6 +68,27 @@ public interface IVersoHost
     /// <summary>Every installed theme, bundled and user-supplied, bundled first.</summary>
     IReadOnlyList<ThemeManifest> GetThemes();
 
+    // ---- widgets ----
+
+    /// <summary>Every installed widget, bundled and user-supplied, bundled first.</summary>
+    IReadOnlyList<WidgetManifest> GetWidgets();
+
+    // ---- launcher (permission: "apps") ----
+
+    /// <summary>
+    /// The apps the user chose to show, resolved to opaque ids — never
+    /// filesystem paths. Chosen from the dashboard, not by a widget; there
+    /// is no <c>AddLauncherEntry</c> here on purpose.
+    /// </summary>
+    IReadOnlyList<LauncherInfo> GetLauncherEntries();
+
+    /// <summary>
+    /// Launches the app behind <paramref name="id"/>. A no-op for any id
+    /// not currently in <see cref="GetLauncherEntries"/> — a widget can
+    /// only launch what the user explicitly added, never an arbitrary path.
+    /// </summary>
+    void LaunchApp(string id);
+
     // ---- background ----
 
     /// <summary>
@@ -78,4 +99,21 @@ public interface IVersoHost
     /// it.
     /// </summary>
     BackgroundInfo GetBackground();
+
+    // ---- layout ----
+
+    /// <summary>
+    /// Where each widget panel sits, as <b>opaque JSON</b> the host stores
+    /// but never interprets.
+    /// </summary>
+    /// <remarks>
+    /// There is no model type here on purpose. What a position means is the
+    /// shell's business and will change as the layout system grows; a typed
+    /// contract would force a host change every time it does. The host
+    /// guarantees durability and nothing else.
+    /// </remarks>
+    string GetLayout();
+
+    /// <summary>Persists the layout. See <see cref="GetLayout"/> for why it is a string.</summary>
+    void SaveLayout(string json);
 }

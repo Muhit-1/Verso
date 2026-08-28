@@ -1,0 +1,13 @@
+{
+  "id": "app-launcher",
+  "name": "App Launcher",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "A short list of apps you chose from the dashboard — click to open one.",
+  "entry": "index.html",
+  "permissions": ["apps"],
+  "defaultSize": { "w": 3, "h": 2 },
+  "interactive": true,
+  "tickMs": 0,
+  "minShellVersion": "0.1.0"
+}

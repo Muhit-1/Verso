@@ -1,0 +1,26 @@
+<Window x:Class="Verso.App.Windows.DashboardWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="Verso"
+        Width="1040" Height="700"
+        MinWidth="760" MinHeight="520"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
+        WindowStartupLocation="CenterScreen"
+        Background="#1B1712">
+
+    <!--
+      No OS title bar: the dashboard draws its own, per the active dashboard
+      theme, inside the page itself (web/dashboard/js/titlebar.js). The window
+      stays an ordinary rectangle — see DashboardWindow.xaml.cs for why this
+      deliberately does not chase window-shape transparency.
+
+      The Background color above is only what shows for the instant before
+      the WebView2 has painted its first frame.
+    -->
+    <Grid>
+        <wv2:WebView2 x:Name="Browser" />
+    </Grid>
+</Window>

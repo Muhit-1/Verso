@@ -77,3 +77,13 @@ WM_DPICHANGED
 SystemParametersInfo
 SYSTEM_PARAMETERS_INFO_ACTION
 SYSTEM_PARAMETERS_INFO_UPDATE_FLAGS
+
+# --- custom title bar (Phase 9: dashboard window drag) ---
+# The dashboard has no OS title bar — web/dashboard/js/titlebar.js posts a
+# message on pointerdown, and this is how the drag is actually carried out:
+# hand the mouse capture back to Windows and tell it the click landed on a
+# caption, exactly as if the (nonexistent) native title bar had been dragged.
+ReleaseCapture
+SendMessage
+WM_NCLBUTTONDOWN
+HTCAPTION

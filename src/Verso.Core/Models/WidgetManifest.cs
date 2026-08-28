@@ -54,6 +54,25 @@ public sealed class WidgetManifest
 
     [JsonPropertyName("minShellVersion")]
     public string MinShellVersion { get; set; } = "0.1.0";
+
+    /// <summary>
+    /// "bundled" or "user". Set by the catalog scan, never read from the
+    /// file — it is how the loader picks which virtual host to fetch the
+    /// widget's files from, since the two roots live in different real
+    /// folders. Not part of the authored widget.json contract.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = "bundled";
+
+    /// <summary>
+    /// Whether the user has turned this widget on. Set by
+    /// <c>ScriptBridge.GetWidgets</c> from settings.json, not read from
+    /// the file — same reasoning as <see cref="Source"/>. A widget the
+    /// user turned off is not returned by the loader at all, so it never
+    /// mounts an iframe or touches the host in the first place.
+    /// </summary>
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; } = true;
 }
 
 public sealed class WidgetSize

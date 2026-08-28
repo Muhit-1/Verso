@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dial widget</title>
+
+<!--
+  DIAL — the desk's original clock, migrated from the shell's own
+  markup into a real widget folder. Needs no permissions: the system
+  clock is not a host capability.
+
+  This is the reference for porting a shell-drawn panel into a widget:
+  the classes and rules below are exactly the ones that used to live
+  in web/shell/css/desk.css, moved here unchanged. Nothing about the
+  math changed, only where it lives.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  /*
+    A container, not the viewport. The panel is resizable now (drag
+    the corner grip the shell draws around it), independently of the
+    window — so every clamp() below scales off the container's own
+    width (cqi) rather than the viewport's (vw). With vw, shrinking a
+    small panel would just clip the numerals instead of shrinking
+    them: the text would have no idea the box got smaller.
+  */
+  body{ container-type:inline-size; }
+
+  .dial{
+    height:100%;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    gap:clamp(10px, 3cqi, 20px);
+  }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:clamp(10px, 2.2cqi, 14px);
+    font-weight:500;
+    letter-spacing:0.34em;
+    text-transform:uppercase;
+    color:var(--slate);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:0;
+  }
+
+  .eyebrow::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:linear-gradient(90deg, var(--brass-hair), transparent);
+  }
+
+  .readout{
+    display:flex;
+    align-items:baseline;
+    gap:clamp(12px, 3.6cqi, 26px);
+  }
+
+  .hhmm{
+    font-family:var(--font-display);
+    font-size:clamp(40px, 26cqi, 280px);
+    font-weight:400;
+    line-height:0.82;
+    letter-spacing:-0.02em;
+    font-variant-numeric:tabular-nums;
+    color:var(--chalk);
+    text-shadow:var(--dial-shadow);
+  }
+
+  /* Glows bleed past a hard region edge instead of fading — see the
+     ?layer= note in js/widgets.js. Only reachable in overlay mode. */
+  :root[data-layer="overlay"] .hhmm{ text-shadow:none; }
+
+  /* seconds get their own small register, as on a regulator dial */
+  .seconds{
+    font-family:var(--font-mono);
+    font-size:clamp(13px, 4.6cqi, 40px);
+    font-weight:400;
+    font-variant-numeric:tabular-nums;
+    color:var(--lume);
+    opacity:0.72;
+    letter-spacing:0.04em;
+    padding-bottom:clamp(4px, 2.4cqi, 22px);
+  }
+
+  .datum{
+    display:flex;
+    align-items:center;
+    gap:clamp(12px, 3.6cqi, 22px);
+    font-family:var(--font-mono);
+    font-size:clamp(11px, 2.4cqi, 17px);
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .datum .rule{
+    width:clamp(24px, 8cqi, 70px);
+    height:1px;
+    background:var(--brass-dim);
+  }
+
+  .datum .week{ color:var(--brass); }
+</style>
+</head>
+<body>
+
+<div class="dial">
+  <p class="eyebrow" id="weekday">Monday</p>
+
+  <div class="readout">
+    <span class="hhmm" id="hhmm">00:00</span>
+    <span class="seconds" id="secs">00</span>
+  </div>
+
+  <div class="datum">
+    <span id="dateLine">1 January 2026</span>
+    <span class="rule"></span>
+    <span class="week" id="weekNo">Week 01</span>
+  </div>
+</div>
+
+<script type="module">
+  // Same layer signal the shell reads for itself in applyLayer() — see
+  // the ?layer= note in web/shell/js/widgets.js.
+  document.documentElement.dataset.layer = new URLSearchParams(location.search).get("layer") || "all";
+
+  const MONTHS = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+  const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  const pad = n => (n < 10 ? "0" : "") + n;
+
+  function isoWeek(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const day = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+  }
+
+  const elWeekday = document.getElementById("weekday");
+  const elHHMM = document.getElementById("hhmm");
+  const elSecs = document.getElementById("secs");
+  const elDate = document.getElementById("dateLine");
+  const elWeek = document.getElementById("weekNo");
+
+  const prev = { hhmm: "", secs: "", day: "" };
+
+  function paint() {
+    const d = new Date();
+    const hhmm = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    const ss = pad(d.getSeconds());
+
+    // Rule 4: touch the DOM only when a value actually changed.
+    if (hhmm !== prev.hhmm) { elHHMM.textContent = hhmm; prev.hhmm = hhmm; }
+    if (ss !== prev.secs) { elSecs.textContent = ss; prev.secs = ss; }
+
+    const dayKey = d.toDateString();
+    if (dayKey !== prev.day) {
+      elWeekday.textContent = DAYS[d.getDay()];
+      elDate.textContent = `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+      elWeek.textContent = "Week " + pad(isoWeek(d));
+      prev.day = dayKey;
+    }
+  }
+
+  paint();
+  setInterval(paint, 1000);   // matches tickMs in widget.json
+</script>
+</body>
+</html>

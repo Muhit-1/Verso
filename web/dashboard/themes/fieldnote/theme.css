@@ -1,0 +1,25 @@
+/* Fieldnote — the dashboard's default theme. See docs/dashboard-theme-spec.md. */
+
+:root {
+  --ink: #2B2620;
+  --ink-muted: #847A67;
+
+  --surface: #FFFDF7;
+  --sidebar: #F1E9D8;
+  --card: #FFFDF7;
+  --border: #E4DAC5;
+
+  --accent: #B85C38;
+  --accent-soft: #F2E1D6;
+  --accent-2: #6E7B4F;
+  --on-accent: #FFFFFF;
+
+  --border-width: 1px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 3px rgba(60, 50, 30, .08);
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Work Sans", "Segoe UI", sans-serif;
+  --font-mono: "Space Mono", Consolas, monospace;
+}

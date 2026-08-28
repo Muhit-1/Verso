@@ -348,59 +348,210 @@ Phase 3's video/interactive path further.
 **You'll see:** flip a checkbox, the taskbar or icons vanish; flip it back,
 they return.
 
-### Phase 5 — widget loader (2–3 days) ← **next**
+### Phase 6 — move and resize widgets ✅ *built, ahead of Phase 5*
 
-Prove the widget contract by using it for real, on the three widgets that
-already exist.
+Taken out of order, deliberately. Phase 5 is invisible plumbing; this is the
+thing that was actually missing when you looked at the desk. And it is not
+throwaway work done early: dragging is keyed off a `data-panel="<id>"`
+attribute, so when the loader lands and the panels become loaded folders
+rather than hardcoded markup, they carry the same attribute and
+`web/shell/js/layout.js` does not change.
 
-- Read folders from `web/widgets/*` and `%APPDATA%\Verso\widgets\`, render
-  each `index.html` into its own iframe per [widget-spec.md](widget-spec.md),
-  instead of the shell drawing the dial/tasks/player itself in `desk.js`.
-- No visible change on day one — the point is `desk.js` no longer
-  hardcodes three widgets, it reads a folder list.
+- Drag any panel by its body; controls inside it (task rows, the text
+  field, transport buttons) keep their own click behaviour.
+- Positions persist to `layout.json`, through a bridge method that passes
+  **opaque JSON** — the host stores it and never parses it, so the shell can
+  change what a position means without a C# change.
+- Stored as **fractions of the viewport**, not pixels, and clamped on load:
+  a desk arranged on a 4K monitor still makes sense at 1080p, and a panel
+  can never be restored off-screen.
+- "Reset positions" in the dashboard, for when one ends up somewhere silly.
 
-**You'll see:** the desk looks identical to today, but drop a throwaway
-fourth folder into `web/widgets/`, following `_template`, restart, and it
-appears with zero shell code touched. That's the proof it works.
+**Two things this forced elsewhere.** `regions.publish()` now coalesces to
+one call per animation frame — a drag calls it on every pointermove, and in
+overlay mode the window is clipped to the panels, so the region has to track
+the drag or the panel is dragged outside its own visible area. And the drag
+listens on `window` rather than using `setPointerCapture`, which throws when
+the pointer is not active and would take the whole drag down with it.
 
-### Phase 6 — move and resize widgets (2–3 days)
+*Verified: drag, persistence across reload, restore-at-a-different-resolution,
+reset, and that pressing the task field or the play button never moves the
+panel. Native path proven by reading the window region back out of Win32 — a
+seeded position of 0.04/0.62 produced a region rectangle at exactly
+Left=77, Top=670 on a 1920×1080 display.*
 
-- Drag a widget panel to a new spot on the desk; grid-snap to keep it tidy.
-- Layout (which widgets, where) persists to JSON, same pattern as tasks.
+### Phase 5 — widget loader ✅ *built*
 
-**You'll see:** drag the clock to the other side of the screen, reload the
-app, it's still there.
+Built as a real, general mechanism rather than a migration of the three
+built-ins — see the amendment below for why. `web/shell/js/widgets.js`
+reads `GetWidgets()` (bundled + user, via a new `WidgetCatalog` mirroring
+`ThemeCatalog`), and for each manifest creates an iframe with:
 
-### Phase 7 — new widgets, default theme only (ongoing, one at a time)
+- the shell's **current theme stylesheet injected** into it, kept in sync
+  on every theme switch — an iframe is a separate document, so `var(--chalk)`
+  does not cross that boundary on its own
+- a **permission-scoped `window.VersoHost`**, built fresh per widget from
+  the one host connection the shell already made — a widget declaring
+  `[]` gets only `hostVersion`; declaring `["tasks","media"]` gets exactly
+  those methods, bound and callable, nothing else
+- a **drag handle**: pointer events do not bubble out of a cross-document
+  iframe into the parent, so `layout.js`'s "drag from anywhere in the
+  panel" cannot fire for a click landing on a widget's own content. Every
+  loaded widget gets a thin handle strip that is part of the wrapper (the
+  parent document, not the iframe) instead.
 
-Per your call: build these against Smoked Petrol as it ships today — no
-new colours, fonts or radii. Theme work (3a) waits until this phase is
-done, which is exactly why the theme/widget boundary in this doc exists.
+**A real bug found and fixed along the way, not a hypothetical:** user
+themes were unreachable in the native app. `ThemeCatalog` found them and
+`theme.js` built a URL for them, but no virtual host ever mapped
+`%APPDATA%\Verso\themes` (or wherever that's been redirected to), so the
+CSS file 404'd. Same fix serves both: `DeskWindow` now maps two narrow
+virtual hosts, `verso.user-themes.local` and `verso.user-widgets.local` —
+narrow rather than one covering the whole data root, so `settings.json`
+and `tasks.json` are not fetchable by a page that has no business reading
+them.
 
-- Clock: one or two alternate faces (digital, analogue) as separate widget
-  folders.
-- App launcher / dock: a short list of pinned apps, click to open. This is
-  the first widget capability that isn't already in `IVersoHost` — needs a
-  small new host API (list pinned apps, launch one).
+**Timing rule, now written into the contract in three places** ([widget-spec.md](widget-spec.md),
+the widgets README, `host-api.md`): a widget's own script starts running
+*before* the loader can reach into its iframe, so `window.VersoHost` is
+never present on the first line. `_template/index.html` was rewritten to
+look it up fresh inside `paint()` rather than caching it once at module
+scope — every future widget should copy that pattern, not the old one.
 
-**You'll see:** each new widget appear on the desk and work, one at a time.
+**Proved with `web/widgets/digital-clock`** — a real widget, not a
+throwaway: an alternate clock face, which is also the first item Phase 7
+asked for. Zero permissions, so it also proves the empty-permission case.
 
-### Phase 8 — real music data, SMTC (2–4 days)
+*Verified: relative URL resolution in both the plain dev server and the
+native virtual host (an earlier hardcoded absolute URL broke browser
+preview entirely — caught by testing, not by reasoning about it); theme
+injection and live re-injection on theme switch, with the widget's
+computed color matching the shell's own exactly; permission scoping
+negative case (`[]` → only `hostVersion`) and positive case
+(`["tasks","media"]` → those methods, bound, `loadTasks()` returns the
+real list); drag-by-handle; that a click landing on the iframe does not
+start a drag; layout persistence and resize-clamping for a loaded widget,
+identically to the built-in panels. Native path proved by reading the
+actual window region back out of Win32 after a real run: four rectangles
+instead of three — dial, tasks, player, and the loaded widget, all with
+real, non-zero geometry.*
 
-Carried over unchanged from the original plan — `GlobalSystemMediaTransportControlsSessionManager`
-is still the right way to do "connect to Spotify/YouTube": it reads
-whatever is actually playing on the machine, no per-service API keys or
-OAuth. The demo fallback stays in the code — it's what makes the web layer
-runnable without launching the app.
+**Deliberately not done here: migrating the dial/tasks/player off their
+current hardcoded form.** That was the phase's original stated goal, and
+reordering it into an amendment rather than silently dropping it is worth
+being explicit about — see below.
 
-**You'll see:** hit play in Spotify or a YouTube tab, the widget updates
-live with title, artist and artwork.
+### Phase 7 — new widgets, default theme only ✅ *built*
 
-### Phase 9 — theme pass (open-ended) ← **your 3a**
+Both items built against Smoked Petrol as it ships today — no new
+colours, fonts or radii, per your call. Theme work (3a) still waits until
+you're ready for it, which is exactly why the theme/widget boundary in
+this doc exists.
+
+- **`digital-clock`** — the alternate clock face, and also the widget that
+  proved the Phase 5 loader (see the amendment there).
+- **`app-launcher`** — a short list of apps, click to launch. Deliberately
+  **not** a reader of Windows' pinned-taskbar folder: that location is
+  undocumented and has moved across Windows versions before, and this
+  project already spent Phase 0 relearning that exact lesson once on
+  WorkerW. Instead the dashboard's new **Apps** section lets the user pick
+  entries from a file dialog — `["a1", "a2", …]`, each an id resolved
+  server-side against an allowlist, so a widget can launch what the user
+  approved and nothing else. New permission: `apps` — documented in
+  [widget-spec.md](widget-spec.md) and the widgets README alongside the
+  other three.
+
+*Verified: both widgets render with real data through the full loader
+pipeline (permission scoping confirmed for `apps` the same way it was for
+`tasks`/`media` in Phase 5 — exactly `getLauncherEntries`/`launchApp`, in
+both the browser preview and a live native run with a real window-region
+readback showing five geometry rectangles instead of four).*
+
+### Phase 8 — real music data, SMTC ✅ *built*
+
+`SmtcNowPlayingSource` wraps `GlobalSystemMediaTransportControlsSessionManager`
+— unchanged from the original plan's reasoning: it reads whatever is
+actually playing on the machine, no per-service API keys or OAuth. Also
+extracts two colours from the session's thumbnail (a dark/light shade of
+its average colour, not a real palette algorithm — the widget only ever
+paints a two-stop gradient from them, so anything fancier would be work
+the result could never show). The demo fallback stays in the code — it's
+what makes the web layer runnable without launching the app, and `null`
+from `GetNowPlaying()` is a real, correct answer now, not a stub: it means
+Windows has no active session.
+
+**Verified live, both directions, with a real session — not simulated:**
+played an actual YouTube video, and Verso's now-playing panel picked up
+the real title ("Rick Astley - Never Gonna Give You Up (Official Video)
+(4K Remaster)"), the real artist, and a live-ticking position (0:19 →
+0:43 across two checks) with the play/pause icon correctly reflecting
+playing vs. paused state in both directions — paused the video from
+outside Verso and watched the icon flip and the position freeze.
+
+### Phase 9 — dashboard rebuilt as a web app, Fieldnote default ✅ *built*
+
+The settings window stopped being a bare WPF `StackPanel` and became what
+the desk already was: a small native window with a WebView2 in it,
+showing an HTML/CSS/JS app (`web/dashboard/`) instead of hand-built XAML.
+Prompted by two full design mockups (Sunburst, Fieldnote) and a much
+larger feature list than this one phase — icon-grouping "Boxes", a
+wallpaper gallery, taskbar/Start-menu/cursor/icon-shape personalization,
+new widgets. Deliberately scoped down before writing any code: **Boxes**
+will be a curated shortcut panel, not real desktop-icon replacement
+(Phase 12+); **taskbar/Start-menu skinning is dropped outright** — no
+`explorer.exe` hooking, no shell replacement, ever, the same category of
+risk this project already knows to respect from the WorkerW saga. This
+phase is the foundation only: today's real functionality (background,
+widgets on/off, reset positions, launcher apps, desktop cleanup, desk
+theme) rebuilt in the new visual language, nothing more.
+
+**Two bridges, not one.** `ScriptBridge`/`IVersoHost` stays exactly what
+it has always been documented as — the widget contract. A second,
+separate object, `DashboardBridge`/`IVersoDashboard`, is injected only
+into the dashboard's own WebView2 as
+`window.chrome.webview.hostObjects.VersoDashboard`, carrying privileges
+(enable a widget, hide the taskbar, pick a background file) no widget
+should reach even by accident. It has no logic of its own — every method
+delegates to `DesktopActions`, same as the tray always has.
+
+**A second, parallel theme contract.** The dashboard is skinned
+independently of the desk — a different token set
+([dashboard-theme-spec.md](dashboard-theme-spec.md)), a different pair of
+folders (`web/dashboard/themes/`, `%APPDATA%\Verso\dashboard-themes\`), a
+different settings key (`dashboardThemeId`). Unlike the desk's tokens,
+this one includes geometry (`--border-width`, `--radius-card`,
+`--shadow-card`) as well as colour — Fieldnote's soft-blurred cards and
+Sunburst's hard-offset "brutalist" ones are a genuinely different shape,
+not just a different palette, and the two shipped themes prove the
+contract holds for both. `ThemeCatalog` itself was generalised to take
+its two roots as constructor parameters rather than duplicated — the same
+scan/merge/skip logic now serves both catalogs.
+
+**A custom title bar, on a plain rectangular window.** The dashboard has
+no OS title bar — `web/dashboard/js/titlebar.js` draws one, themed like
+everything else, and drives drag/minimize/maximize/close through the
+standard WebMessage-plus-`WM_NCLBUTTONDOWN` technique
+(`Verso.Interop/TitleBarDrag.cs`). Deliberately **not** a shaped window:
+this codebase already spent real effort discovering that WPF and WebView2
+do not compose cleanly with per-pixel transparency (see
+[desktop-layer.md](desktop-layer.md)), and a settings window has no
+reason to reopen that fight. "Maximize" is a manual bounds swap to
+`SystemParameters.WorkArea` rather than true `WindowState.Maximized`,
+which avoids a borderless window covering the taskbar without adding a
+`WM_GETMINMAXINFO` hook.
+
+**You'll see:** Settings… opens a bordered card, not a stack of
+checkboxes — sidebar nav, real widget cards with on/off switches, a
+theme picker for both the desk and the dashboard itself. Switching
+dashboard themes is instant, no window reload; switching the desk's
+theme still reloads the desk, same as it always has.
+
+### Phase 10 — theme pass for the desk (open-ended) ← **your 3a, next**
 
 Now that background, cleanup toggles, the widget loader, drag/drop, new
-widgets and music are all real, design the actual look: a new
-`theme.json`/`theme.css`, or a reworked Smoked Petrol.
+widgets and music are all real, design the actual look of the desk
+itself: a new `theme.json`/`theme.css`, or a reworked Smoked Petrol. Not
+to be confused with Phase 9's dashboard theme, which is a separate
+contract this phase does not touch.
 
 **You'll see:** switch themes, the whole desk changes skin, nothing
 functional breaks — the payoff of doing 3b before 3a.
@@ -409,21 +560,20 @@ functional breaks — the payoff of doing 3b before 3a.
 
 **Stop here if it's just for you.**
 
-### Phase 10 — don't be a hog, the rest (3–4 days)
+### Phase 11 — don't be a hog, the rest (3–4 days)
 
 The remaining pause rules: battery, monitor off, throttle-when-hidden.
 Multi-monitor: one window per display, correct DPI, handle monitor
 hot-plug. Tedious, unglamorous, load-bearing. Unchanged from the original
 plan's Phase 4.
 
-### Phase 11 — could ship it (+6–10 weeks)
+### Phase 12 — could ship it (+6–10 weeks)
 
-Settings window (arrange widgets, per-monitor config, theme picker).
 Installer. Autostart. Crash reporting. First-run experience. The widget
-loader and drag/drop already landed in Phases 5-6, ahead of where the
-original plan put them.
+loader and drag/drop already landed in Phases 5-6, and the dashboard
+itself in Phase 9, ahead of where the original plan put them.
 
-### Phase 12 — could sell it (+ open-ended)
+### Phase 13 — could sell it (+ open-ended)
 
 Licensing, auto-update, support, and — only if you decide other people's
 wallpapers should be discoverable *inside* the app rather than downloaded
@@ -472,3 +622,10 @@ actually true rather than aspirational. See [theme-spec.md](theme-spec.md).
 | 10 | Video | libmpv deferred: it needs a binary that is not in the repo, and without a WorkerW a full-screen video would cover the desktop icons |
 | 11 | **Video, again** | libmpv **dropped**, not just deferred. The wallpaper layer is already a WebView2 — an `<video>` element covers "play a downloaded video as background" with no new native dependency. See Phase 3 |
 | 12 | **Phases 3-6 reordered** | Split into Phases 3-12, each landing something runnable: background picker, cleanup toggles, widget loader, drag/drop, new widgets, SMTC, then theme (3a) — functionality before visual design, per your instruction |
+| 13 | **Dashboard pulled forward** | A real settings window (WPF) moved from Phase 11 to now. A tray menu is not a way to configure a wallpaper app, and every phase so far shipped with no visible controls. Tray and dashboard share one `DesktopActions` — two ways in, one implementation |
+| 14 | **Phase 6 before Phase 5** | Dragging landed before the widget loader: the loader is invisible, dragging was the missing thing. Keyed off `data-panel`, so it survives the loader unchanged |
+| 15 | **Data root is redirectable** | `%APPDATA%\Verso` can be moved to another drive via a pointer file (`data-location.txt`) or `VERSO_DATA`. The WebView2 cache under it grows without bound, and a full system drive is exactly when someone goes looking for it |
+| 16 | **Pause rule corrected** | `QUNS_BUSY` was treated as "a fullscreen app is running". It is also what Windows reports whenever notifications are silenced — Focus Assist, Do Not Disturb, quiet hours — so Verso hid itself ~2s after every launch on any machine with those on. Now only `QUNS_RUNNING_D3D_FULL_SCREEN` counts |
+| 17 | **Phase 5 scoped down, on purpose** | Built the loader as a real general mechanism, proved with a genuine new widget (`digital-clock`) — but did **not** migrate the dial/tasks/player off their current, working, tested hardcoded form in the same pass. Doing both at once meant risking three stable features against one largely-untested new mechanism, in the same change. The loader is proven now; migrating the built-ins is a small, low-risk follow-up whenever it's wanted, not a prerequisite for anything else |
+| 18 | **User theme/widget virtual hosts** | Found while building Phase 5: user themes 404'd in the native app — `ThemeCatalog` found them, `theme.js` built a URL, nothing ever mapped `%APPDATA%\Verso\themes` to a virtual host. Fixed alongside the equivalent widget plumbing, as two narrow mappings rather than one covering the whole data root |
+| 19 | **Dashboard rebuild inserted as Phase 9** | The old Phase 9 ("theme pass") is now **Phase 10**; the ship/sell phases after it shift to 11-13 accordingly. Driven by two new design mockups and a much larger feature request — scoped down deliberately before building: curated shortcut panels instead of real desktop-icon replacement, and taskbar/Start-menu skinning **dropped outright**, not deferred. See Phase 9 and [dashboard-theme-spec.md](dashboard-theme-spec.md) |

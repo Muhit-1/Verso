@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using H.NotifyIcon;
 using Verso.App.Hosting;
+using Verso.App.Media;
 using Verso.App.Storage;
 using Verso.App.Windows;
 using Verso.Core;
@@ -22,13 +23,17 @@ public partial class App : Application
     private DeskController? _desk;
     private DesktopActions? _actions;
     private ThemeCatalog? _themes;
+    private ThemeCatalog? _dashboardThemes;
+    private WidgetCatalog? _widgets;
+    private FileLayoutStore? _layout;
+    private SmtcNowPlayingSource? _media;
     private MenuItem? _pauseItem;
 
     /// <summary>
     /// The dashboard is a singleton: opening it twice from the tray activates
     /// the one already open rather than stacking a second copy.
     /// </summary>
-    private SettingsWindow? _settingsWindow;
+    private DashboardWindow? _dashboardWindow;
 
     /// <summary>
     /// Set once this process has actually taken the single-instance mutex.
@@ -56,13 +61,20 @@ public partial class App : Application
         VersoPaths.EnsureCreated();
 
         _settings = new SettingsStore();
-        _themes = new ThemeCatalog();
-        _bridge = new ScriptBridge(new FileTaskStore(), _themes, _settings);
+        _themes = new ThemeCatalog(VersoPaths.BundledThemes, VersoPaths.UserThemes);
+        _dashboardThemes = new ThemeCatalog(VersoPaths.BundledDashboardThemes, VersoPaths.UserDashboardThemes);
+        _widgets = new WidgetCatalog();
+        _layout = new FileLayoutStore();
+
+        _media = new SmtcNowPlayingSource();
+        await _media.StartAsync();
+
+        _bridge = new ScriptBridge(new FileTaskStore(), _themes, _widgets, _settings, _layout, _media);
 
         ApplyDesktopCleanup();
 
         _desk = new DeskController(_bridge, _settings);
-        _actions = new DesktopActions(_settings, _desk);
+        _actions = new DesktopActions(_settings, _desk, _layout);
 
         _tray = BuildTrayIcon();
 
@@ -137,20 +149,20 @@ public partial class App : Application
     /// <summary>Opens the dashboard, or brings the one already open to the front.</summary>
     private void OpenSettingsWindow()
     {
-        if (_settings is null || _desk is null || _actions is null || _themes is null)
+        if (_settings is null || _actions is null || _themes is null || _dashboardThemes is null || _widgets is null)
         {
             return;
         }
 
-        if (_settingsWindow is null)
+        if (_dashboardWindow is null)
         {
-            _settingsWindow = new SettingsWindow(_settings, _desk, _actions, _themes);
-            _settingsWindow.Closed += (_, _) => _settingsWindow = null;
-            _settingsWindow.Show();
+            _dashboardWindow = new DashboardWindow(_settings, _actions, _themes, _dashboardThemes, _widgets);
+            _dashboardWindow.Closed += (_, _) => _dashboardWindow = null;
+            _dashboardWindow.Show();
         }
         else
         {
-            _settingsWindow.Activate();
+            _dashboardWindow.Activate();
         }
     }
 
@@ -208,6 +220,7 @@ public partial class App : Application
         _desk?.Dispose();
         _tray?.Dispose();
         _bridge?.Dispose();
+        _media?.Dispose();
         _instanceMutex?.Dispose();
         base.OnExit(e);
     }

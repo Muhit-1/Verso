@@ -1,0 +1,321 @@
+/* ==================================================================
+   VERSO DASHBOARD — components
+
+   Nav, cards, toggles, list rows, the theme picker. Entirely
+   var()-driven, same rule as base.css.
+================================================================== */
+
+/* ---- nav -------------------------------------------------------- */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius-card);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+
+.nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* ---- section chrome ----------------------------------------------- */
+
+.section-divider {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 26px 0 14px;
+  padding-top: 20px;
+  border-top: var(--border-width) solid var(--border);
+}
+
+.section-divider:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.hint {
+  color: var(--ink-muted);
+  font-size: 12px;
+  margin: 4px 0 14px;
+}
+
+/* ---- buttons -------------------------------------------------------- */
+
+.btn {
+  padding: 8px 14px;
+  border-radius: var(--radius-card);
+  border: var(--border-width) solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.btn.primary:hover {
+  opacity: .9;
+}
+
+.btn-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+/* ---- toggle row + switch --------------------------------------------- */
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.toggle-row .label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.toggle-row .sub {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+.switch {
+  width: 36px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--border);
+  position: relative;
+  flex: 0 0 auto;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+  transition: left .12s ease;
+}
+
+.switch.on {
+  background: var(--accent);
+}
+
+.switch.on .knob {
+  left: 18px;
+}
+
+/* ---- widget grid ------------------------------------------------------ */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.card {
+  background: var(--card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.card-preview {
+  height: 84px;
+  border-radius: calc(var(--radius-card) - 4px);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: var(--border-width) solid var(--border);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.card-sub {
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* ---- list rows (apps) -------------------------------------------------- */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.list-row .name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.list-empty {
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  padding: 4px 2px 14px;
+}
+
+.icon-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.icon-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.icon-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* ---- theme picker ------------------------------------------------------- */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+  margin-bottom: 8px;
+}
+
+.theme-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: var(--card);
+  border: var(--border-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 10px;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  position: relative;
+}
+
+.theme-card.selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.theme-card-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-card-preview {
+  aspect-ratio: 16 / 10;
+  border-radius: calc(var(--radius-card) - 4px);
+  overflow: hidden;
+  border: var(--border-width) solid var(--border);
+}
+
+.theme-card-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: 8px;
+  text-align: center;
+}

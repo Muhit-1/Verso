@@ -41,7 +41,37 @@ function writeLocalTasks(tasks) {
   }
 }
 
-function createDemoHost() {
+/**
+ * Widget discovery for a plain browser: there is no host to list a
+ * directory, so — same trick as theme.js — read a hand-maintained
+ * index file and fetch each manifest it names.
+ */
+async function discoverDemoWidgets() {
+  try {
+    const res = await fetch("../widgets/widgets.json", { cache: "no-cache" });
+    const index = await res.json();
+
+    const found = await Promise.all((index.widgets ?? []).map(async id => {
+      try {
+        const r = await fetch(`../widgets/${id}/widget.json`, { cache: "no-cache" });
+        if (!r.ok) return null;
+        const manifest = await r.json();
+        // Folder name wins, same rule as themes and as the real catalog.
+        return { ...manifest, id, source: "bundled" };
+      } catch {
+        return null;
+      }
+    }));
+
+    return found.filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+async function createDemoHost() {
+  const widgets = await discoverDemoWidgets();
+
   const seeded = [
     { id: "t1", text: "Run the Phase 0 spike", done: true },
     { id: "t2", text: "Decide: mouse hook, or a layered widget window", done: false },
@@ -121,7 +151,24 @@ function createDemoHost() {
     onNowPlayingChanged: cb => listeners.push(cb),
     // No host, so no chosen background either — the stage falls back to
     // whatever the active theme's own --stage/--photo tokens paint.
-    getBackground: () => ({ kind: "none", url: null })
+    getBackground: () => ({ kind: "none", url: null }),
+    // Layout has no demo data: an empty object means "wherever the CSS
+    // puts them", which is the correct first-run desk. layout.js falls
+    // back to localStorage, so dragging still persists in a browser.
+    getLayout: () => null,
+    saveLayout: () => {},
+
+    getWidgets: () => widgets,
+
+    // No real apps to launch without a host. Seeded so the app-launcher
+    // widget has something to show while being developed standalone.
+    getLauncherEntries: () => [
+      { id: "demo-1", name: "Notepad" },
+      { id: "demo-2", name: "Calculator" }
+    ],
+    launchApp(id) {
+      console.log(`Verso (demo): would launch ${id}`);
+    }
   };
 }
 
@@ -162,9 +209,24 @@ async function createRealHost(bridge) {
   // does after a theme is installed.
   const background = parse(await bridge.GetBackground(), { kind: "none", url: null });
 
-  // Until the host raises a real event (Phase 3), poll. One call a second
-  // across a COM proxy costs nothing measurable, and it keeps this file
-  // from having to change shape when the event arrives.
+  // Same reasoning as the background: read once at startup, because the
+  // only thing that changes it mid-session is this page itself.
+  let layout = parse(await bridge.GetLayout(), {});
+
+  // Same again: the set of installed widgets does not change mid-session
+  // either — a widget dropped into the folder while Verso is running
+  // needs a restart to be picked up, same as a widget.json edit does.
+  const widgets = parse(await bridge.GetWidgets(), []);
+
+  // And again: the launcher list only changes from the dashboard, which
+  // reloads the desk itself after adding or removing an entry.
+  const launcherEntries = parse(await bridge.GetLauncherEntries(), []);
+
+  // Polling, deliberately, even now that Phase 8 wired SMTC up for real.
+  // SmtcNowPlayingSource does raise real .NET events on its side, but
+  // COM events do not survive the JS boundary cleanly, and one call a
+  // second across the proxy costs nothing measurable — simpler than a
+  // WebMessage-based push channel for a difference no one would see.
   setInterval(refreshMedia, 1000);
 
   return {
@@ -186,7 +248,18 @@ async function createRealHost(bridge) {
     previous() { bridge.Previous(); refreshMedia(); },
 
     onNowPlayingChanged: cb => listeners.push(cb),
-    getBackground: () => background
+    getBackground: () => background,
+
+    getLayout: () => layout,
+    saveLayout(next) {
+      layout = next;                                 // cache first, so a drag
+      bridge.SaveLayout(JSON.stringify(next));       // never waits on IO
+    },
+
+    getWidgets: () => widgets,
+
+    getLauncherEntries: () => launcherEntries,
+    launchApp(id) { bridge.LaunchApp(id); }
   };
 }
 
@@ -214,10 +287,33 @@ export async function connect() {
     }
   }
 
-  host = createDemoHost();
+  host = await createDemoHost();
   return host;
 }
 
+/**
+ * The empty stand-in {@link get} hands out if it is ever called before
+ * {@link connect} has resolved. Every module in the shell awaits connect()
+ * before touching Host.get(), so this path is not expected to run — but
+ * createDemoHost() is async now (it discovers widgets over fetch), so
+ * get() can no longer build a demo host on demand the way it used to.
+ * Returning something inert is still better than throwing into whatever
+ * called it.
+ */
+const EMPTY_HOST = {
+  kind: "demo", hostVersion: "demo",
+  loadTasks: () => [], saveTasks() {},
+  getNowPlaying: () => null, getQueue: () => [],
+  play() {}, pause() {}, next() {}, previous() {}, onNowPlayingChanged() {},
+  getBackground: () => ({ kind: "none", url: null }),
+  getLayout: () => null, saveLayout() {},
+  getWidgets: () => [],
+  getLauncherEntries: () => [], launchApp() {}
+};
+
 export function get() {
-  return host ?? (host = createDemoHost());
+  if (!host) {
+    console.warn("Verso: Host.get() called before Host.connect() resolved.");
+  }
+  return host ?? EMPTY_HOST;
 }

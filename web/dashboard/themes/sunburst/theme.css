@@ -1,0 +1,26 @@
+/* Sunburst — hard offset shadows instead of blur, the ink colour doubling
+   as the border colour. See docs/dashboard-theme-spec.md. */
+
+:root {
+  --ink: #2B2320;
+  --ink-muted: #7A6A56;
+
+  --surface: #FFFBF2;
+  --sidebar: #FFFBF2;
+  --card: #FFFBF2;
+  --border: #2B2320;
+
+  --accent: #D9622B;
+  --accent-soft: #E8A93A;
+  --accent-2: #1F6F6B;
+  --on-accent: #FFFBF2;
+
+  --border-width: 2px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 3px 3px 0 var(--border);
+
+  --font-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --font-sans: "Work Sans", "Segoe UI", sans-serif;
+  --font-mono: Consolas, "Courier New", monospace;
+}

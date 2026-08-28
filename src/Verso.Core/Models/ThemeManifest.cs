@@ -48,4 +48,13 @@ public sealed class ThemeManifest
     /// <summary>Lowest shell version this theme's token set is valid for.</summary>
     [JsonPropertyName("minShellVersion")]
     public string MinShellVersion { get; set; } = "0.1.0";
+
+    /// <summary>
+    /// "bundled" or "user". Set by the catalog scan, never read from the
+    /// file. A bundled theme's stylesheet is fetched from the shell's own
+    /// virtual host; a user theme lives in a different real folder and
+    /// needs a different one — see js/theme.js.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = "bundled";
 }

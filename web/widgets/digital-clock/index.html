@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Clock widget</title>
+
+<!--
+  DIGITAL CLOCK — an alternate face for the time.
+
+  Proves the widget loader (Phase 5) with something more useful than
+  a throwaway: this is also the first of the alternate clock faces
+  Phase 7 asked for. Needs no permissions — it only reads the
+  system clock, which is not a host capability at all.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:var(--font-mono);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  .readout{
+    display:flex;
+    align-items:baseline;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .segment{
+    font-size:clamp(28px, 6vw, 56px);
+    font-weight:600;
+    color:var(--chalk);
+    letter-spacing:0.02em;
+  }
+
+  .colon{
+    font-size:clamp(28px, 6vw, 56px);
+    font-weight:600;
+    color:var(--lume);
+    opacity:0.75;
+    margin:0 0.06em;
+    animation:blink 2s steps(1) infinite;
+  }
+
+  .secs{
+    font-size:clamp(13px, 2.4vw, 20px);
+    color:var(--slate);
+    margin-left:0.35em;
+    align-self:flex-end;
+    padding-bottom:0.3em;
+  }
+
+  @keyframes blink{ 50%{ opacity:0.25; } }
+
+  @media (prefers-reduced-motion: reduce){
+    .colon{ animation:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="readout">
+  <span class="segment" id="hh">00</span>
+  <span class="colon">:</span>
+  <span class="segment" id="mm">00</span>
+  <span class="secs" id="ss">00</span>
+</div>
+
+<script type="module">
+  const pad = n => (n < 10 ? "0" : "") + n;
+  const hh = document.getElementById("hh");
+  const mm = document.getElementById("mm");
+  const ss = document.getElementById("ss");
+
+  let last = "";
+
+  function paint() {
+    const d = new Date();
+    const key = d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds();
+    if (key === last) return;   // Rule 4: touch the DOM only on change.
+    last = key;
+
+    hh.textContent = pad(d.getHours());
+    mm.textContent = pad(d.getMinutes());
+    ss.textContent = pad(d.getSeconds());
+  }
+
+  paint();
+  setInterval(paint, 1000);   // matches tickMs in widget.json
+</script>
+</body>
+</html>

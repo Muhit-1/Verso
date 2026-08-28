@@ -11,22 +11,29 @@ namespace Verso.App.Hosting;
 /// <remarks>
 /// <para>
 /// A theme is a folder containing a theme.json. Two places are scanned: the
-/// themes shipped with the app, and %APPDATA%\Verso\themes for ones the user
-/// dropped in. A user theme with the same id as a bundled one replaces it,
-/// which is how someone retints a stock theme without editing Program Files.
+/// bundled root and the user root passed to the constructor. A user theme
+/// with the same id as a bundled one replaces it, which is how someone
+/// retints a stock theme without editing Program Files.
 /// </para>
 /// <para>
 /// Folders whose names begin with an underscore are skipped — that is how
 /// <c>_template</c> stays out of the picker.
 /// </para>
+/// <para>
+/// Takes its roots rather than hardcoding <see cref="VersoPaths.BundledThemes"/>/
+/// <see cref="VersoPaths.UserThemes"/> so the same class serves both the desk's
+/// themes and the dashboard's — two different token contracts (see
+/// docs/theme-spec.md vs docs/dashboard-theme-spec.md), each with its own pair
+/// of folders, but identical scan/merge/skip rules.
+/// </para>
 /// </remarks>
-internal sealed class ThemeCatalog
+internal sealed class ThemeCatalog(string bundledRoot, string userRoot)
 {
     public IReadOnlyList<ThemeManifest> Scan()
     {
         var found = new Dictionary<string, ThemeManifest>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var root in new[] { VersoPaths.BundledThemes, VersoPaths.UserThemes })
+        foreach (var (root, source) in new[] { (bundledRoot, "bundled"), (userRoot, "user") })
         {
             if (!Directory.Exists(root))
             {
@@ -56,6 +63,7 @@ internal sealed class ThemeCatalog
                 // The folder name wins. An id that disagrees with its folder
                 // would break every relative URL the shell builds from it.
                 manifest.Id = name;
+                manifest.Source = source;
                 found[name] = manifest;
             }
         }

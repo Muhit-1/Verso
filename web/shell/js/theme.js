@@ -16,6 +16,19 @@
 ================================================================== */
 
 export const THEME_ROOT = "../themes";
+
+/**
+ * Where a *user-installed* theme's files actually are. Distinct from
+ * THEME_ROOT because a user theme lives in %APPDATA%\Verso\themes (or
+ * wherever that has been redirected to — see docs/plan.md's data-root
+ * amendment), a different real folder from the bundled web layer, mapped
+ * to its own virtual host in DeskWindow.cs. Building every theme's URL
+ * from THEME_ROOT unconditionally was a bug: a user theme's own CSS
+ * would 404 the instant the page tried to load it, even though the host
+ * found the theme fine.
+ */
+const USER_THEME_ROOT = "https://verso.user-themes.local";
+
 const STORE_KEY = "verso.theme.v1";
 const FALLBACK_ID = "smoked-petrol";
 
@@ -102,8 +115,11 @@ export async function apply(id) {
     stale.remove();
   }
 
+  // A user theme's files live under a different virtual host than a
+  // bundled one — see USER_THEME_ROOT above.
+  const root = manifest.source === "user" ? USER_THEME_ROOT : THEME_ROOT;
   const sheet = manifest.stylesheet ?? "theme.css";
-  const link = ensureLink("verso-theme", { href: `${THEME_ROOT}/${id}/${sheet}` });
+  const link = ensureLink("verso-theme", { href: `${root}/${id}/${sheet}` });
 
   await new Promise(resolve => {
     if (link.sheet) return resolve();

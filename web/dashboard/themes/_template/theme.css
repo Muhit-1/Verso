@@ -1,0 +1,26 @@
+/* Copy this folder and fill in every token. See docs/dashboard-theme-spec.md
+   for what each one means — nothing here has a fallback if you skip it. */
+
+:root {
+  --ink: #202020;
+  --ink-muted: #6B6B6B;
+
+  --surface: #FFFFFF;
+  --sidebar: #F2F2F2;
+  --card: #FFFFFF;
+  --border: #DADADA;
+
+  --accent: #3B6FD6;
+  --accent-soft: #E4ECFB;
+  --accent-2: #6E7B4F;
+  --on-accent: #FFFFFF;
+
+  --border-width: 1px;
+  --radius-card: 12px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, .08);
+
+  --font-display: "Segoe UI", sans-serif;
+  --font-sans: "Segoe UI", sans-serif;
+  --font-mono: Consolas, monospace;
+}

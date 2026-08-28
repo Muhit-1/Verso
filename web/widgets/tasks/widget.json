@@ -1,0 +1,13 @@
+{
+  "id": "tasks",
+  "name": "Tasks",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "A short task list you can tick off from the desktop.",
+  "entry": "index.html",
+  "permissions": ["tasks"],
+  "defaultSize": { "w": 4, "h": 4 },
+  "interactive": true,
+  "tickMs": 0,
+  "minShellVersion": "0.1.0"
+}

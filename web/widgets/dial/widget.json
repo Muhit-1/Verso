@@ -1,0 +1,13 @@
+{
+  "id": "dial",
+  "name": "Dial",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "The big clock — weekday, time, date and the week number.",
+  "entry": "index.html",
+  "permissions": [],
+  "defaultSize": { "w": 8, "h": 3 },
+  "interactive": false,
+  "tickMs": 1000,
+  "minShellVersion": "0.1.0"
+}

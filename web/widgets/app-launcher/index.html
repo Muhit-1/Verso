@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>App Launcher widget</title>
+
+<!--
+  APP LAUNCHER — a short list of apps the user chose from the
+  dashboard. Needs the "apps" permission; see docs/widget-spec.md.
+
+  Event-driven (tickMs: 0): the list only changes from the dashboard,
+  which reloads the desk after an add/remove, so there is nothing to
+  poll for on a timer. The one thing this file does poll for, briefly,
+  is the host itself arriving — see the timing note on rule 1 in
+  docs/widget-spec.md: window.VersoHost is not present on the first
+  line of this script, only shortly after.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  .head{
+    font-family:var(--font-mono);
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .list{
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:8px 4px;
+    border-top:1px solid var(--rule-faint);
+    border-left:0; border-right:0; border-bottom:0;
+    background:transparent;
+    cursor:pointer;
+    font:inherit;
+    color:var(--chalk);
+    text-align:left;
+    width:100%;
+  }
+  .row:first-child{ border-top:0; }
+  .row:hover{ background:var(--lume-wash); }
+  .row:focus-visible{ outline:1px solid var(--lume); outline-offset:1px; }
+
+  .dot{
+    flex:0 0 auto;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--brass);
+  }
+
+  .name{
+    font-size:14px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .empty{
+    margin:10px 0 0;
+    font-size:13px;
+    color:var(--slate-deep);
+    font-style:italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="head">Apps</div>
+<ul class="list" id="list"></ul>
+<p class="empty" id="empty" hidden>Add apps from the Verso dashboard.</p>
+
+<script type="module">
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+
+  function render(entries) {
+    listEl.textContent = "";
+
+    for (const entry of entries) {
+      const li = document.createElement("li");
+      const row = document.createElement("button");
+      row.className = "row";
+      row.type = "button";
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = entry.name;
+
+      row.append(dot, name);
+      row.addEventListener("click", () => {
+        (window.VersoHost ?? null)?.launchApp?.(entry.id);
+      });
+
+      li.appendChild(row);
+      listEl.appendChild(li);
+    }
+
+    emptyEl.hidden = entries.length > 0;
+  }
+
+  /*
+    A short, bounded poll for the host — not a repaint tick. This
+    widget has nothing to redraw once rendered; it only needs one
+    chance to find window.VersoHost after the loader sets it, which
+    happens shortly after this script starts running.
+  */
+  let attempts = 0;
+
+  function tryRender() {
+    const host = window.VersoHost ?? null;
+    if (host?.getLauncherEntries) {
+      render(host.getLauncherEntries());
+      return;
+    }
+
+    attempts++;
+    if (attempts < 20) {
+      setTimeout(tryRender, 100);
+    } else {
+      // No host ever arrived (opened standalone in a browser) — render
+      // the empty state rather than spin forever.
+      render([]);
+    }
+  }
+
+  tryRender();
+</script>
+</body>
+</html>

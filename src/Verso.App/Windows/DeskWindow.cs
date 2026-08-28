@@ -56,6 +56,18 @@ internal sealed class DeskWindow : IDisposable
     /// </summary>
     private const string VirtualHost = "verso.local";
 
+    /// <summary>
+    /// User-installed themes live under <see cref="VersoPaths.UserThemes"/>, a
+    /// different real folder from the bundled web layer — and, since Phase 3,
+    /// possibly on a different drive entirely. Without a mapping for it, a
+    /// user theme's own CSS 404s the instant the page fetches it, even though
+    /// the catalog scan on the C# side finds the theme fine.
+    /// </summary>
+    private const string UserThemesVirtualHost = "verso.user-themes.local";
+
+    /// <summary>Same reasoning as <see cref="UserThemesVirtualHost"/>, for <see cref="VersoPaths.UserWidgets"/>.</summary>
+    private const string UserWidgetsVirtualHost = "verso.user-widgets.local";
+
     private readonly ScriptBridge _bridge;
     private readonly SettingsStore _settings;
     private readonly DeskMode _mode;
@@ -134,7 +146,22 @@ internal sealed class DeskWindow : IDisposable
 
         core.SetVirtualHostNameToFolderMapping(
             VirtualHost,
-            ResolveWebRoot(),
+            VersoPaths.ResolveWebRoot(),
+            CoreWebView2HostResourceAccessKind.Allow);
+
+        // Two narrow mappings rather than one covering the whole data root —
+        // settings.json and tasks.json have no business being fetchable by a
+        // page, even a trusted first-party one.
+        Directory.CreateDirectory(VersoPaths.UserThemes);
+        core.SetVirtualHostNameToFolderMapping(
+            UserThemesVirtualHost,
+            VersoPaths.UserThemes,
+            CoreWebView2HostResourceAccessKind.Allow);
+
+        Directory.CreateDirectory(VersoPaths.UserWidgets);
+        core.SetVirtualHostNameToFolderMapping(
+            UserWidgetsVirtualHost,
+            VersoPaths.UserWidgets,
             CoreWebView2HostResourceAccessKind.Allow);
 
         ApplyBackgroundMapping();
@@ -322,29 +349,6 @@ internal sealed class DeskWindow : IDisposable
             ScriptBridge.BackgroundVirtualHost,
             folder,
             CoreWebView2HostResourceAccessKind.Allow);
-    }
-
-    /// <summary>
-    /// Where the web layer lives.
-    /// </summary>
-    /// <remarks>
-    /// An installed build has it beside the executable. Running from source that
-    /// copy also exists, but preferring the repo's own folder means editing a
-    /// theme and reloading works without a rebuild.
-    /// </remarks>
-    private static string ResolveWebRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        for (var i = 0; i < 8 && directory is not null; i++, directory = directory.Parent)
-        {
-            var candidate = Path.Combine(directory.FullName, "web", "shell", "index.html");
-            if (File.Exists(candidate))
-            {
-                return Path.Combine(directory.FullName, "web");
-            }
-        }
-
-        return VersoPaths.BundledWeb;
     }
 
     public void Dispose()

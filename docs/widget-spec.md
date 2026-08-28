@@ -60,8 +60,14 @@ nothing and the bridge you get has no methods on it.
 |---|---|
 | `tasks` | Read and write the task list. |
 | `media` | Read what is playing; control transport. |
+| `apps` | List and launch the apps the user added from the dashboard. |
 | `system` | CPU, memory, battery, network. |
 | `network` | Reach the internet at all. |
+
+`apps` is deliberately narrow: `launchApp(id)` only accepts an id already
+returned by `getLauncherEntries()`, which only ever contains what the user
+picked themselves from a native file dialog. A widget cannot add an entry
+and cannot launch an arbitrary path — see [host-api.md](host-api.md).
 
 Declaring `network` is a visible choice on purpose. A widget that phones
 home should have to say so in a file the user can read.
@@ -72,6 +78,14 @@ home should have to say so in a file the user can read.
 Never fetch a local file, never touch `chrome.webview` directly, never
 assume a .NET object exists. If the host is absent, degrade to something
 sensible and keep rendering. Full API in [host-api.md](host-api.md).
+
+Look it up **fresh every time you need it — never cache it once at the top
+of your script.** The loader sets `window.VersoHost` on your iframe only
+after your own script has already started running, so `const host =
+window.VersoHost` at module scope reads `null` even when a host is on its
+way. Reading it again inside `paint()` — which `tickMs` already has you
+calling on a timer — costs nothing and always sees the current answer.
+`_template/index.html` shows the pattern.
 
 **2. Never set a colour, a font or a radius of your own.**
 Use the theme tokens. They are inherited from the shell, so a widget

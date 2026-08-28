@@ -1,0 +1,14 @@
+{
+  "id": "fieldnote",
+  "name": "Fieldnote",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Warm paper, soft shadows, serif headings. The dashboard's default look.",
+  "scheme": "light",
+  "stylesheet": "theme.css",
+  "preview": null,
+  "fonts": [
+    "https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap"
+  ],
+  "minShellVersion": "0.1.0"
+}
