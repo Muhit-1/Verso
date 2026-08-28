@@ -27,6 +27,14 @@ later.
 > **[amended]** where they appear and summarised at the end. Phases 0-2 are
 > now built; where the plan's assumptions did not survive contact with
 > Windows, the section says so.
+>
+> **Revision 2, 2026-08-28.** Phases 3-6 are reordered and split into
+> smaller phases, each one landing something you can run and see, driven by
+> the actual feature target: a Lively/Wallpaper-Engine-style desktop —
+> pick your own video/image/interactive background, movable widgets, a
+> clean-desktop option — built for personal use first, themed only after
+> the functionality works. Two more amendments come out of that pass,
+> numbered 11-12 below. The Phase 0-2 sections below are untouched history.
 
 ---
 
@@ -83,7 +91,7 @@ if a dependency ever objects it is a one-line change back.
 |---|---|---|
 | App framework | **.NET 10 + WPF** | WinUI 3 is newer but its window-handle story is worse, and you need raw window handles constantly here |
 | Browser control | **WebView2** (`Microsoft.Web.WebView2`) | Chromium, ships with Windows, no runtime to bundle |
-| Video wallpaper | **libmpv, called directly** | **[amended]** — see below |
+| Video wallpaper | **`<video>` in the existing WebView2**, not libmpv | **[amended, again]** — see Phase 3 below |
 | Win32 calls | **CsWin32** (`Microsoft.Windows.CsWin32`) | Source generator — you list the API names in `NativeMethods.txt` and it writes correct P/Invoke signatures for you. Saves real hours |
 | Now playing | **`Windows.Media.Control`** (WinRT) | `GlobalSystemMediaTransportControlsSessionManager`. Reads title/artist/artwork/position from Spotify, YouTube Music, browser tabs, anything. Also gives you play/pause/next. Built into Windows — you get the whole music widget nearly free |
 | Tray icon | **H.NotifyIcon** | Because the built-in one is from 2005 |
@@ -96,6 +104,14 @@ unmaintained. mpv's C API is tiny — `mpv_create`, `mpv_set_option_string`,
 `mpv_command`, `mpv_terminate_destroy` covers nearly all of it — so budget
 roughly 200 lines of P/Invoke you own outright. A dead dependency sitting in
 your render path is worse than code you control.
+
+**[amended, again] Then dropped in favour of the `<video>` tag.** The
+wallpaper layer is already a WebView2. Chromium plays mp4/webm natively and
+in hardware, which covers "play a short video I downloaded as my
+background" completely. libmpv would only earn its keep for formats or
+performance the `<video>` element can't handle — cross that bridge if it's
+ever actually reached. Until then it's a 40 MB binary and 200 lines of
+P/Invoke this project doesn't need. See Phase 3.
 
 ---
 
@@ -292,36 +308,129 @@ and it lands in `%APPDATA%/Verso/tasks.json` through the bridge.
 
 *"When you can tick a task off your desktop, the product exists."*
 
-### Phase 3 — real data (2–4 days) ← **next**
+### Phase 3 — background picker (1–2 days) ← **next**
 
-Wire the bridge: tasks to a JSON file *(done)*, music to the SMTC
-API. The demo fallback stays in the file — it's what makes the web layer
-runnable in a plain browser, and deleting it would end your ability to
-develop widgets without launching the app.
+Let the wallpaper be *your* file, not just a theme's built-in photo.
 
-### Phase 4 — don't be a hog (3–4 days)
+- Tray menu: **Set Background…** → a file picker.
+- **Image** — the same static path the theme's `--photo` token already
+  uses, just user-chosen instead of theme-bundled.
+- **Video** — an `<video autoplay loop muted playsinline>` pointing at the
+  chosen file, full-bleed behind the widgets. See the amendment above —
+  this replaces libmpv, no new native dependency.
+- **Interactive** — point the same layer at any local `index.html`. This is
+  the "download a free live wallpaper and use it" feature: the user finds
+  the file themselves anywhere online — a video, or someone's HTML
+  wallpaper — and Verso only needs to accept "here's a local file, use
+  it." No marketplace, no hosting, no third-party code review; that stays
+  out of scope until Phase 12, if ever.
+- Selection persists the same way tasks do — a small JSON file in
+  `%APPDATA%/Verso`.
+
+**You'll see:** pick an mp4 off your disk, the desktop plays it on loop.
+Pick an image, it's static. Pick an `index.html`, it animates.
+
+### Phase 4 — desktop cleanup toggles (1 day)
+
+- Tray checkboxes: **Hide taskbar**, **Hide desktop icons**.
+- Taskbar: `SHAppBarMessage` (auto-hide), or toggle its visibility
+  directly.
+- Icons: toggle the `SysListView32` under Progman — the same well-known
+  trick every wallpaper tool uses. Independent of the WorkerW problem;
+  doesn't touch it.
+
+**Side effect worth knowing:** once icons can be hidden, the reason Verso
+stays sized to just its panels — staying behind the icon layer — no longer
+applies when the user has chosen to hide icons. Worth re-testing a
+full-screen bottom-most surface under that condition; it may simplify
+Phase 3's video/interactive path further.
+
+**You'll see:** flip a checkbox, the taskbar or icons vanish; flip it back,
+they return.
+
+### Phase 5 — widget loader (2–3 days)
+
+Prove the widget contract by using it for real, on the three widgets that
+already exist.
+
+- Read folders from `web/widgets/*` and `%APPDATA%\Verso\widgets\`, render
+  each `index.html` into its own iframe per [widget-spec.md](widget-spec.md),
+  instead of the shell drawing the dial/tasks/player itself in `desk.js`.
+- No visible change on day one — the point is `desk.js` no longer
+  hardcodes three widgets, it reads a folder list.
+
+**You'll see:** the desk looks identical to today, but drop a throwaway
+fourth folder into `web/widgets/`, following `_template`, restart, and it
+appears with zero shell code touched. That's the proof it works.
+
+### Phase 6 — move and resize widgets (2–3 days)
+
+- Drag a widget panel to a new spot on the desk; grid-snap to keep it tidy.
+- Layout (which widgets, where) persists to JSON, same pattern as tasks.
+
+**You'll see:** drag the clock to the other side of the screen, reload the
+app, it's still there.
+
+### Phase 7 — new widgets, default theme only (ongoing, one at a time)
+
+Per your call: build these against Smoked Petrol as it ships today — no
+new colours, fonts or radii. Theme work (3a) waits until this phase is
+done, which is exactly why the theme/widget boundary in this doc exists.
+
+- Clock: one or two alternate faces (digital, analogue) as separate widget
+  folders.
+- App launcher / dock: a short list of pinned apps, click to open. This is
+  the first widget capability that isn't already in `IVersoHost` — needs a
+  small new host API (list pinned apps, launch one).
+
+**You'll see:** each new widget appear on the desk and work, one at a time.
+
+### Phase 8 — real music data, SMTC (2–4 days)
+
+Carried over unchanged from the original plan — `GlobalSystemMediaTransportControlsSessionManager`
+is still the right way to do "connect to Spotify/YouTube": it reads
+whatever is actually playing on the machine, no per-service API keys or
+OAuth. The demo fallback stays in the code — it's what makes the web layer
+runnable without launching the app.
+
+**You'll see:** hit play in Spotify or a YouTube tab, the widget updates
+live with title, artist and artwork.
+
+### Phase 9 — theme pass (open-ended) ← **your 3a**
+
+Now that background, cleanup toggles, the widget loader, drag/drop, new
+widgets and music are all real, design the actual look: a new
+`theme.json`/`theme.css`, or a reworked Smoked Petrol.
+
+**You'll see:** switch themes, the whole desk changes skin, nothing
+functional breaks — the payoff of doing 3b before 3a.
+
+---
+
+**Stop here if it's just for you.**
+
+### Phase 10 — don't be a hog, the rest (3–4 days)
 
 The remaining pause rules: battery, monitor off, throttle-when-hidden.
-Multi-monitor: one window per display, correct DPI, handle monitor hot-plug.
-Tedious, unglamorous, load-bearing.
+Multi-monitor: one window per display, correct DPI, handle monitor
+hot-plug. Tedious, unglamorous, load-bearing. Unchanged from the original
+plan's Phase 4.
 
-**Stop here if it's just for you. Total: roughly 3–5 weeks of evenings and
-weekends.**
+### Phase 11 — could ship it (+6–10 weeks)
 
-### Phase 5 — could ship it (+6–10 weeks)
+Settings window (arrange widgets, per-monitor config, theme picker).
+Installer. Autostart. Crash reporting. First-run experience. The widget
+loader and drag/drop already landed in Phases 5-6, ahead of where the
+original plan put them.
 
-Settings window (pick wallpaper, arrange widgets, per-monitor config, theme
-picker). The widget loader that renders `web/widgets/*` into the desk.
-Drag-and-drop layout saved to JSON. Installer. Autostart. Crash reporting.
-First-run experience.
+### Phase 12 — could sell it (+ open-ended)
 
-**[amended]** The widget manifest spec is *already written* —
-[widget-spec.md](widget-spec.md) — so widgets built between now and here
-won't need rewriting.
-
-### Phase 6 — could sell it (+ open-ended)
-
-Licensing, auto-update, a widget gallery, and — the real work — support.
+Licensing, auto-update, support, and — only if you decide other people's
+wallpapers should be discoverable *inside* the app rather than downloaded
+by hand — a gallery. That specifically needs a review/sandboxing story
+first, because it means someone else's HTML/JS runs unattended on a
+stranger's desktop. Treat it as a separate project, not a checkbox on this
+one.
 
 ---
 
@@ -361,3 +470,5 @@ actually true rather than aspirational. See [theme-spec.md](theme-spec.md).
 | 8 | **Desktop layer** | The WorkerW technique is **dead on Windows 11 build 26200**. Verso uses a bottom-most window it owns, reshaped by a window region. See [desktop-layer.md](desktop-layer.md) |
 | 9 | **Input** | Phase 2 needed no mouse hook at all — a window region gives real input inside the desk and true click-through outside it |
 | 10 | Video | libmpv deferred: it needs a binary that is not in the repo, and without a WorkerW a full-screen video would cover the desktop icons |
+| 11 | **Video, again** | libmpv **dropped**, not just deferred. The wallpaper layer is already a WebView2 — an `<video>` element covers "play a downloaded video as background" with no new native dependency. See Phase 3 |
+| 12 | **Phases 3-6 reordered** | Split into Phases 3-12, each landing something runnable: background picker, cleanup toggles, widget loader, drag/drop, new widgets, SMTC, then theme (3a) — functionality before visual design, per your instruction |
