@@ -54,6 +54,21 @@ public sealed class VersoSettings
     [JsonPropertyName("widgets")]
     public WidgetSettings Widgets { get; set; } = new();
 
+    /// <summary>
+    /// On/off per Outpost-desk widget, by id. A widget missing from the map uses its catalog default
+    /// (first run: Clock and Now playing on, everything else off). Each widget has its own entry, so
+    /// switching one never touches another. See OutpostWidgetCatalog.
+    /// </summary>
+    [JsonPropertyName("outpostWidgets")]
+    public Dictionary<string, bool> OutpostWidgets { get; set; } = [];
+
+    /// <summary>
+    /// The Outpost desk's colour palette ("sunset", "night"...). Owned by the host so the dashboard and the
+    /// desk's round menu always agree. Empty = not chosen yet (the desk falls back to what it had saved).
+    /// </summary>
+    [JsonPropertyName("outpostTheme")]
+    public string OutpostTheme { get; set; } = string.Empty;
+
     /// <summary>One entry per display, keyed by the device id Windows reports.</summary>
     [JsonPropertyName("displays")]
     public List<DisplaySettings> Displays { get; set; } = [];

@@ -319,3 +319,147 @@
   margin-top: 8px;
   text-align: center;
 }
+
+/* ---- settings tabs ------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.tab {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.tab-panel {
+  display: none;
+}
+
+.tab-panel.active {
+  display: block;
+}
+
+/* ---- apps page: one section per box --------------------------------------- */
+
+.btn.small {
+  padding: 5px 12px;
+  font-size: 11.5px;
+}
+
+.app-box {
+  margin-bottom: 22px;
+}
+
+.app-box-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.app-box-name {
+  font: inherit;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: 8px;
+  padding: 3px 6px;
+  margin-left: -6px;
+  min-width: 0;
+  width: 190px;
+}
+
+input.app-box-name:hover,
+input.app-box-name:focus {
+  border-color: var(--border);
+  background: var(--surface);
+  outline: none;
+}
+
+.app-box-count {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+
+.app-box-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.app-box .list-row {
+  margin-bottom: 8px;
+}
+
+.app-row-left,
+.app-row-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.app-ico img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.select {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--border-width) solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  max-width: 190px;
+}
+
+.card-extra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 12px;
+}
+
+.card-extra .card-sub {
+  margin-top: 0;
+}

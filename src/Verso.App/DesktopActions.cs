@@ -1,4 +1,5 @@
 using System.IO;
+using Verso.App.Hosting;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
@@ -18,8 +19,26 @@ namespace Verso.App;
 /// logic — there is exactly one place that
 /// knows how to detect a background's kind or apply a cleanup toggle.
 /// </remarks>
-internal sealed class DesktopActions(SettingsStore settings, DeskController desk, FileLayoutStore layout)
+internal sealed class DesktopActions(SettingsStore settings, DeskController desk, FileLayoutStore layout, LauncherLibrary library, NotesLibrary notes)
 {
+    /// <summary>The sticky notes shared by the desk and the dashboard.</summary>
+    public NotesLibrary Notes => notes;
+
+    /// <summary>The app library shared by the desk and the dashboard.</summary>
+    public LauncherLibrary Library => library;
+
+    /// <summary>Saves the Outpost palette and pushes it to the desk at once.</summary>
+    public void SetOutpostTheme(string id)
+    {
+        if (!OutpostPalettes.Contains(id))
+        {
+            return;
+        }
+
+        settings.Update(s => s.OutpostTheme = id);
+        desk.NotifyThemeChanged();
+    }
+
     /// <summary>
     /// Forgets where the panels were dragged to and reloads the desk.
     /// </summary>
@@ -31,6 +50,13 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
     /// </remarks>
     public void ResetLayout()
     {
+        if (settings.Current.DeskStyle == "outpost")
+        {
+            // The Outpost desk keeps its own arrangement; ask it to forget it.
+            desk.ResetOutpostLayout();
+            return;
+        }
+
         layout.Reset();
         desk.ReloadWeb();
     }
@@ -189,6 +215,14 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
     /// </summary>
     public void SetWidgetEnabled(string widgetId, bool enabled)
     {
+        // The Outpost desk's widgets switch one at a time and live — no reload, nothing else touched.
+        if (settings.Current.DeskStyle == "outpost" && OutpostWidgetCatalog.Contains(widgetId))
+        {
+            settings.Update(s => s.OutpostWidgets[widgetId] = enabled);
+            desk.NotifyWidgetsChanged();
+            return;
+        }
+
         settings.Update(s =>
         {
             s.Widgets.Disabled.RemoveAll(id => id == widgetId);

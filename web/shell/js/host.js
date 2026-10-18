@@ -199,7 +199,10 @@ async function createDemoHost() {
     pause() { isPlaying = false; emit(); },
     next,
     previous,
-    onNowPlayingChanged: cb => listeners.push(cb),
+    onNowPlayingChanged: cb => {
+      listeners.push(cb);
+      return () => { const i = listeners.indexOf(cb); if (i >= 0) listeners.splice(i, 1); };   // a widget that goes away stops listening
+    },
     // No host, so no chosen background either — the stage falls back to
     // whatever the active theme's own --stage/--photo tokens paint.
     getBackground: () => ({ kind: "none", url: null }),
@@ -210,6 +213,48 @@ async function createDemoHost() {
     saveLayout: () => {},
 
     // The Outpost desk's state; localStorage is enough to develop it in a browser.
+    // Outpost widgets: each on/off by itself, defaults like the real host (Clock + Now playing on).
+    getOutpostWidgets: () => {
+      let map = {};
+      try { map = JSON.parse(localStorage.getItem("verso.outpost.widgets") || "{}"); } catch { /* ignore */ }
+      return OUTPOST_WIDGETS.map(w => ({ ...w, enabled: map[w.id] ?? w.defaultEnabled }));
+    },
+    setOutpostWidgetEnabled: (id, on) => {
+      let map = {};
+      try { map = JSON.parse(localStorage.getItem("verso.outpost.widgets") || "{}"); } catch { /* ignore */ }
+      map[id] = on;
+      try { localStorage.setItem("verso.outpost.widgets", JSON.stringify(map)); } catch { /* ignore */ }
+    },
+    openDashboard: () => console.log("Verso (demo): would open the dashboard"),
+
+    // Palette: owned by the host in the real app; kept in memory here.
+    getOutpostThemes: () => OUTPOST_THEMES.map(t => ({ ...t, selected: t.id === demoTheme })),
+    getOutpostTheme: () => demoTheme,
+    setOutpostTheme: id => { demoTheme = id; },
+
+    // App library: boxes with apps, in memory.
+    getApps: () => demoBoxes.map(b => ({ ...b, apps: b.apps.slice() })),
+    getAppIcon: () => "",
+    addApp: () => console.log("Verso (demo): no native file picker in a plain browser."),
+    removeApp: id => { demoBoxes.forEach(b => { b.apps = b.apps.filter(a => a.id !== id); }); },
+    moveApp: (id, boxId) => {
+      let app = null;
+      demoBoxes.forEach(b => { const a = b.apps.find(x => x.id === id); if (a) { app = a; b.apps = b.apps.filter(x => x !== a); } });
+      const to = demoBoxes.find(b => b.id === boxId) ?? demoBoxes[0];
+      if (app) to.apps.push(app);
+    },
+    addBox: () => {
+      const id = "b" + Date.now();
+      demoBoxes.push({ id, name: "New box", builtIn: false, apps: [] });
+      return id;
+    },
+    deleteBox: id => {
+      const gone = demoBoxes.find(b => b.id === id);
+      if (!gone || gone.builtIn) return;
+      demoBoxes[0].apps.push(...gone.apps);
+      demoBoxes.splice(demoBoxes.indexOf(gone), 1);
+    },
+
     getDeskState: () => {
       try { return JSON.parse(localStorage.getItem("verso.outpost.v1") || "{}"); } catch { return {}; }
     },
@@ -221,6 +266,18 @@ async function createDemoHost() {
 
     // No real apps to launch without a host. Seeded so the app-launcher
     // widget has something to show while being developed standalone.
+    // Sticky notes: in memory here; the real host keeps them in outpost-notes.json.
+    getNotes: () => demoNotes.map(n => ({ ...n })),
+    newNote: () => {
+      const id = "n" + Date.now();
+      demoNotes.push({ id, color: NOTE_COLORS[demoNotes.length % NOTE_COLORS.length], html: "" });
+      return id;
+    },
+    setNoteColor: (id, color) => { const n = demoNotes.find(x => x.id === id); if (n) n.color = color; },
+    deleteNote: id => { const i = demoNotes.findIndex(x => x.id === id); if (i >= 0) demoNotes.splice(i, 1); },
+    editNote: () => console.log("Verso (demo): the pop-up editor needs the real host."),
+    editBoxName: () => console.log("Verso (demo): the pop-up editor needs the real host."),
+
     getLauncherEntries: () => [
       { id: "demo-1", name: "Notepad" },
       { id: "demo-2", name: "Calculator" }
@@ -231,10 +288,38 @@ async function createDemoHost() {
   };
 }
 
+/* The Outpost widgets as the demo host knows them. The real host's list lives in OutpostWidgetCatalog.cs. */
+const OUTPOST_WIDGETS = [
+  { id: "clock", name: "Clock", description: "The big clock and date.", defaultEnabled: true },
+  { id: "np", name: "Now playing", description: "What Windows is playing.", defaultEnabled: true },
+  { id: "pomo", name: "Pomodoro", description: "A focus timer.", defaultEnabled: false },
+  { id: "sw", name: "Stopwatch", description: "A stopwatch with laps.", defaultEnabled: false },
+  { id: "notes", name: "Sticky notes", description: "Notes you can place anywhere.", defaultEnabled: false },
+  { id: "launcher", name: "App launcher", description: "See-through boxes of apps.", defaultEnabled: false },
+  { id: "flies", name: "Fireflies", description: "Drifting lights.", defaultEnabled: false }
+];
+
+const OUTPOST_THEMES = [
+  { id: "sunset", name: "Sunset", from: "#3a2540", to: "#ff9e64" },
+  { id: "night", name: "Night", from: "#0a1428", to: "#FFD700" },
+  { id: "evening", name: "Evening", from: "#1e1040", to: "#c084fc" },
+  { id: "forest-green", name: "Forest green", from: "#0c2a1e", to: "#66cc99" },
+  { id: "black-sunset", name: "Black sunset", from: "#050505", to: "#ff7a00" },
+  { id: "pencil", name: "Pencil", from: "#141414", to: "#bbbbbb" }
+];
+let demoTheme = "";
+const NOTE_COLORS = ["#7ac55c", "#5aa9e6", "#f2c94c", "#f08fb0", "#b48ae0", "#a8a8a8"];
+const demoNotes = [{ id: "n1", color: NOTE_COLORS[2], html: "Ring the ticket desk<br>about the printer" }];
+const demoBoxes = [
+  { id: "recent", name: "Recent", builtIn: true, apps: [{ id: "d1", name: "Notepad" }, { id: "d2", name: "Calculator" }] },
+  { id: "work", name: "Work", builtIn: false, apps: [] }
+];
+
 /* ---- real implementation ---------------------------------------- */
 
 async function createRealHost(bridge) {
   const listeners = [];
+  const iconCache = new Map();   // app id -> data URL (an icon never changes for an id)
 
   let tasks = [];
   let notes = [];
@@ -325,7 +410,10 @@ async function createRealHost(bridge) {
     next() { bridge.Next(); refreshMedia(); },
     previous() { bridge.Previous(); refreshMedia(); },
 
-    onNowPlayingChanged: cb => listeners.push(cb),
+    onNowPlayingChanged: cb => {
+      listeners.push(cb);
+      return () => { const i = listeners.indexOf(cb); if (i >= 0) listeners.splice(i, 1); };   // a widget that goes away stops listening
+    },
     getBackground: () => background,
 
     getLayout: () => layout,
@@ -341,6 +429,35 @@ async function createRealHost(bridge) {
       deskState = next;                              // cache first, like layout
       bridge.SaveDeskState(JSON.stringify(next));
     },
+
+    // Outpost widgets are read fresh every time (they change live from the dashboard and the desk menu).
+    getOutpostWidgets: async () => parse(await bridge.GetOutpostWidgets(), []),
+    setOutpostWidgetEnabled: (id, on) => bridge.SetOutpostWidgetEnabled(id, on),
+    openDashboard: () => bridge.OpenDashboard(),
+
+    // Palette and app library are owned by the host; read fresh, so the desk always agrees with the dashboard.
+    getOutpostThemes: async () => parse(await bridge.GetOutpostThemes(), []),
+    getOutpostTheme: async () => (await bridge.GetOutpostTheme()) || "",
+    setOutpostTheme: id => bridge.SetOutpostTheme(id),
+
+    getApps: async () => parse(await bridge.GetApps(), []),
+    async getAppIcon(id) {
+      if (!iconCache.has(id)) iconCache.set(id, (await bridge.GetAppIcon(id)) || "");
+      return iconCache.get(id);
+    },
+    // Sticky notes live in the host (their own file); the desk reads them fresh and the pop-up editor edits them.
+    getNotes: async () => parse(await bridge.GetNotes(), []),
+    newNote: () => bridge.NewNote(),
+    setNoteColor: (id, color) => bridge.SetNoteColor(id, color),
+    deleteNote: id => bridge.DeleteNote(id),
+    editNote: (id, screenRect) => bridge.EditNote(id, JSON.stringify(screenRect)),
+    editBoxName: (id, screenRect) => bridge.EditBoxName(id, JSON.stringify(screenRect)),
+
+    addApp: boxId => bridge.AddApp(boxId),
+    removeApp: id => bridge.RemoveApp(id),
+    moveApp: (id, boxId) => bridge.MoveApp(id, boxId),
+    addBox: () => bridge.AddBox(),
+    deleteBox: id => bridge.DeleteBox(id),
 
     getLauncherEntries: () => launcherEntries,
     launchApp(id) { bridge.LaunchApp(id); }
@@ -394,6 +511,10 @@ const EMPTY_HOST = {
   getBackground: () => ({ kind: "none", url: null }),
   getLayout: () => null, saveLayout() {},
   getDeskState: () => ({}), saveDeskState() {},
+  getOutpostWidgets: () => [], setOutpostWidgetEnabled() {}, openDashboard() {},
+  getOutpostThemes: () => [], getOutpostTheme: () => "", setOutpostTheme() {},
+  getNotes: () => [], newNote() {}, setNoteColor() {}, deleteNote() {}, editNote() {}, editBoxName() {},
+  getApps: () => [], getAppIcon: () => "", addApp() {}, removeApp() {}, moveApp() {}, addBox() {}, deleteBox() {},
   getWidgets: () => [],
   getLauncherEntries: () => [], launchApp() {}
 };

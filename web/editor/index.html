@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso editor</title>
+<link rel="stylesheet" href="../outpost/fonts/fonts.local.css">
+<style>
+  :root { --accent: #f2c94c; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #2b2b2b; color: #f4f4f4;
+    font-family: 'Inter', system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; border: 2px solid var(--accent); }
+  #body { flex: 1; padding: 12px 14px; font-size: .95rem; line-height: 1.4; outline: none; overflow: auto; user-select: text;
+    word-break: break-word; cursor: text; }
+  #body ul, #body ol { padding-left: 1.3em; }
+  .tools { display: flex; align-items: center; gap: 4px; padding: 6px 10px; border-top: 1px solid #444; color: #ccc; flex: none; }
+  .tools button { width: 30px; height: 26px; border-radius: 5px; font: inherit; font-size: .85rem; color: inherit;
+    background: none; border: 0; cursor: pointer; }
+  .tools button:hover { background: #444; }
+  .tools button.on { background: #555; color: #fff; }
+  .tools .sp { flex: 1; }
+  .tools .done { width: auto; padding: 0 12px; background: var(--accent); color: #1a1a1a; font-weight: 600; font-size: .72rem;
+    letter-spacing: .08em; text-transform: uppercase; }
+  .tools .done:hover { filter: brightness(1.08); background: var(--accent); }
+  body.single .tools { display: none; }
+  body.single #body { white-space: nowrap; overflow: hidden; display: flex; align-items: center; font-size: 1.05rem; }
+</style>
+</head>
+<body>
+<div id="body" contenteditable="true" spellcheck="true"></div>
+<div class="tools" id="tools">
+  <button data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+  <button data-cmd="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+  <button data-cmd="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+  <button data-cmd="strikeThrough" title="Strikethrough"><s>ab</s></button>
+  <button data-cmd="insertUnorderedList" title="Bullet list">&bull;&equiv;</button>
+  <span class="sp"></span>
+  <button class="done" id="done" title="Esc">Done</button>
+</div>
+<script>
+  // The editor page. The host opens it over a note or a box name; it reports text back through postMessage.
+  // Everything typed stays text/HTML inside this page — the host reduces notes to a few safe tags before storing them.
+  const body = document.getElementById("body");
+  const post = msg => window.chrome?.webview?.postMessage(msg);
+  let single = false;
+  let timer = 0;
+
+  const value = () => single ? body.innerText.replace(/\s+/g, " ").trim() : body.innerHTML;
+  window.__editorValue = value;
+
+  function changed() {
+    clearTimeout(timer);
+    timer = setTimeout(() => post({ type: "change", value: value() }), 800);   // autosave
+  }
+
+  function refreshTools() {
+    document.querySelectorAll(".tools [data-cmd]").forEach(b => {
+      let on = false;
+      try { on = document.queryCommandState(b.dataset.cmd); } catch { /* not supported here */ }
+      b.classList.toggle("on", on);
+    });
+  }
+
+  body.addEventListener("input", () => { changed(); refreshTools(); });
+  document.addEventListener("selectionchange", refreshTools);
+
+  document.querySelectorAll(".tools [data-cmd]").forEach(b => {
+    b.addEventListener("mousedown", e => e.preventDefault());   // keep the selection in the text
+    b.addEventListener("click", () => { document.execCommand(b.dataset.cmd); body.focus(); changed(); refreshTools(); });
+  });
+
+  const finish = () => { clearTimeout(timer); post({ type: "done", value: value() }); };
+  document.getElementById("done").addEventListener("click", finish);
+
+  addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); finish(); }
+    else if (single && e.key === "Enter") { e.preventDefault(); finish(); }
+  });
+
+  // single-line mode: no pasted line breaks or formatting
+  body.addEventListener("paste", e => {
+    if (!single) return;
+    e.preventDefault();
+    document.execCommand("insertText", false, (e.clipboardData.getData("text/plain") || "").replace(/\s+/g, " "));
+  });
+
+  window.chrome?.webview?.addEventListener("message", e => {
+    const m = e.data;
+    if (m?.type !== "init") return;
+    single = !!m.single;
+    document.body.classList.toggle("single", single);
+    if (m.color) document.documentElement.style.setProperty("--accent", m.color);
+    if (single) body.textContent = m.value || "";
+    else body.innerHTML = m.value || "";
+    body.focus();
+    // caret at the end, like clicking after the last word
+    const r = document.createRange();
+    r.selectNodeContents(body);
+    r.collapse(false);
+    const s = getSelection();
+    s.removeAllRanges();
+    s.addRange(r);
+    if (single) { r.selectNodeContents(body); s.removeAllRanges(); s.addRange(r); }   // rename: select the whole name
+    refreshTools();
+  });
+
+  post({ type: "ready" });
+</script>
+</body>
+</html>

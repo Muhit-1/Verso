@@ -86,10 +86,27 @@ public sealed class DashboardBridge
         _settings.Update(s => s.DashboardThemeId = themeId);
     }
 
+    // ---- desk style and the Outpost palette ------------------------------------
+
+    /// <returns>"outpost" or "classic" — which kind of desk the Theme page should describe.</returns>
+    public string GetDeskStyle() => _settings.Current.DeskStyle;
+
+    public string GetOutpostThemes() => JsonSerializer.Serialize(OutpostPalettes.Describe(_settings.Current), Json);
+
+    public string GetOutpostTheme() => OutpostPalettes.Chosen(_settings.Current);
+
+    public void SetOutpostTheme(string id) => _actions.SetOutpostTheme(id);
+
     // ---- widgets ------------------------------------------------------------
 
     public string GetWidgets()
     {
+        // The Outpost desk has its own widgets, each with its own switch.
+        if (_settings.Current.DeskStyle == "outpost")
+        {
+            return JsonSerializer.Serialize(OutpostWidgetCatalog.Describe(_settings.Current), Json);
+        }
+
         var manifests = _widgets.Scan();
         WidgetCatalog.ApplyEnabled(manifests, _settings.Current.Widgets.Disabled);
         return JsonSerializer.Serialize(manifests, Json);
@@ -140,4 +157,31 @@ public sealed class DashboardBridge
     public void AddLauncherEntry() => _actions.AddLauncherEntry(_owner);
 
     public void RemoveLauncherEntry(string id) => _actions.RemoveLauncherEntry(id);
+
+    // ---- app library: apps sorted into boxes ------------------------------------
+
+    /// <returns>JSON array of boxes <c>{id, name, builtIn, apps:[{id, name}]}</c>, Recent first.</returns>
+    public string GetApps() => JsonSerializer.Serialize(_actions.Library.Describe(), Json);
+
+    /// <returns>A <c>data:image/png</c> URL for the app's icon, or <c>""</c>.</returns>
+    public string GetAppIcon(string id) => _actions.Library.GetIcon(id);
+
+    /// <summary>Opens the file picker; new apps land in the given box ("recent" if empty).</summary>
+    public void AddApp(string boxId) => _actions.Library.PickAndAdd(boxId, _owner);
+
+    public void RemoveApp(string id) => _actions.Library.RemoveApp(id);
+
+    public void MoveApp(string id, string boxId) => _actions.Library.MoveApp(id, boxId);
+
+    public string AddBox() => _actions.Library.AddBox();
+
+    public void RenameBox(string id, string name) => _actions.Library.RenameBox(id, name);
+
+    public void DeleteBox(string id) => _actions.Library.DeleteBox(id);
+
+    // ---- sticky notes: the dashboard only counts and creates; typing happens on the desk -----------
+
+    public int GetNoteCount() => _actions.Notes.Describe().Count;
+
+    public string NewNote() => _actions.Notes.NewNote();
 }

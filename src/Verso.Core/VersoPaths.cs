@@ -112,6 +112,9 @@ public static class VersoPaths
     /// </summary>
     public static string OutpostFile => Path.Combine(DataRoot, "outpost.json");
 
+    /// <summary>The sticky notes of the Outpost desk (text and colour). Positions stay in <see cref="OutpostFile"/>.</summary>
+    public static string OutpostNotesFile => Path.Combine(DataRoot, "outpost-notes.json");
+
     /// <summary>logs</summary>
     public static string LogDirectory => Path.Combine(DataRoot, "logs");
 

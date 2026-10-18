@@ -59,6 +59,8 @@ public sealed class ScriptBridge : IDisposable
     private readonly FileLayoutStore _layout;
     private readonly FileLayoutStore _deskState;
     private readonly INowPlayingSource _media;
+    private readonly LauncherLibrary _library;
+    private readonly NotesLibrary _notesLibrary;
 
     internal ScriptBridge(
         ITaskStore tasks,
@@ -69,7 +71,9 @@ public sealed class ScriptBridge : IDisposable
         SettingsStore settings,
         FileLayoutStore layout,
         FileLayoutStore deskState,
-        INowPlayingSource media)
+        INowPlayingSource media,
+        LauncherLibrary library,
+        NotesLibrary notesLibrary)
     {
         _tasks = tasks;
         _notes = notes;
@@ -80,6 +84,14 @@ public sealed class ScriptBridge : IDisposable
         _layout = layout;
         _deskState = deskState;
         _media = media;
+        _library = library;
+        _notesLibrary = notesLibrary;
+        _notesLibrary.Changed += () => NotesChanged?.Invoke();
+        _notesLibrary.WidgetsChanged += () => OutpostWidgetsChanged?.Invoke();
+
+        // The library is shared with the dashboard; whoever changes it, the desk follows.
+        _library.Changed += () => AppsChanged?.Invoke();
+        _library.WidgetsChanged += () => OutpostWidgetsChanged?.Invoke();
     }
 
     // ---- identity -------------------------------------------------------
@@ -251,6 +263,140 @@ public sealed class ScriptBridge : IDisposable
 
     /// <param name="json">Opaque layout JSON. Stored verbatim, never parsed.</param>
     public void SaveLayout(string json) => _layout.Save(json);
+
+    // ---- Outpost widgets: each one on or off by itself ---------------------------
+
+    /// <summary>Raised after any Outpost widget is switched, so every desk window can follow.</summary>
+    internal event Action? OutpostWidgetsChanged;
+
+    /// <summary>Raised when the desk's menu asks for the dashboard.</summary>
+    internal event Action? OpenDashboardRequested;
+
+    /// <returns>JSON array of <c>{id, name, description, enabled}</c>, read fresh every call.</returns>
+    public string GetOutpostWidgets() => JsonSerializer.Serialize(OutpostWidgetCatalog.Describe(_settings.Current), Json);
+
+    /// <summary>Switches ONE widget. Every other widget is left exactly as it was.</summary>
+    public void SetOutpostWidgetEnabled(string id, bool enabled)
+    {
+        if (!OutpostWidgetCatalog.Contains(id))
+        {
+            return;
+        }
+
+        _settings.Update(s => s.OutpostWidgets[id] = enabled);
+        OutpostWidgetsChanged?.Invoke();
+    }
+
+    public void OpenDashboard() => OpenDashboardRequested?.Invoke();
+
+    // ---- Outpost palette: owned by the host so the desk menu and the dashboard agree ----------
+
+    /// <summary>Raised when the palette is changed from the desk, so every desk window follows.</summary>
+    internal event Action? OutpostThemeChanged;
+
+    /// <returns>JSON array of <c>{id, name, from, to, selected}</c>.</returns>
+    public string GetOutpostThemes() => JsonSerializer.Serialize(OutpostPalettes.Describe(_settings.Current), Json);
+
+    /// <returns>The chosen palette id, or <c>""</c> when none was chosen yet.</returns>
+    public string GetOutpostTheme() => OutpostPalettes.Chosen(_settings.Current);
+
+    public void SetOutpostTheme(string id)
+    {
+        if (!OutpostPalettes.Contains(id))
+        {
+            return;
+        }
+
+        _settings.Update(s => s.OutpostTheme = id);
+        OutpostThemeChanged?.Invoke();
+    }
+
+    // ---- App library (the launcher boxes) ------------------------------------------------------
+
+    /// <summary>Raised after any change to apps or boxes, from the desk or from the dashboard.</summary>
+    internal event Action? AppsChanged;
+
+    /// <returns>JSON array of boxes <c>{id, name, builtIn, apps:[{id, name}]}</c>, Recent first. Never paths.</returns>
+    public string GetApps() => JsonSerializer.Serialize(_library.Describe(), Json);
+
+    /// <returns>A <c>data:image/png</c> URL, or <c>""</c>.</returns>
+    public string GetAppIcon(string id) => _library.GetIcon(id);
+
+    /// <summary>Opens the file picker; the chosen apps land in the given box.</summary>
+    public void AddApp(string boxId) => _library.PickAndAdd(boxId, null);
+
+    public void RemoveApp(string id) => _library.RemoveApp(id);
+
+    public void MoveApp(string id, string boxId) => _library.MoveApp(id, boxId);
+
+    public string AddBox() => _library.AddBox();
+
+    public void DeleteBox(string id) => _library.DeleteBox(id);
+
+    // ---- Sticky notes and the pop-up editor -----------------------------------------------------
+
+    /// <summary>Raised after any change to the notes, from the desk, the editor or the dashboard.</summary>
+    internal event Action? NotesChanged;
+
+    /// <summary>Raised when the desk wants to type into something; the app opens a real editor window.</summary>
+    internal event Action<EditRequest>? EditRequested;
+
+    /// <summary>Raised when the editor window has closed, so the desk can stop showing the element as "being edited".</summary>
+    internal event Action? EditorClosed;
+
+    internal void RaiseEditorClosed() => EditorClosed?.Invoke();
+
+    /// <returns>JSON array of <c>{id, color, html}</c> — html is already reduced to a few safe tags.</returns>
+    public string GetNotes() => JsonSerializer.Serialize(_notesLibrary.Describe(), Json);
+
+    /// <returns>The id of the new, empty note. Also switches the Sticky notes widget on.</returns>
+    public string NewNote() => _notesLibrary.NewNote();
+
+    public void SetNoteColor(string id, string color) => _notesLibrary.SetColor(id, color);
+
+    public void DeleteNote(string id) => _notesLibrary.Delete(id);
+
+    /// <param name="id">A note id.</param>
+    /// <param name="screenRectJson"><c>{x, y, w, h}</c>: where the note is on screen, in physical pixels.</param>
+    public void EditNote(string id, string screenRectJson)
+    {
+        var note = _notesLibrary.Get(id);
+        if (note is null || !TryRect(screenRectJson, out var r))
+        {
+            return;
+        }
+
+        EditRequested?.Invoke(new EditRequest("note", id, note.Html, note.Color, false, r.x, r.y, r.w, r.h));
+    }
+
+    /// <summary>Opens the editor over a launcher box's name. The built-in Recent box cannot be renamed.</summary>
+    public void EditBoxName(string id, string screenRectJson)
+    {
+        var box = _library.Describe().Find(b => b.Id == id);
+        if (box is null || box.BuiltIn || !TryRect(screenRectJson, out var r))
+        {
+            return;
+        }
+
+        EditRequested?.Invoke(new EditRequest("box", id, box.Name, "", true, r.x, r.y, r.w, r.h));
+    }
+
+    private static bool TryRect(string json, out (int x, int y, int w, int h) rect)
+    {
+        rect = default;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            rect = (root.GetProperty("x").GetInt32(), root.GetProperty("y").GetInt32(),
+                    root.GetProperty("w").GetInt32(), root.GetProperty("h").GetInt32());
+            return rect.w > 0 && rect.h > 0 && rect.w < 10000 && rect.h < 10000;
+        }
+        catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or FormatException)
+        {
+            return false;
+        }
+    }
 
     // ---- Outpost desk state -------------------------------------------------
 

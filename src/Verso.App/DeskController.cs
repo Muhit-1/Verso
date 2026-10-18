@@ -64,6 +64,11 @@ internal sealed class DeskController : IDisposable
         _settings = settings;
         _power = new PowerGate(settings.Current.Power);
         _power.Changed += OnPauseChanged;
+        _bridge.OutpostWidgetsChanged += NotifyWidgetsChanged;
+        _bridge.OutpostThemeChanged += NotifyThemeChanged;
+        _bridge.AppsChanged += NotifyAppsChanged;
+        _bridge.NotesChanged += OnNotesChanged;
+        _bridge.EditorClosed += OnEditorClosed;
 
         // Activating another app, showing the desktop, or a resolution change can
         // all raise a bottom-most window. Re-asserting on a slow timer is far
@@ -314,6 +319,55 @@ internal sealed class DeskController : IDisposable
         }
     }
 
+    /// <summary>Asks every Outpost window to forget where its elements were moved to.</summary>
+    public void ResetOutpostLayout()
+    {
+        foreach (var window in _backgroundWindows.Values.Where(w => w.Mode == DeskMode.Outpost))
+        {
+            window.ResetLayout();
+        }
+    }
+
+    /// <summary>Pushes a widget on/off change to every Outpost window (one per monitor).</summary>
+    public void NotifyWidgetsChanged()
+    {
+        foreach (var window in _backgroundWindows.Values.Where(w => w.Mode == DeskMode.Outpost))
+        {
+            window.NotifyWidgetsChanged();
+        }
+    }
+
+    /// <summary>Pushes a palette change to every Outpost window.</summary>
+    public void NotifyThemeChanged()
+    {
+        foreach (var window in _backgroundWindows.Values.Where(w => w.Mode == DeskMode.Outpost))
+        {
+            window.NotifyThemeChanged();
+        }
+    }
+
+    /// <summary>Tells every Outpost page about a host event ("notesChanged", "editorClosed"...); widgets listen with ctx.on.</summary>
+    public void NotifyEvent(string name)
+    {
+        foreach (var window in _backgroundWindows.Values.Where(w => w.Mode == DeskMode.Outpost))
+        {
+            window.NotifyEvent(name);
+        }
+    }
+
+    /// <summary>Pushes an app / box change to every Outpost window.</summary>
+    public void NotifyAppsChanged()
+    {
+        foreach (var window in _backgroundWindows.Values.Where(w => w.Mode == DeskMode.Outpost))
+        {
+            window.NotifyAppsChanged();
+        }
+    }
+
+    private void OnNotesChanged() => NotifyEvent("notesChanged");
+
+    private void OnEditorClosed() => NotifyEvent("editorClosed");
+
     private async void OnShellRestarted()
     {
         if (!_started)
@@ -399,6 +453,11 @@ internal sealed class DeskController : IDisposable
             _shellWatcher.Dispose();
         }
 
+        _bridge.OutpostWidgetsChanged -= NotifyWidgetsChanged;
+        _bridge.OutpostThemeChanged -= NotifyThemeChanged;
+        _bridge.AppsChanged -= NotifyAppsChanged;
+        _bridge.NotesChanged -= OnNotesChanged;
+        _bridge.EditorClosed -= OnEditorClosed;
         _inputMirror?.Dispose();
         _inputMirror = null;
 

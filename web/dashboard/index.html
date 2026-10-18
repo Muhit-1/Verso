@@ -67,13 +67,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><rect x="14" y="14" width="7" height="7" rx="1.2"/></svg>
         Apps
       </button>
-      <button class="nav-item" data-target="desktop" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/></svg>
-        Desktop
-      </button>
-      <button class="nav-item" data-target="theme" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.2" fill="currentColor" stroke="none"/><circle cx="14" cy="8.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="16" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
-        Theme
+      <button class="nav-item" data-target="settings" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.3 3h-4.6l-.3 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.3 2.7h4.6l.3-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>
+        Settings
       </button>
     </nav>
 
@@ -117,48 +113,53 @@
     <section class="view" data-view="apps">
       <div class="main-head">
         <h1>Apps</h1>
-        <p>Shown in the app-launcher widget on the desk.</p>
+        <p>Your app library. New apps land in <b>Recent</b>; move them into your own boxes to organise them.
+          The same boxes show on the desk while the App launcher widget is on.</p>
       </div>
 
-      <div class="list" id="launcherList"></div>
       <div class="btn-row">
-        <button type="button" class="btn primary" id="addLauncherBtn">Add app…</button>
+        <button type="button" class="btn primary" id="addAppBtn">Add app…</button>
+        <button type="button" class="btn" id="newBoxBtn">New box</button>
       </div>
+      <p class="hint" id="appsHint"></p>
+      <div id="appsBoxes"></div>
     </section>
 
-    <!-- DESKTOP -->
-    <section class="view" data-view="desktop">
+    <!-- SETTINGS -->
+    <section class="view" data-view="settings">
       <div class="main-head">
-        <h1>Desktop</h1>
-        <p>Keep the real desktop clean while Verso is running.</p>
+        <h1>Settings</h1>
+        <p>How Verso behaves on your desktop, and how it looks.</p>
       </div>
 
-      <div class="toggle-row">
-        <div>
-          <div class="label">Hide taskbar</div>
+      <div class="tabs" id="settingsTabs" role="tablist">
+        <button type="button" class="tab active" data-tab="desktop" role="tab">Desktop</button>
+        <button type="button" class="tab" data-tab="theme" role="tab">Theme</button>
+      </div>
+
+      <div class="tab-panel active" data-panel="desktop">
+        <p class="hint">Keep the real desktop clean while Verso is running.</p>
+        <div class="toggle-row">
+          <div>
+            <div class="label">Hide taskbar</div>
+          </div>
+          <button type="button" class="switch" id="hideTaskbarSwitch"><div class="knob"></div></button>
         </div>
-        <button type="button" class="switch" id="hideTaskbarSwitch"><div class="knob"></div></button>
-      </div>
-      <div class="toggle-row">
-        <div>
-          <div class="label">Hide desktop icons</div>
+        <div class="toggle-row">
+          <div>
+            <div class="label">Hide desktop icons</div>
+          </div>
+          <button type="button" class="switch" id="hideIconsSwitch"><div class="knob"></div></button>
         </div>
-        <button type="button" class="switch" id="hideIconsSwitch"><div class="knob"></div></button>
-      </div>
-    </section>
-
-    <!-- THEME -->
-    <section class="view" data-view="theme">
-      <div class="main-head">
-        <h1>Theme</h1>
-        <p>The desk and the dashboard are skinned independently.</p>
       </div>
 
-      <div class="section-divider">Desktop theme</div>
-      <div class="theme-grid" id="deskThemeGrid"></div>
+      <div class="tab-panel" data-panel="theme">
+        <div class="section-divider" id="deskThemeTitle">Desk colours</div>
+        <div class="theme-grid" id="deskThemeGrid"></div>
 
-      <div class="section-divider">Dashboard theme</div>
-      <div class="theme-grid" id="dashboardThemeGrid"></div>
+        <div class="section-divider">Dashboard theme</div>
+        <div class="theme-grid" id="dashboardThemeGrid"></div>
+      </div>
     </section>
 
   </main>

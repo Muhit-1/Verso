@@ -28,6 +28,9 @@ public partial class App : Application
     private FileLayoutStore? _layout;
     private SmtcNowPlayingSource? _media;
     private MenuItem? _pauseItem;
+    private LauncherLibrary? _library;
+    private NotesLibrary? _notes;
+    private TextEditorWindow? _editor;
 
     /// <summary>
     /// The dashboard is a singleton: opening it twice from the tray activates
@@ -66,19 +69,24 @@ public partial class App : Application
         _widgets = new WidgetCatalog();
         _layout = new FileLayoutStore();
 
+        _library = new LauncherLibrary(_settings);
+        _notes = new NotesLibrary(_settings, new FileLayoutStore(VersoPaths.OutpostNotesFile));
         _media = new SmtcNowPlayingSource();
         await _media.StartAsync();
 
-        _bridge = new ScriptBridge(new FileTaskStore(), new FileNoteStore(), new FileAgendaStore(), _themes, _widgets, _settings, _layout, new FileLayoutStore(VersoPaths.OutpostFile), _media);
+        _bridge = new ScriptBridge(new FileTaskStore(), new FileNoteStore(), new FileAgendaStore(), _themes, _widgets, _settings, _layout, new FileLayoutStore(VersoPaths.OutpostFile), _media, _library, _notes);
 
         ApplyDesktopCleanup();
+        _bridge.OpenDashboardRequested += OpenSettingsWindow;
+        _bridge.EditRequested += OpenEditor;
 
         _desk = new DeskController(_bridge, _settings);
-        _actions = new DesktopActions(_settings, _desk, _layout);
+        _actions = new DesktopActions(_settings, _desk, _layout, _library, _notes);
 
         _tray = BuildTrayIcon();
 
         await _desk.StartAsync();
+        TextEditorWindow.WarmUp();
 
         RefreshTray();
 
@@ -152,6 +160,47 @@ public partial class App : Application
         var cleanup = _settings!.Current.DesktopCleanup;
         DesktopChrome.SetTaskbarVisible(!cleanup.HideTaskbar);
         DesktopChrome.SetDesktopIconsVisible(!cleanup.HideDesktopIcons);
+    }
+
+    /// <summary>
+    /// Opens the pop-up editor over a note or a box name. The desk page cannot take keyboard input, so typing happens in
+    /// a real window; its text goes back into the notes / launcher library.
+    /// </summary>
+    private void OpenEditor(EditRequest request)
+    {
+        if (_notes is null || _library is null || _bridge is null)
+        {
+            return;
+        }
+
+        void Apply(string value)
+        {
+            if (request.Kind == "note")
+            {
+                _notes.SetHtml(request.Id, value);
+            }
+            else
+            {
+                _library.RenameBox(request.Id, value);
+            }
+        }
+
+        if (_editor is null)
+        {
+            // the first editor is built off-screen and kept for the next one (see TextEditorWindow)
+            var created = new TextEditorWindow();
+            created.Retired += () =>
+            {
+                if (ReferenceEquals(_editor, created))
+                {
+                    _editor = null;
+                }
+            };
+            _editor = created;
+            created.Show();
+        }
+
+        _editor.Begin(request, Apply, Apply, () => _bridge.RaiseEditorClosed());
     }
 
     /// <summary>Opens the dashboard, or brings the one already open to the front.</summary>

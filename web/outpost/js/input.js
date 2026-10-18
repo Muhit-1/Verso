@@ -12,7 +12,7 @@
       with the position in physical pixels and the raw delta (120 per notch, positive = away).
 ================================================================== */
 
-const HOVERABLE = "button, .chip, .pillbtn, .btn, .sq";
+const HOVERABLE = "button, .chip, .btn, .rbtn, .mi, .tile, .dot";
 
 let hovered = null;
 let pending = null;

@@ -18,6 +18,26 @@ public sealed class LauncherSettings
 {
     [JsonPropertyName("entries")]
     public List<LauncherEntry> Entries { get; set; } = [];
+
+    /// <summary>
+    /// The boxes the user made on the Outpost desk. "Recent" is built in and never stored here — it is
+    /// where a newly added app lands, and where the apps of a deleted box go.
+    /// </summary>
+    [JsonPropertyName("boxes")]
+    public List<LauncherBox> Boxes { get; set; } = [];
+}
+
+/// <summary>One see-through box of apps on the Outpost desk.</summary>
+public sealed class LauncherBox
+{
+    /// <summary>Id of the built-in box that holds new apps.</summary>
+    public const string RecentId = "recent";
+
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 }
 
 public sealed class LauncherEntry
@@ -37,6 +57,10 @@ public sealed class LauncherEntry
     /// <summary>Absolute path to an .exe or .lnk. Never sent to script — see <see cref="LauncherInfo"/>.</summary>
     [JsonPropertyName("path")]
     public string Path { get; set; } = string.Empty;
+
+    /// <summary>The box this app sits in. Entries saved before boxes existed read as "recent".</summary>
+    [JsonPropertyName("boxId")]
+    public string BoxId { get; set; } = LauncherBox.RecentId;
 }
 
 /// <summary>

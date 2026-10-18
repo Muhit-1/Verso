@@ -46,6 +46,17 @@ async function createDemoHost() {
   let background = { kind: "none", url: null };
   const cleanup = { hideTaskbar: false, hideDesktopIcons: false };
   const launcher = [{ id: "demo-1", name: "Notepad" }, { id: "demo-2", name: "Calculator" }];
+  const outpostThemes = [
+    { id: "sunset", name: "Sunset", from: "#3a2540", to: "#ff9e64" },
+    { id: "night", name: "Night", from: "#0a1428", to: "#FFD700" },
+    { id: "evening", name: "Evening", from: "#1e1040", to: "#c084fc" }
+  ];
+  let outpostTheme = "sunset";
+  let demoNotes = 1;
+  const boxes = [
+    { id: "recent", name: "Recent", builtIn: true, apps: [{ id: "d1", name: "Notepad" }, { id: "d2", name: "Calculator" }] },
+    { id: "work", name: "Work", builtIn: false, apps: [] }
+  ];
 
   return {
     kind: "demo",
@@ -77,6 +88,32 @@ async function createDemoHost() {
     setTaskbarHidden(hide) { cleanup.hideTaskbar = hide; },
     setDesktopIconsHidden(hide) { cleanup.hideDesktopIcons = hide; },
 
+    getDeskStyle: () => "outpost",
+    getOutpostThemes: () => outpostThemes.map(t => ({ ...t, selected: t.id === outpostTheme })),
+    getOutpostTheme: () => outpostTheme,
+    setOutpostTheme(id) { outpostTheme = id; },
+
+    getNoteCount: () => demoNotes,
+    newNote() { demoNotes += 1; },
+
+    getApps: () => boxes.map(b => ({ ...b, apps: b.apps.slice() })),
+    getAppIcon: () => "",
+    async addApp() { console.log("Verso (demo): no native file picker in a plain browser."); },
+    removeApp(id) { boxes.forEach(b => { b.apps = b.apps.filter(a => a.id !== id); }); },
+    moveApp(id, boxId) {
+      let app = null;
+      boxes.forEach(b => { const a = b.apps.find(x => x.id === id); if (a) { app = a; b.apps = b.apps.filter(x => x !== a); } });
+      (boxes.find(b => b.id === boxId) ?? boxes[0]).apps.push(app);
+    },
+    addBox() { const id = "b" + Date.now(); boxes.push({ id, name: "New box", builtIn: false, apps: [] }); return id; },
+    renameBox(id, name) { const b = boxes.find(x => x.id === id); if (b && name.trim()) b.name = name.trim(); },
+    deleteBox(id) {
+      const gone = boxes.find(b => b.id === id);
+      if (!gone || gone.builtIn) return;
+      boxes[0].apps.push(...gone.apps);
+      boxes.splice(boxes.indexOf(gone), 1);
+    },
+
     getLauncherEntries: () => launcher,
     async addLauncherEntry() {
       console.log("Verso (demo): no native file picker in a plain browser.");
@@ -99,6 +136,7 @@ async function createDemoHost() {
  * against awaiting here.
  */
 async function createRealHost(bridge) {
+  const iconCache = new Map();   // app id -> data URL (an icon never changes for an id)
   const parse = (json, fallback) => {
     try {
       const v = JSON.parse(json);
@@ -134,6 +172,26 @@ async function createRealHost(bridge) {
     getDesktopCleanup: async () => parse(await bridge.GetDesktopCleanup(), { hideTaskbar: false, hideDesktopIcons: false }),
     setTaskbarHidden: hide => bridge.SetTaskbarHidden(hide),
     setDesktopIconsHidden: hide => bridge.SetDesktopIconsHidden(hide),
+
+    getDeskStyle: async () => (await bridge.GetDeskStyle()) || "outpost",
+    getOutpostThemes: async () => parse(await bridge.GetOutpostThemes(), []),
+    getOutpostTheme: async () => (await bridge.GetOutpostTheme()) || "",
+    setOutpostTheme: id => bridge.SetOutpostTheme(id),
+
+    getNoteCount: async () => Number(await bridge.GetNoteCount()) || 0,
+    newNote: () => bridge.NewNote(),
+
+    getApps: async () => parse(await bridge.GetApps(), []),
+    async getAppIcon(id) {
+      if (!iconCache.has(id)) iconCache.set(id, (await bridge.GetAppIcon(id)) || "");
+      return iconCache.get(id);
+    },
+    addApp: boxId => bridge.AddApp(boxId || "recent"),
+    removeApp: id => bridge.RemoveApp(id),
+    moveApp: (id, boxId) => bridge.MoveApp(id, boxId),
+    addBox: () => bridge.AddBox(),
+    renameBox: (id, name) => bridge.RenameBox(id, name),
+    deleteBox: id => bridge.DeleteBox(id),
 
     getLauncherEntries: async () => parse(await bridge.GetLauncherEntries(), []),
     async addLauncherEntry() {

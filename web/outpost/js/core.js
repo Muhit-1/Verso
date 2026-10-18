@@ -29,9 +29,35 @@ export function setPosition(id, value) {
   scheduleSave();
 }
 
+/* Each widget saves only under its own key (state.w.<id>), so one widget's data can never overwrite another's. */
+export function getWidgetState(id) {
+  return (state.w && state.w[id]) || {};
+}
+
+export function patchWidgetState(id, patch) {
+  state.w = { ...(state.w || {}), [id]: { ...getWidgetState(id), ...patch } };
+  scheduleSave();
+}
+
+/** Forgets one element's saved position (a deleted note or box). */
+export function clearPosition(key) {
+  if (state.pos && key in state.pos) {
+    const next = { ...state.pos };
+    delete next[key];
+    state.pos = next;
+    scheduleSave();
+  }
+}
+
 export function clearPositions() {
   state.pos = {};
   scheduleSave();
+}
+
+/** Writes the state now instead of after the usual short delay (used before a reload). */
+export function flush() {
+  clearTimeout(timer);
+  Host.get().saveDeskState?.(state);
 }
 
 function scheduleSave() {
@@ -39,7 +65,8 @@ function scheduleSave() {
   timer = setTimeout(() => Host.get().saveDeskState?.(state), 250);
 }
 
-/* ---- palettes (a "theme" is colour only: the wallpaper is the user's) ---- */
+/* ---- palettes (a "theme" is colour only: the wallpaper is the user's) ----
+   The chosen palette is kept by the host (settings.outpostTheme), so the dashboard and this desk always agree. */
 
 export const PALETTES = ["sunset", "night", "evening", "forest-green", "black-sunset", "pencil"];
 
@@ -54,13 +81,6 @@ export function applyPalette(name, announce = false) {
     applyPalette.h = setTimeout(() => t.classList.remove("show"), 1400);
   }
   return id;
-}
-
-export function cyclePalette() {
-  const current = PALETTES.indexOf(document.body.dataset.theme);
-  const next = PALETTES[(current + 1) % PALETTES.length];
-  applyPalette(next, true);
-  patchState({ theme: next });
 }
 
 /* ---- the area elements may use ----
@@ -78,4 +98,21 @@ export function area() {
     }
   }
   return { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
+}
+
+/* ---- where an element is on the SCREEN, in physical pixels ----
+   The pop-up editor is a real window placed exactly over an element, so the host needs screen pixels. The host
+   passes this monitor's origin as ?mo=left,top (physical pixels); the page's own scale is devicePixelRatio. */
+
+const mo = (new URLSearchParams(location.search).get("mo") || "0,0").split(",").map(Number);
+
+export function screenRect(el) {
+  const r = el.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  return {
+    x: Math.round((mo[0] || 0) + r.left * dpr),
+    y: Math.round((mo[1] || 0) + r.top * dpr),
+    w: Math.round(r.width * dpr),
+    h: Math.round(r.height * dpr)
+  };
 }

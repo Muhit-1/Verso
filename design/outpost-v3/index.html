@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso — Outpost desk v3 (mockup)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600&family=Caveat:wght@500&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   VERSO — Outpost desk, MOCKUP v3 (static, throwaway). Round-2 feedback:
+   independent widgets (each on/off from the dashboard, own position/state),
+   round menu button instead of MOVE/THEME, separate Pomodoro + Stopwatch,
+   sticky notes, app-launcher boxes, dashboard Apps page, Settings = Desktop + Theme.
+   Everything in the mockup bar at the top is review-only and does NOT ship.
+   ===================================================================== */
+:root{--font-display:'Anton',sans-serif;--font-body:'Inter',system-ui,sans-serif;--font-hand:'Caveat',cursive;--font-serif:'Fraunces',Georgia,serif;--taskbar:48px;--bar:38px;--t:.5s ease}
+body[data-theme="sunset"]{--text:#fde8d0;--text2:rgba(253,232,208,.7);--date:#d4a574;--accent:#ff9e64;--accent-h:#ffb386;--glass:rgba(40,10,20,.55);--glass-b:rgba(253,232,208,.16);--hover:rgba(255,158,100,.18);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:255,180,100;--on:#1a0d08}
+body[data-theme="night"]{--text:#fff;--text2:rgba(255,255,255,.6);--date:#8fb8d4;--accent:#FFD700;--accent-h:#ffe44d;--glass:rgba(0,0,0,.62);--glass-b:rgba(255,255,255,.12);--hover:rgba(255,215,0,.14);--shadow:0 4px 40px rgba(0,0,0,.6);--fly:255,215,0;--on:#1a1500}
+body[data-theme="evening"]{--text:#e8d5f5;--text2:rgba(232,213,245,.65);--date:#b89cc8;--accent:#c084fc;--accent-h:#d4a5ff;--glass:rgba(30,10,50,.58);--glass-b:rgba(200,160,255,.16);--hover:rgba(192,132,252,.15);--shadow:0 4px 40px rgba(0,0,0,.5);--fly:192,132,252;--on:#16082a}
+body[data-theme="forest-green"]{--text:#e0f8e0;--text2:rgba(224,248,224,.65);--date:#a3d9b8;--accent:#66cc99;--accent-h:#8ce6b3;--glass:rgba(10,30,20,.58);--glass-b:rgba(224,248,224,.16);--hover:rgba(102,204,153,.16);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:102,204,153;--on:#06150e}
+body[data-theme="black-sunset"]{--text:#fff;--text2:rgba(255,255,255,.6);--date:#d8c8b8;--accent:#ff7a00;--accent-h:#ffa34d;--glass:rgba(0,0,0,.7);--glass-b:rgba(255,255,255,.12);--hover:rgba(255,122,0,.16);--shadow:0 4px 40px rgba(0,0,0,.6);--fly:255,122,0;--on:#1a0a00}
+body[data-theme="pencil"]{--text:#e0e0e0;--text2:rgba(224,224,224,.65);--date:#a0a0a0;--accent:#bbb;--accent-h:#e0e0e0;--glass:rgba(10,10,10,.55);--glass-b:rgba(224,224,224,.16);--hover:rgba(187,187,187,.16);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:187,187,187;--on:#111}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000}
+body{font-family:var(--font-body);color:var(--text);user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- mockup-only bar (NOT part of Verso) ---------- */
+#mockbar{position:fixed;z-index:200;top:0;left:0;right:0;height:var(--bar);display:flex;align-items:center;gap:8px;padding:0 12px;background:#15151a;border-bottom:1px solid #2e2e38;color:#a9a9b8;font-size:12px;white-space:nowrap;overflow:hidden}
+#mockbar b{color:#fff;letter-spacing:.06em}
+#mockbar .sp{flex:1}
+#mockbar button{padding:4px 11px;border-radius:999px;background:#ffffff14;font-size:12px;color:#ddd}
+#mockbar button:hover{background:#ffffff2a}
+#mockbar button.on{background:#fff;color:#000}
+#mockbar .grp{display:flex;gap:4px;align-items:center}
+
+#stage{position:fixed;left:50%;top:calc(var(--bar) + (100vh - var(--bar))/2);width:1920px;height:1080px;overflow:hidden;transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:center}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:linear-gradient(#1a2a44,#050a14)}
+.scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.4),transparent 36%),linear-gradient(to bottom,rgba(0,0,0,.22),transparent 20%)}
+#flies{position:absolute;inset:0;pointer-events:none;display:none}
+body.flies-on #flies{display:block}
+
+/* mock of the real Windows desktop */
+.ctx{position:absolute;inset:0;z-index:60;pointer-events:none;transition:opacity .3s}
+body.no-ctx .ctx{opacity:0}
+.ctx .icons{position:absolute;left:0;top:0;width:76px;padding-top:6px;text-align:center;font-size:12px;color:#fff;text-shadow:0 1px 3px #000}
+.ctx .ic{height:100px;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:6px}
+.ctx .ic i{width:40px;height:40px;border-radius:8px;display:block}
+.ctx .tb{position:absolute;left:0;right:0;bottom:0;height:var(--taskbar);background:rgba(28,28,30,.92);border-top:1px solid #ffffff14;display:flex;align-items:center;justify-content:center;gap:14px}
+.ctx .tb b{width:26px;height:26px;border-radius:6px;background:#ffffff26;display:block}
+.ctx .tb em{position:absolute;right:18px;font-style:normal;font-size:12px;color:#ddd}
+
+/* ---------- desk ---------- */
+.desk{position:absolute;left:0;right:0;top:0;bottom:var(--taskbar);z-index:10}
+body.hide-ui .desk>.mv:not(.rb){opacity:0;pointer-events:none}
+.mv{position:absolute;left:0;top:0}
+.mv.dragging{z-index:30;transition:none!important}
+.glass{background:var(--glass);border:1px solid var(--glass-b);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 28px rgba(0,0,0,.22)}
+body.arrange .mv:not(.rb){outline:2px dashed var(--accent);outline-offset:6px;border-radius:14px}
+body.arrange .mv:not(.rb) *{pointer-events:none}
+body.arrange .mv:not(.rb) .grip{pointer-events:auto}
+.mv.enter{animation:pop .25s ease}
+@keyframes pop{from{opacity:0;transform:scale(.96)}}
+
+/* clock */
+.clock .time{font-family:var(--font-display);font-size:9.5rem;line-height:.95;text-shadow:var(--shadow);display:flex;align-items:baseline;gap:.2rem;white-space:nowrap}
+.clock .ampm{font-family:var(--font-body);font-weight:500;font-size:1.7rem;color:var(--accent);letter-spacing:.06em;cursor:pointer}
+.clock .date{margin-top:.5rem;font-size:1.3rem;font-weight:300;letter-spacing:.28em;text-transform:uppercase;color:var(--date);padding-left:.3rem;white-space:nowrap}
+.sep{animation:blink 2s steps(1) infinite}@keyframes blink{50%{opacity:.45}}
+
+/* now playing */
+.np{width:300px;border-radius:1rem;overflow:hidden}
+.np .head{display:flex;align-items:center;gap:12px;padding:0 16px;height:56px;cursor:pointer}
+.np .head svg{width:26px;height:26px;color:var(--accent)}
+.np .lbl{font-size:.62rem;font-weight:600;letter-spacing:.16em;color:var(--accent)}
+.np .tx{min-width:0;flex:1}
+.np .mq{white-space:nowrap;overflow:hidden;font-size:.82rem}
+.np .mq span{display:inline-block;padding-right:3rem;animation:mq 14s linear infinite}@keyframes mq{to{transform:translateX(-50%)}}
+.np .chev{transition:transform .2s;opacity:.7}.np.open .chev{transform:rotate(180deg)}
+.np .more{max-height:0;overflow:hidden;transition:max-height .25s;padding:0 16px}
+.np.open .more{max-height:200px;padding:4px 16px 16px}
+.art{width:54px;height:54px;border-radius:.7rem;background:linear-gradient(135deg,var(--accent),#222);flex:none}
+.mrow{display:flex;gap:12px;align-items:center}.mrow b{display:block;font-weight:500;font-size:.9rem}.mrow span{font-size:.78rem;color:var(--text2)}
+.bar{height:4px;border-radius:4px;background:var(--glass-b);margin:14px 0 5px;overflow:hidden}.bar i{display:block;height:100%;width:30%;background:var(--accent)}
+.tm{display:flex;justify-content:space-between;font-size:.68rem;color:var(--text2)}
+.ctl{display:flex;justify-content:center;gap:12px;margin-top:8px}
+.rbtn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center}
+.rbtn:hover{background:var(--hover)}.rbtn.main{background:var(--accent);color:var(--on)}
+
+/* cards (pomodoro / stopwatch): independent elements */
+.card{width:300px;border-radius:1.25rem;padding:18px 20px 20px}
+.card h3{font-size:.68rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;cursor:grab}
+.card h3 small{font-family:var(--font-hand);font-size:1.1rem;letter-spacing:0;text-transform:none;color:var(--text2);font-weight:500}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.chip{padding:7px 0;border-radius:.6rem;font-size:.72rem;border:1px solid var(--glass-b);text-align:center}
+.chip:hover{background:var(--hover)}.chip.on{background:var(--hover);border-color:var(--accent);color:var(--accent)}
+.ring{position:relative;width:140px;height:140px;margin:2px auto 8px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}.ring circle{fill:none;stroke-width:5}
+.ring .tr0{stroke:var(--glass-b)}.ring .fg{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:263.89;transition:stroke-dashoffset 1s linear}
+.ring .big{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.disp{font-family:var(--font-display);font-size:2.7rem;letter-spacing:.02em;line-height:1}
+.sub{font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text2);margin-top:5px}
+.row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+.btn{padding:9px 20px;border-radius:999px;border:1px solid var(--glass-b);font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.btn:hover{background:var(--hover)}.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.swd{text-align:center;margin:18px 0 12px}.swd .disp{font-size:3rem}.swd .cs{font-size:1.3rem;opacity:.5}
+.laps{margin-top:10px;max-height:90px;overflow:auto;font-size:.78rem;color:var(--text2)}
+.laps div{display:flex;justify-content:space-between;padding:4px 2px;border-top:1px solid var(--glass-b)}
+
+/* sticky notes */
+.note{border-radius:.5rem;background:#323232;color:#f1f1f1;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;flex-direction:column;overflow:hidden}
+.note .strip{height:26px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 6px;cursor:grab;color:rgba(0,0,0,.55)}
+.note .strip button{width:22px;height:22px;display:grid;place-items:center;border-radius:5px;color:inherit}.note .strip button:hover{background:rgba(0,0,0,.15)}
+.note .nb{flex:1;padding:12px 14px;font-size:.95rem;line-height:1.35;white-space:pre-wrap;overflow:hidden;cursor:text}
+.note .nb:empty::before{content:"Take a note…";color:#9a9a9a}
+.grip{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;opacity:0;transition:opacity .15s;background:linear-gradient(135deg,transparent 55%,rgba(255,255,255,.45) 56% 62%,transparent 63% 72%,rgba(255,255,255,.45) 73% 79%,transparent 80%)}
+.mv:hover>.grip,body.arrange .grip{opacity:1}
+
+/* launcher boxes */
+.box{border-radius:1rem;display:flex;flex-direction:column;overflow:hidden}
+.box .bh{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px 16px;cursor:grab}
+.box .bh span{font-size:.7rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);cursor:text}
+.box .bh .acts{display:flex;gap:2px}
+.mini{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:var(--text2)}.mini:hover{background:var(--hover);color:var(--text)}
+.box .apps{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:4px 10px 12px;overflow:hidden}
+.tile{width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px;border-radius:.7rem;font-size:.66rem;text-align:center;cursor:pointer;line-height:1.15}
+.tile:hover{background:var(--hover)}
+.aico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:1rem;color:#fff;box-shadow:0 4px 10px rgba(0,0,0,.3)}
+.box .empty{font-size:.74rem;color:var(--text2);padding:14px 16px}
+.drop{outline:2px solid var(--accent);outline-offset:-3px}
+.ghost{position:fixed;z-index:500;pointer-events:none;opacity:.9}
+
+/* round menu button + popover */
+.rb{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.25rem;cursor:pointer;color:var(--text)}
+.rb:hover{background:var(--hover)}.rb.open{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.menu{position:absolute;z-index:40;width:290px;border-radius:1rem;padding:8px;background:var(--glass);border:1px solid var(--glass-b);backdrop-filter:blur(14px);box-shadow:0 14px 40px rgba(0,0,0,.4);opacity:0;pointer-events:none;transform:scale(.97);transition:.15s}
+.menu.open{opacity:1;pointer-events:auto;transform:none}
+.menu h4{font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text2);margin:8px 10px 4px;font-weight:600}
+.mi{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border-radius:.6rem;font-size:.82rem;text-align:left}
+.mi:hover{background:var(--hover)}.mi svg{color:var(--accent)}
+.mi .r{margin-left:auto;color:var(--text2);font-size:.72rem}
+.sw{width:34px;height:20px;border-radius:999px;background:var(--glass-b);position:relative;flex:none;transition:.2s}
+.sw::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
+.sw.on{background:var(--accent)}.sw.on::after{left:16px}
+.dots{display:flex;gap:8px;padding:6px 10px 8px}
+.dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent}.dot.on{border-color:#fff}
+.sep1{height:1px;background:var(--glass-b);margin:6px 4px}
+
+/* arrange hint + toast + popovers */
+.hint{position:absolute;z-index:45;left:50%;top:24px;transform:translate(-50%,-10px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 20px;border-radius:999px;font-size:.78rem;transition:.25s;white-space:nowrap;background:var(--glass);border:1px solid var(--glass-b);backdrop-filter:blur(14px)}
+body.arrange .hint{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.hint b{color:var(--accent);letter-spacing:.14em;font-size:.68rem;text-transform:uppercase}.hint .btn{padding:7px 16px;font-size:.68rem}
+.toast{position:absolute;z-index:90;left:50%;top:92px;transform:translate(-50%,-8px);opacity:0;padding:9px 20px;border-radius:999px;font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;transition:.3s;pointer-events:none;background:var(--glass);border:1px solid var(--glass-b);backdrop-filter:blur(14px)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.pop{position:absolute;z-index:50;width:250px;border-radius:.9rem;padding:6px;background:var(--glass);border:1px solid var(--glass-b);backdrop-filter:blur(14px);box-shadow:0 14px 40px rgba(0,0,0,.4);display:none;max-height:340px;overflow:auto}
+.pop.open{display:block}
+.pop .mi{padding:7px 8px}
+.pop .aico{width:30px;height:30px;font-size:.8rem;border-radius:8px}
+.swatches{display:flex;gap:6px;padding:6px 8px}
+.swatches i{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent}.swatches i:hover{border-color:#fff}
+
+/* the borderless editor window that takes real keyboard focus */
+#editor{position:absolute;z-index:80;display:none;flex-direction:column;border-radius:.5rem;background:#2b2b2b;color:#f4f4f4;box-shadow:0 0 0 2px var(--accent),0 20px 50px rgba(0,0,0,.55)}
+#editor.open{display:flex}
+#editor .etag{position:absolute;left:0;top:-26px;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:var(--accent);color:var(--on);padding:3px 9px;border-radius:5px 5px 0 0;font-weight:600;white-space:nowrap}
+#editor .ebody{flex:1;padding:12px 14px;font-size:.95rem;line-height:1.35;outline:none;overflow:auto;white-space:pre-wrap;user-select:text;min-height:30px}
+#editor .etools{display:flex;gap:4px;padding:6px 10px;border-top:1px solid #444;color:#ccc}
+#editor .etools span{width:30px;height:26px;display:grid;place-items:center;border-radius:5px;font-size:.85rem}#editor .etools span:hover{background:#444}
+
+/* =========== dashboard window (the real one is a separate window; shown here to demo on/off) =========== */
+#dash{position:absolute;z-index:100;left:300px;top:90px;width:1180px;height:760px;border-radius:16px;overflow:hidden;display:none;background:#f3ead8;color:#3b2f25;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 1px rgba(0,0,0,.15);font-family:var(--font-body)}
+#dash.open{display:flex;flex-direction:column}
+#dash .tbar{height:44px;display:flex;align-items:center;gap:10px;padding:0 14px 0 18px;background:#efe4cf;border-bottom:1px solid #dccfb6;cursor:grab;font-family:var(--font-serif);font-weight:600;font-size:1rem}
+#dash .tbar i{width:14px;height:14px;border-radius:4px;background:#c4552f;display:block}
+#dash .tbar .x{margin-left:auto;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#7a6755;font-size:1.1rem}#dash .tbar .x:hover{background:#e3d5bb}
+#dash .dbody{flex:1;display:flex;min-height:0}
+#dash nav{width:230px;padding:18px 14px;background:#efe4cf;border-right:1px solid #dccfb6;display:flex;flex-direction:column;gap:4px}
+#dash nav button{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;text-align:left;font-size:.92rem;color:#6a5846;font-weight:500}
+#dash nav button:hover{background:#e6d9bf}#dash nav button.on{background:#f0d9c9;color:#b24a26;font-weight:600}
+#dash nav svg{width:1.25em;height:1.25em}
+#dash main{flex:1;overflow:auto;padding:26px 32px 32px}
+#dash h1{font-family:var(--font-serif);font-weight:600;font-size:1.7rem;margin-bottom:4px}
+#dash .lead{color:#7b6954;font-size:.88rem;margin-bottom:20px;max-width:640px;line-height:1.45}
+#dash .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+#dash .wc{background:#fcf8ee;border:1px solid #e3d6bc;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px;transition:.2s}
+#dash .wc.off{opacity:.62}
+#dash .wc .top{display:flex;align-items:center;gap:12px}
+#dash .wc .ico{width:44px;height:44px;border-radius:12px;background:#f1dfd1;color:#b24a26;display:grid;place-items:center}
+#dash .wc h2{font-family:var(--font-serif);font-size:1.08rem;font-weight:600}
+#dash .wc p{font-size:.8rem;color:#7b6954;line-height:1.4}
+#dash .tg{margin-left:auto;width:44px;height:26px;border-radius:999px;background:#d9ccb3;position:relative;cursor:pointer;flex:none;transition:.2s}
+#dash .tg::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:.2s}
+#dash .tg.on{background:#c4552f}#dash .tg.on::after{left:21px}
+#dash .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#dash .db{padding:8px 14px;border-radius:999px;background:#fff;border:1px solid #dccfb6;font-size:.78rem;font-weight:600;color:#5a4838}
+#dash .db:hover{background:#f3e8d3}#dash .db.pri{background:#c4552f;border-color:#c4552f;color:#fff}#dash .db.dis{opacity:.45;pointer-events:none}
+#dash .segd{display:inline-flex;background:#eadfc8;border-radius:999px;padding:3px}
+#dash .segd button{padding:5px 14px;border-radius:999px;font-size:.78rem;font-weight:600;color:#6a5846}#dash .segd button.on{background:#fff;color:#b24a26;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+#dash .note2{margin-top:18px;padding:12px 16px;border-radius:12px;background:#f1e6cf;font-size:.8rem;color:#6a5846}
+#dash .sect{background:#fcf8ee;border:1px solid #e3d6bc;border-radius:16px;margin-bottom:14px;overflow:hidden}
+#dash .sect .sh{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#f6edd9;border-bottom:1px solid #e3d6bc;font-family:var(--font-serif);font-weight:600}
+#dash .sect .sh small{font-family:var(--font-body);font-weight:400;color:#8a7762;font-size:.76rem}
+#dash .sect .sh .db{margin-left:auto;padding:5px 11px;font-size:.72rem}
+#dash .ar{display:flex;align-items:center;gap:14px;padding:10px 18px;border-top:1px solid #efe4cf}
+#dash .ar:first-of-type{border-top:0}
+#dash .ar .aico{width:36px;height:36px;font-size:.85rem;border-radius:9px}
+#dash .ar .nm{font-weight:600;font-size:.9rem}
+#dash .ar select{margin-left:auto;padding:6px 10px;border-radius:8px;border:1px solid #dccfb6;background:#fff;font:inherit;font-size:.78rem;color:#5a4838}
+#dash .ar .rm{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:#a0452b}#dash .ar .rm:hover{background:#f1dfd1}
+#dash .none{padding:16px 18px;font-size:.82rem;color:#8a7762}
+#dash .tabs{display:flex;gap:6px;margin-bottom:18px}
+#dash .tabs button{padding:9px 18px;border-radius:999px;background:#eadfc8;font-weight:600;font-size:.84rem;color:#6a5846}#dash .tabs button.on{background:#c4552f;color:#fff}
+#dash .row2{display:flex;align-items:center;gap:14px;padding:14px 18px;background:#fcf8ee;border:1px solid #e3d6bc;border-radius:14px;margin-bottom:10px}
+#dash .row2 .tx{flex:1}#dash .row2 b{display:block;font-size:.92rem}#dash .row2 span{font-size:.78rem;color:#7b6954}
+#dash .pal{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+#dash .pal .pc{border-radius:14px;padding:16px;border:2px solid #e3d6bc;cursor:pointer;font-size:.84rem;font-weight:600;display:flex;flex-direction:column;gap:10px;background:#fcf8ee}
+#dash .pal .pc.on{border-color:#c4552f}#dash .pal .pc i{height:42px;border-radius:10px;display:block}
+#dash .wp{display:flex;gap:18px;align-items:center;padding:18px;background:#fcf8ee;border:1px solid #e3d6bc;border-radius:16px}
+#dash .wp .th{width:220px;height:124px;border-radius:12px;background:linear-gradient(135deg,#1c3a63,#0c1424);flex:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+</style>
+</head>
+<body data-theme="sunset">
+
+<!-- ====== MOCKUP-ONLY BAR (review controls; none of this ships) ====== -->
+<div id="mockbar">
+  <b>MOCKUP v3</b><span>review controls only — not part of Verso</span>
+  <span class="sp"></span>
+  <span>Round button glyph:</span>
+  <span class="grp"><button data-glyph="bang" class="on">!</button><button data-glyph="dots">⋯</button><button data-glyph="gear">⚙</button></span>
+  <button id="mDemo">Load demo content</button>
+  <button id="mReset">Reset to first run</button>
+  <button id="mDash">Open dashboard</button>
+  <button id="mCtx" class="on">desktop icons + taskbar</button>
+</div>
+
+<div id="stage">
+  <video id="bg" src="/bg.mp4" autoplay muted loop playsinline></video>
+  <div class="scrim"></div>
+  <canvas id="flies" width="960" height="540" style="width:1920px;height:1080px"></canvas>
+
+  <main class="desk" id="desk">
+    <div class="hint" id="hint"><b>Arrange</b><span>Drag anything · resize notes and boxes by the corner · cards, notes and boxes also move by their title/strip any time</span>
+      <button class="btn" id="hReset">Reset layout</button><button class="btn primary" id="hDone">Done</button></div>
+    <div class="menu" id="menu"></div>
+    <div class="pop" id="pop"></div>
+  </main>
+
+  <div id="editor"><div class="etag" id="etag">Editing — real keyboard window</div><div class="ebody" id="ebody" contenteditable="true" spellcheck="false"></div>
+    <div class="etools" id="etools"><span><b>B</b></span><span><i>I</i></span><span><u>U</u></span><span><s>ab</s></span><span>•≡</span></div></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="ctx" id="ctx"><div class="icons">
+      <div class="ic"><i style="background:linear-gradient(#34b5ea,#0e7ab8)"></i>This PC</div>
+      <div class="ic"><i style="background:linear-gradient(#e8f3ff,#8fb4d8)"></i>Recycle Bin</div>
+      <div class="ic"><i style="background:linear-gradient(#fff,#cfd6dd)"></i>notes.txt</div></div>
+    <div class="tb"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><em>6:00 AM<br>10/18/2026</em></div></div>
+
+  <!-- ====== the dashboard (separate window in the real app) ====== -->
+  <div id="dash">
+    <div class="tbar" id="dtbar"><i></i>Verso<button class="x" id="dx">✕</button></div>
+    <div class="dbody">
+      <nav id="dnav">
+        <button data-p="wallpaper"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 15l5-4 5 4 3-2 5 4"/></svg>Wallpaper</button>
+        <button data-p="widgets" class="on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>Widgets</button>
+        <button data-p="apps"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="18" cy="12" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="12" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>Apps</button>
+        <button data-p="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.3 3h-4.6l-.3 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.3 2.7h4.6l.3-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>Settings</button>
+      </nav>
+      <main id="dmain"></main>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const stage = $('#stage'), desk = $('#desk'), body = document.body;
+const SW = 1920, DH = 1080 - 48;
+let SC = 1;
+function fit(){ SC = Math.min(innerWidth/1920, (innerHeight-38)/1080); stage.style.setProperty('--s', SC); }
+addEventListener('resize', fit); fit();
+
+/* ------------------------------------------------------------------ data */
+const ICON = {
+  clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  music:'<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  timer:'<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>',
+  stopwatch:'<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M10 2h4"/></svg>',
+  note:'<svg viewBox="0 0 24 24"><path d="M5 3h14v12l-6 6H5z"/><path d="M13 21v-6h6"/></svg>',
+  grid:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>',
+  spark:'<svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>',
+  move:'<svg viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>',
+  sun:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  eye:'<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  dots:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+  gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.3 3h-4.6l-.3 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.3 2.7h4.6l.3-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.1-.4.1-.8.1-1.2z"/></svg>',
+  prev:'<svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8zM5 19V5"/></svg>',
+  next:'<svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8zM19 5v14"/></svg>',
+  chev:'<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>'
+};
+const REG = [
+  {id:'clock', name:'Clock',        ico:'clock',     desc:'The big clock and date. Click AM/PM on the desk to switch 12/24 hour.'},
+  {id:'np',    name:'Now playing',  ico:'music',     desc:'What Windows is playing, with play / pause / next. Click it to expand.'},
+  {id:'pomo',  name:'Pomodoro',     ico:'timer',     desc:'A focus timer with work / break presets.'},
+  {id:'sw',    name:'Stopwatch',    ico:'stopwatch', desc:'A stopwatch with laps.'},
+  {id:'notes', name:'Sticky notes', ico:'note',      desc:'As many notes as you like — free text, coloured strip, resizable.', multi:'note'},
+  {id:'launcher', name:'App launcher', ico:'grid',   desc:'See-through boxes of apps, placed anywhere — instead of taskbar pins.', multi:'box'},
+  {id:'flies', name:'Fireflies',    ico:'spark',     desc:'Slow drifting lights over the wallpaper (uses a little extra power).'}
+];
+const CATALOG = [
+  {k:'chrome',n:'Chrome',c:'#4285f4',g:'C'},{k:'vscode',n:'VS Code',c:'#007acc',g:'‹›'},{k:'spotify',n:'Spotify',c:'#1db954',g:'♪'},
+  {k:'whatsapp',n:'WhatsApp',c:'#25d366',g:'W'},{k:'discord',n:'Discord',c:'#5865f2',g:'D'},{k:'figma',n:'Figma',c:'#a259ff',g:'F'},
+  {k:'terminal',n:'Terminal',c:'#374151',g:'>_'},{k:'obs',n:'OBS Studio',c:'#302e31',g:'O'},{k:'vlc',n:'VLC',c:'#ff8800',g:'▶'},
+  {k:'notion',n:'Notion',c:'#191919',g:'N'},{k:'excel',n:'Excel',c:'#1d6f42',g:'X'},{k:'word',n:'Word',c:'#2b579a',g:'W'}
+];
+const cat = k => CATALOG.find(c => c.k === k);
+const NOTE_COLORS = ['#7ac55c','#5aa9e6','#f2c94c','#f08fb0','#b48ae0','#a8a8a8'];
+const PALETTES = ['sunset','night','evening','forest-green','black-sunset','pencil'];
+const PAL_SW = {sunset:'linear-gradient(90deg,#3a2540,#ff9e64)',night:'linear-gradient(90deg,#0a1428,#FFD700)',evening:'linear-gradient(90deg,#1e1040,#c084fc)','forest-green':'linear-gradient(90deg,#0c2a1e,#66cc99)','black-sunset':'linear-gradient(90deg,#050505,#ff7a00)',pencil:'linear-gradient(90deg,#141414,#bbbbbb)'};
+
+const KEY = 'verso.mock.v3';
+const first = () => ({theme:'sunset', glyph:'bang', on:{clock:true,np:true,pomo:false,sw:false,notes:false,launcher:false,flies:false},
+  pos:{}, clock24:false, notes:[], boxes:[{id:'recent',name:'Recent',w:340,h:230}], apps:[], npOpen:false, seq:1, hideTaskbar:false, hideIcons:false});
+let S = (() => { try { return Object.assign(first(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(e){ return first(); } })();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} };
+const uid = () => 'x' + (S.seq++);
+
+/* ------------------------------------------------------------------ helpers */
+function toast(t){ const e = $('#toast'); e.textContent = t; e.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(()=>e.classList.remove('show'), 1700); }
+const size = el => ({w:el.offsetWidth, h:el.offsetHeight});
+const clampXY = (x,y,w,h) => [Math.min(Math.max(0,x), SW-w), Math.min(Math.max(0,y), DH-h)];
+function put(el, x, y){ const {w,h} = size(el); [x,y] = clampXY(x,y,w,h); el.style.left = x+'px'; el.style.top = y+'px'; }
+function savePos(el){ S.pos[el.dataset.id] = {x:el.offsetLeft, y:el.offsetTop, w:el.dataset.rs ? el.offsetWidth : undefined, h:el.dataset.rs ? el.offsetHeight : undefined}; save(); }
+function mk(html){ const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; }
+const appHtml = a => { const c = cat(a.k); return `<div class="aico" style="background:${c.c}">${c.g}</div>`; };
+
+/* ------------------------------------------------------------------ widget framework
+   Every widget: its own element, own saved position, own enabled flag. Mount/unmount only touches itself. */
+const mounted = new Map();   // element id -> {el, tick?}
+function mount(id, el, defPos){
+  el.dataset.id = id; el.classList.add('mv','enter'); desk.appendChild(el);
+  const sp = S.pos[id];
+  if (el.dataset.rs && sp && sp.w){ el.style.width = sp.w+'px'; el.style.height = sp.h+'px'; }
+  const d = sp || defPos(size(el));
+  put(el, d.x, d.y);
+  mounted.set(id, el);
+}
+function unmount(id){ const el = mounted.get(id); if (el){ el.remove(); mounted.delete(id); } }
+
+/* --- clock --- */
+function buildClock(){
+  const el = mk(`<section class="clock"><div class="time"><span class="h">00</span><span class="sep">:</span><span class="m">00</span><span class="ampm" title="Click to switch 12/24">AM</span></div><div class="date"></div></section>`);
+  el.querySelector('.ampm').onclick = () => { S.clock24 = !S.clock24; save(); tickAll(); renderDash(); };
+  el.tick = () => { const d = new Date(); let h = d.getHours(); const ap = h>=12?'PM':'AM'; if(!S.clock24) h = h%12||12;
+    el.querySelector('.h').textContent = String(h).padStart(2,'0'); el.querySelector('.m').textContent = String(d.getMinutes()).padStart(2,'0');
+    const a = el.querySelector('.ampm'); a.style.display = S.clock24?'none':''; a.textContent = ap;
+    el.querySelector('.date').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'}); };
+  mount('clock', el, ({h}) => ({x:48, y:DH-36-h})); el.tick();
+}
+
+/* --- now playing (pill that expands) --- */
+function buildNp(){
+  const el = mk(`<div class="np glass${S.npOpen?' open':''}"><div class="head" data-drag>${ICON.music}<div class="tx"><div class="lbl">NOW PLAYING</div><div class="mq"><span>The ENTIRE Story of PRISON BREAK in 195 Minutes — JarToon&nbsp;&nbsp;·&nbsp;&nbsp;The ENTIRE Story of PRISON BREAK in 195 Minutes — JarToon&nbsp;&nbsp;·&nbsp;&nbsp;</span></div></div><span class="chev">${ICON.chev}</span></div>
+    <div class="more"><div class="mrow"><div class="art"></div><div><b>The ENTIRE Story of PRISON BREAK…</b><span>JarToon · Chrome</span></div></div>
+    <div class="bar"><i></i></div><div class="tm"><span>58:12</span><span>195:36</span></div>
+    <div class="ctl"><button class="rbtn">${ICON.prev}</button><button class="rbtn main"><svg viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button><button class="rbtn">${ICON.next}</button></div></div></div>`);
+  el.querySelector('.head').addEventListener('click', e => { if (body.classList.contains('arrange') || el.moved) return; el.classList.toggle('open'); S.npOpen = el.classList.contains('open'); save(); });
+  mount('np', el, () => ({x:112, y:32}));
+}
+
+/* --- pomodoro (own timer, own state) --- */
+function buildPomo(){
+  const st = {f:25,b:5,left:1500,run:false,brk:false,t:null};
+  const el = mk(`<div class="card glass"><h3 data-drag><span>Pomodoro</span><small class="lab">focus session</small></h3>
+    <div class="chips"><button class="chip on" data-f="25" data-b="5">25 / 5</button><button class="chip" data-f="45" data-b="5">45 / 5</button><button class="chip" data-f="50" data-b="10">50 / 10</button><button class="chip" data-f="90" data-b="15">90 / 15</button></div>
+    <div class="ring"><svg viewBox="0 0 100 100"><circle class="tr0" cx="50" cy="50" r="42"/><circle class="fg" cx="50" cy="50" r="42"/></svg><div class="big"><div class="disp">25:00</div><div class="sub">Focus</div></div></div>
+    <div class="row"><button class="btn primary go">Start</button><button class="btn rs">Reset</button></div></div>`);
+  const f2 = s => String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  const draw = () => { const tot=(st.brk?st.b:st.f)*60; el.querySelector('.disp').textContent=f2(st.left); el.querySelector('.fg').style.strokeDashoffset=263.89*(1-st.left/tot);
+    el.querySelector('.sub').textContent = st.brk?'Break':'Focus'; el.querySelector('.lab').textContent = st.brk?'take five':'focus session'; el.querySelector('.go').textContent = st.run?'Pause':'Start'; };
+  el.querySelector('.go').onclick = () => { st.run=!st.run; clearInterval(st.t); if(st.run) st.t=setInterval(()=>{ if(--st.left<=0){ st.brk=!st.brk; st.left=(st.brk?st.b:st.f)*60; toast(st.brk?'Focus complete':'Break over'); } draw(); },1000); draw(); };
+  el.querySelector('.rs').onclick = () => { st.run=false; clearInterval(st.t); st.brk=false; st.left=st.f*60; draw(); };
+  el.querySelectorAll('.chip').forEach(c => c.onclick = () => { el.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); st.f=+c.dataset.f; st.b=+c.dataset.b; el.querySelector('.rs').click(); });
+  el.destroy = () => clearInterval(st.t);
+  mount('pomo', el, () => ({x:SW/2-310, y:330})); draw();
+}
+
+/* --- stopwatch (own timer, own state) --- */
+function buildSw(){
+  const st = {t:0,run:false,i:null,last:0};
+  const el = mk(`<div class="card glass"><h3 data-drag><span>Stopwatch</span><small>go on, I'll wait</small></h3>
+    <div class="swd"><div class="disp">00:00<span class="cs">.00</span></div></div>
+    <div class="row"><button class="btn primary go">Start</button><button class="btn lap">Lap</button><button class="btn rs">Reset</button></div><div class="laps"></div></div>`);
+  const fm = ms => { const c=Math.floor(ms/10)%100,s=Math.floor(ms/1000)%60,m=Math.floor(ms/60000); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'<span class="cs">.'+String(c).padStart(2,'0')+'</span>'; };
+  el.querySelector('.go').onclick = () => { st.run=!st.run; el.querySelector('.go').textContent=st.run?'Stop':'Start'; clearInterval(st.i); if(st.run){ const t0=performance.now()-st.t; st.i=setInterval(()=>{ st.t=performance.now()-t0; el.querySelector('.disp').innerHTML=fm(st.t); },40); } };
+  el.querySelector('.lap').onclick = () => { if(!st.t) return; const d=document.createElement('div'); d.innerHTML=`<span>Lap ${el.querySelector('.laps').children.length+1}</span><span>${fm(st.t-st.last).replace(/<[^>]+>/g,'')}</span>`; st.last=st.t; el.querySelector('.laps').prepend(d); };
+  el.querySelector('.rs').onclick = () => { st.run=false; clearInterval(st.i); st.t=0; st.last=0; el.querySelector('.go').textContent='Start'; el.querySelector('.disp').innerHTML=fm(0); el.querySelector('.laps').innerHTML=''; };
+  el.destroy = () => clearInterval(st.i);
+  mount('sw', el, () => ({x:SW/2+10, y:330}));
+}
+
+/* --- sticky notes (multi-instance: each note is its own widget) --- */
+function buildNote(n, idx){
+  const el = mk(`<div class="note" data-rs="1" style="width:${n.w||300}px;height:${n.h||220}px"><div class="strip" data-drag style="background:${n.c}"><button class="add" title="New note">${ICON.plus}</button><button class="more" title="More">${ICON.dots}</button></div><div class="nb"></div><div class="grip"></div></div>`);
+  el.querySelector('.nb').textContent = n.text || '';
+  el.querySelector('.add').onclick = e => { e.stopPropagation(); addNote(); };
+  el.querySelector('.more').onclick = e => { e.stopPropagation(); openPop(e.currentTarget, `<div class="swatches">${NOTE_COLORS.map(c=>`<i data-c="${c}" style="background:${c}"></i>`).join('')}</div><button class="mi" data-del>${ICON.dots}<span>Delete note</span></button>`, p => {
+      p.querySelectorAll('[data-c]').forEach(i => i.onclick = () => { n.c = i.dataset.c; save(); el.querySelector('.strip').style.background = n.c; closePop(); });
+      p.querySelector('[data-del]').onclick = () => { S.notes = S.notes.filter(x=>x!==n); delete S.pos['note-'+n.id]; save(); closePop(); sync(); renderDash(); }; }); };
+  el.querySelector('.nb').addEventListener('click', e => { if(body.classList.contains('arrange')) return; openEditor(el, {text:n.text||'', label:'Editing note', done:t=>{ n.text=t; save(); el.querySelector('.nb').textContent=t; }}); });
+  mount('note-'+n.id, el, () => ({x:210+(idx%5)*34, y:130+(idx%5)*34}));
+}
+function addNote(){ S.notes.push({id:uid(), c:NOTE_COLORS[S.notes.length%NOTE_COLORS.length], text:'', w:300, h:220}); S.on.notes = true; save(); sync(); renderDash(); toast('New note'); }
+
+/* --- app launcher boxes (multi-instance) --- */
+function appsOf(b){ return S.apps.filter(a => a.box === b.id); }
+function buildBox(b, idx){
+  const el = mk(`<div class="box glass" data-rs="1" style="width:${b.w||340}px;height:${b.h||230}px"><div class="bh" data-drag><span class="nm" title="Click to rename">${b.name}</span><div class="acts"><button class="mini add" title="Add app">${ICON.plus}</button>${b.id==='recent'?'':`<button class="mini del" title="Delete box">${ICON.dots}</button>`}</div></div><div class="apps"></div><div class="grip"></div></div>`);
+  const ap = el.querySelector('.apps'); const list = appsOf(b);
+  if (!list.length) ap.innerHTML = `<div class="empty">${b.id==='recent'?'New apps land here. Move them into your own boxes.':'Empty box. Use + to add an app.'}</div>`;
+  list.forEach(a => { const t = mk(`<div class="tile" data-app="${a.id}">${appHtml(a)}<span>${cat(a.k).n}</span></div>`); ap.appendChild(t); t.addEventListener('pointerdown', tileDown); });
+  el.querySelector('.nm').addEventListener('click', e => { if(body.classList.contains('arrange')) return; openEditor(el, {text:b.name, single:true, label:'Rename box', done:t=>{ b.name=t||b.name; save(); sync(true); renderDash(); }}); });
+  el.querySelector('.add').onclick = e => { e.stopPropagation(); openAddApp(e.currentTarget, b.id); };
+  const d = el.querySelector('.del'); if (d) d.onclick = e => { e.stopPropagation(); S.apps.filter(a=>a.box===b.id).forEach(a=>a.box='recent'); S.boxes = S.boxes.filter(x=>x!==b); delete S.pos['box-'+b.id]; save(); sync(true); renderDash(); toast('Box deleted — its apps moved to Recent'); };
+  mount('box-'+b.id, el, () => ({x:1400, y:130 + idx*250}));
+}
+function addBox(){ S.boxes.push({id:uid(), name:'New box', w:340, h:230}); S.on.launcher = true; save(); sync(true); renderDash(); toast('New box'); }
+function addAppTo(boxId, k){ if(S.apps.some(a=>a.k===k)){ toast('Already added'); return; } S.apps.push({id:uid(), k, box:boxId}); S.on.launcher = S.on.launcher; save(); sync(true); renderDash(); toast(cat(k).n+' added'+(boxId==='recent'?' to Recent':'')); }
+function openAddApp(anchor, boxId){
+  openPop(anchor, `<h4 style="font-size:.6rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text2);margin:6px 8px;font-weight:600">Add an app (the real one opens a file picker)</h4>`+CATALOG.filter(c=>!S.apps.some(a=>a.k===c.k)).map(c=>`<button class="mi" data-k="${c.k}"><div class="aico" style="background:${c.c}">${c.g}</div><span>${c.n}</span></button>`).join(''), p => p.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { addAppTo(boxId, b.dataset.k); closePop(); }));
+}
+/* drag an app tile into another box */
+let tdrag = null;
+function tileDown(e){
+  if (body.classList.contains('arrange')) return;
+  const t = e.currentTarget; tdrag = {t, id:t.dataset.app, x:e.clientX, y:e.clientY, g:null, moved:false};
+}
+addEventListener('pointermove', e => {
+  if (!tdrag) return;
+  if (!tdrag.moved && Math.hypot(e.clientX-tdrag.x, e.clientY-tdrag.y) < 6) return;
+  tdrag.moved = true;
+  if (!tdrag.g){ tdrag.g = tdrag.t.cloneNode(true); tdrag.g.classList.add('ghost'); document.body.appendChild(tdrag.g); }
+  tdrag.g.style.left = (e.clientX-30)+'px'; tdrag.g.style.top = (e.clientY-30)+'px';
+  $$('.box').forEach(b => { const r = b.getBoundingClientRect(); b.classList.toggle('drop', e.clientX>r.left&&e.clientX<r.right&&e.clientY>r.top&&e.clientY<r.bottom); });
+});
+addEventListener('pointerup', e => {
+  if (!tdrag) return; const d = tdrag; tdrag = null;
+  if (d.g) d.g.remove();
+  const target = $$('.box').find(b => b.classList.contains('drop')); $$('.box').forEach(b=>b.classList.remove('drop'));
+  if (!d.moved){ const a = S.apps.find(a=>a.id===d.id); toast('Launching '+cat(a.k).n+'…'); return; }
+  if (target){ const bid = target.dataset.id.replace('box-',''); const a = S.apps.find(a=>a.id===d.id); if (a && a.box!==bid){ a.box = bid; save(); sync(true); renderDash(); toast('Moved to '+S.boxes.find(b=>b.id===bid).name); } }
+});
+
+/* --- fireflies (an ambience widget with no element of its own) --- */
+let flyRun = false;
+function setFlies(on){ body.classList.toggle('flies-on', on); if(on && !flyRun){ flyRun = true; requestAnimationFrame(flyFrame); } if(!on) flyRun = false; }
+const fl = Array.from({length:18},()=>({x:Math.random(),y:Math.random(),r:Math.random()*2.5+1.5,vx:(Math.random()-.5)*.0016,vy:(Math.random()-.5)*.0012,o:Math.random()*.6,to:Math.random()*.6+.2}));
+let flT = 0;
+function flyFrame(t){ if(!flyRun) return; requestAnimationFrame(flyFrame); if(t-flT<66) return; flT=t;
+  const cv=$('#flies'), cx=cv.getContext('2d'), rgb=getComputedStyle(body).getPropertyValue('--fly').trim(); cx.clearRect(0,0,960,540);
+  for(const f of fl){ f.x+=f.vx; f.y+=f.vy; f.o+=(f.to-f.o)*.02; if(f.x<0||f.x>1) f.vx*=-1; if(f.y<0||f.y>1) f.vy*=-1;
+    const g=cx.createRadialGradient(f.x*960,f.y*540,0,f.x*960,f.y*540,f.r*7); g.addColorStop(0,`rgba(${rgb},${f.o})`); g.addColorStop(1,`rgba(${rgb},0)`); cx.fillStyle=g; cx.fillRect(f.x*960-30,f.y*540-30,60,60); } }
+
+/* --- the round menu button: always present, not a widget you can turn off --- */
+function buildRb(){
+  const el = mk(`<button class="rb glass" title="Desk menu"></button>`);
+  el.onclick = e => { if(el.moved) return; toggleMenu(el); };
+  mount('rb', el, () => ({x:SW-32-46, y:32})); glyph();
+}
+function glyph(){ const rb = mounted.get('rb'); if(!rb) return; rb.innerHTML = S.glyph==='bang' ? '!' : S.glyph==='dots' ? ICON.dots.replace('<svg','<svg style="width:1.4em;height:1.4em"') : ICON.gear.replace('<svg','<svg style="width:1.3em;height:1.3em"');
+  $$('#mockbar [data-glyph]').forEach(b => b.classList.toggle('on', b.dataset.glyph===S.glyph)); }
+
+/* ------------------------------------------------------------------ menu / popovers */
+const menu = $('#menu'), pop = $('#pop');
+function placeNear(box, anchor, w, h){
+  const r = anchor.getBoundingClientRect(), s = stage.getBoundingClientRect();
+  let x = (r.left - s.left)/SC, y = (r.bottom - s.top)/SC + 10;
+  if (x + w > SW - 20) x = (r.right - s.left)/SC - w;
+  if (y + h > DH) y = (r.top - s.top)/SC - h - 10;
+  box.style.left = Math.max(10,x)+'px'; box.style.top = Math.max(10,y)+'px';
+}
+function renderMenu(){
+  menu.innerHTML = `<button class="mi" data-a="arrange">${ICON.move}<span>Arrange (move / resize)</span></button>
+    <div class="sep1"></div><h4>Theme</h4><div class="dots">${PALETTES.map(p=>`<i class="dot${S.theme===p?' on':''}" data-t="${p}" title="${p}" style="background:${PAL_SW[p]}"></i>`).join('')}</div>
+    <div class="sep1"></div><h4>Widgets — each is independent</h4>
+    ${REG.map(w=>`<button class="mi" data-w="${w.id}">${ICON[w.ico]}<span>${w.name}</span><span class="r"><i class="sw${S.on[w.id]?' on':''}" style="display:inline-block"></i></span></button>`).join('')}
+    <div class="sep1"></div>
+    <button class="mi" data-a="note">${ICON.plus}<span>New note</span></button>
+    <button class="mi" data-a="box">${ICON.plus}<span>New app box</span></button>
+    <button class="mi" data-a="hide">${ICON.eye}<span>${body.classList.contains('hide-ui')?'Show':'Hide'} all widgets</span></button>
+    <button class="mi" data-a="settings">${ICON.gear}<span>Open Settings…</span></button>`;
+  menu.querySelectorAll('[data-t]').forEach(d => d.onclick = () => { S.theme = d.dataset.t; body.dataset.theme = S.theme; save(); renderMenu(); renderDash(); });
+  menu.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { setWidget(b.dataset.w, !S.on[b.dataset.w]); renderMenu(); });
+  menu.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; closeMenu();
+    if(a==='arrange') arrange(true); if(a==='note') addNote(); if(a==='box') addBox();
+    if(a==='hide') body.classList.toggle('hide-ui'); if(a==='settings') openDash('settings'); });
+}
+function toggleMenu(anchor){ if(menu.classList.contains('open')){ closeMenu(); return; } closePop(); renderMenu(); placeNear(menu, anchor, 290, menu.scrollHeight||520); menu.classList.add('open'); anchor.classList.add('open'); }
+function closeMenu(){ menu.classList.remove('open'); mounted.get('rb')?.classList.remove('open'); }
+function openPop(anchor, html, wire){ closeMenu(); pop.innerHTML = html; placeNear(pop, anchor, 250, 300); pop.classList.add('open'); wire && wire(pop); }
+function closePop(){ pop.classList.remove('open'); }
+addEventListener('pointerdown', e => { if(!e.target.closest('#menu,.rb,#pop,.mini,.strip .more,#editor')){ closeMenu(); closePop(); } if(!e.target.closest('#editor,.nb,.nm')) closeEditor(true); }, true);
+
+/* ------------------------------------------------------------------ editor window (real keyboard focus in the real app) */
+let edCur = null;
+function openEditor(el, o){
+  closeEditor(true); edCur = o; const ed = $('#editor'), eb = $('#ebody');
+  const x = el.offsetLeft, y = el.offsetTop; const nm = o.single;
+  ed.style.left = (nm ? x : x) + 'px'; ed.style.top = (nm ? y+4 : y) + 'px'; ed.style.width = (nm ? Math.max(el.offsetWidth,260) : el.offsetWidth)+'px'; ed.style.height = (nm ? '76px' : el.offsetHeight+'px');
+  $('#etag').textContent = o.label + ' — real keyboard window'; $('#etools').style.display = nm ? 'none' : 'flex';
+  eb.textContent = o.text; ed.classList.add('open'); eb.focus();
+  const r = document.createRange(); r.selectNodeContents(eb); r.collapse(false); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function closeEditor(commit){ if(!edCur) return; const eb = $('#ebody'); const t = eb.innerText.replace(/\n$/,''); $('#editor').classList.remove('open'); const o = edCur; edCur = null; if(commit) o.done(t); }
+$('#ebody').addEventListener('keydown', e => { if(e.key==='Escape') closeEditor(true); if(e.key==='Enter' && edCur && edCur.single){ e.preventDefault(); closeEditor(true); } });
+
+/* ------------------------------------------------------------------ dragging / resizing (generic) */
+let drag = null;
+addEventListener('pointerdown', e => {
+  const grip = e.target.closest('.grip');
+  const el = e.target.closest('.mv'); if(!el || e.target.closest('#editor')) return;
+  if (grip){ drag = {el, mode:'rs', sx:e.clientX, sy:e.clientY, w:el.offsetWidth, h:el.offsetHeight}; el.classList.add('dragging'); e.preventDefault(); return; }
+  const arr = body.classList.contains('arrange');
+  const handle = e.target.closest('[data-drag]');
+  if (!(arr || handle)) return;
+  if (!arr && e.target.closest('button') && !e.target.closest('.head')) return;
+  drag = {el, mode:'mv', dx:(e.clientX - stage.getBoundingClientRect().left)/SC - el.offsetLeft, dy:(e.clientY - stage.getBoundingClientRect().top)/SC - el.offsetTop, moved:false, sx:e.clientX, sy:e.clientY};
+  el.classList.add('dragging'); el.moved = false;
+});
+addEventListener('pointermove', e => {
+  if(!drag) return; const el = drag.el;
+  if(drag.mode==='rs'){ el.style.width = Math.max(180, drag.w + (e.clientX-drag.sx)/SC)+'px'; el.style.height = Math.max(120, drag.h + (e.clientY-drag.sy)/SC)+'px'; return; }
+  if(!drag.moved && Math.hypot(e.clientX-drag.sx, e.clientY-drag.sy) < 4) return;
+  drag.moved = true; el.moved = true; const s = stage.getBoundingClientRect();
+  let x = (e.clientX-s.left)/SC - drag.dx, y = (e.clientY-s.top)/SC - drag.dy; const {w,h} = size(el);
+  for (const c of [32,(SW-w)/2,SW-32-w]) if(Math.abs(x-c)<12) x=c;
+  for (const c of [32,(DH-h)/2,DH-32-h]) if(Math.abs(y-c)<12) y=c;
+  put(el, x, y);
+});
+addEventListener('pointerup', () => { if(!drag) return; const el = drag.el; el.classList.remove('dragging'); if(drag.mode==='rs'||drag.moved){ savePos(el);
+    const id = el.dataset.id; if(id.startsWith('note-')){ const n=S.notes.find(n=>'note-'+n.id===id); if(n){ n.w=el.offsetWidth; n.h=el.offsetHeight; save(); } }
+    if(id.startsWith('box-')){ const b=S.boxes.find(b=>'box-'+b.id===id); if(b){ b.w=el.offsetWidth; b.h=el.offsetHeight; save(); } } }
+  setTimeout(()=>{ el.moved=false; },0); drag = null; });
+
+function arrange(on){ body.classList.toggle('arrange', on); closeMenu(); closePop(); closeEditor(true); }
+$('#hDone').onclick = () => arrange(false);
+$('#hReset').onclick = () => { S.pos = {}; save(); sync(true); toast('Layout reset'); };
+
+/* ------------------------------------------------------------------ sync: desk follows the enabled flags — each widget independently */
+function setWidget(id, on){ S.on[id] = on; save(); sync(); renderDash(); }
+function sync(rebuildMulti){
+  const want = (id, builder) => { const key = id; if (S.on[id] && !mounted.has(key)){ try { builder(); } catch(err){ console.error(id, err); } } else if (!S.on[id] && mounted.has(key)){ mounted.get(key).destroy?.(); unmount(key); } };
+  want('clock', buildClock); want('np', buildNp); want('pomo', buildPomo); want('sw', buildSw);
+  // multi-instance: only the affected elements change
+  for (const [id] of [...mounted]) { if (id.startsWith('note-') && (!S.on.notes || !S.notes.some(n=>'note-'+n.id===id))) unmount(id); if (id.startsWith('box-') && (!S.on.launcher || !S.boxes.some(b=>'box-'+b.id===id) || rebuildMulti)) unmount(id); }
+  if (S.on.notes) S.notes.forEach((n,i) => { if(!mounted.has('note-'+n.id)) buildNote(n,i); });
+  if (S.on.launcher) S.boxes.forEach((b,i) => { if(!mounted.has('box-'+b.id)) buildBox(b,i); });
+  setFlies(!!S.on.flies);
+}
+function tickAll(){ mounted.forEach(el => el.tick && el.tick()); }
+setInterval(tickAll, 1000);
+
+/* ------------------------------------------------------------------ dashboard */
+let dpage = 'widgets', dtab = 'desktop';
+function openDash(p){ if(p) dpage = p; $('#dash').classList.add('open'); renderDash(); }
+$('#dx').onclick = () => $('#dash').classList.remove('open');
+$$('#dnav button').forEach(b => b.onclick = () => { dpage = b.dataset.p; renderDash(); });
+(() => { const t = $('#dtbar'); let d = null; t.addEventListener('pointerdown', e => { if(e.target.closest('.x')) return; const r = $('#dash'); d = {x:e.clientX/SC - r.offsetLeft, y:e.clientY/SC - r.offsetTop}; t.setPointerCapture(e.pointerId); });
+  t.addEventListener('pointermove', e => { if(!d) return; const r = $('#dash'); const s = stage.getBoundingClientRect(); r.style.left = ((e.clientX - s.left)/SC - d.x - 0)+'px'; r.style.top = ((e.clientY - s.top)/SC - d.y)+'px'; r.style.left = (parseFloat(r.style.left)+ (s.left/SC - 0) *0)+'px'; });
+  t.addEventListener('pointerup', () => d = null); })();
+
+function wcard(w){
+  const on = S.on[w.id]; let extra = '';
+  if (w.id==='clock') extra = `<div class="acts"><span style="font-size:.78rem;color:#7b6954">Format</span><div class="segd"><button data-f="12" class="${S.clock24?'':'on'}">12 h</button><button data-f="24" class="${S.clock24?'on':''}">24 h</button></div></div>`;
+  if (w.id==='notes') extra = `<div class="acts"><button class="db pri" data-a="newnote">+ New note</button><span style="font-size:.78rem;color:#7b6954">${S.notes.length} note${S.notes.length===1?'':'s'}</span></div>`;
+  if (w.id==='launcher') extra = `<div class="acts"><button class="db pri" data-a="newbox">+ New box</button><span style="font-size:.78rem;color:#7b6954">${S.boxes.length} box${S.boxes.length===1?'':'es'} · ${S.apps.length} app${S.apps.length===1?'':'s'}</span></div>`;
+  const reset = w.multi ? '' : `<button class="db ${on?'':'dis'}" data-a="resetpos">Reset position</button>`;
+  return `<div class="wc ${on?'':'off'}" data-w="${w.id}"><div class="top"><div class="ico">${ICON[w.ico]}</div><h2>${w.name}</h2><i class="tg ${on?'on':''}" data-a="toggle"></i></div><p>${w.desc}</p>${extra}${reset?`<div class="acts">${reset}</div>`:''}</div>`;
+}
+function renderDash(){
+  $$('#dnav button').forEach(b => b.classList.toggle('on', b.dataset.p===dpage));
+  const m = $('#dmain'); let h = '';
+  if (dpage==='wallpaper') h = `<h1>Wallpaper</h1><p class="lead">Your wallpaper plays behind the desktop icons. Pick a video, image or page.</p><div class="wp"><div class="th"></div><div><b style="font-family:var(--font-serif);font-size:1.1rem">lich-king.1920x1080.mp4</b><p style="color:#7b6954;font-size:.82rem;margin:4px 0 14px">Video · looping · muted</p><div class="acts"><button class="db pri">Set wallpaper…</button><button class="db">Clear</button></div></div></div>`;
+  if (dpage==='widgets') h = `<h1>Widgets</h1><p class="lead">Every widget is its own thing. Turn one on and it appears on your desk; turn it off and only that one goes away. Moving or changing one never touches another.</p><div class="grid">${REG.map(wcard).join('')}</div>
+    <div class="note2">Tip: on your desk, the round button also lets you switch widgets on and off, add a note or a box, and arrange everything.</div>`;
+  if (dpage==='apps'){
+    h = `<h1>Apps</h1><p class="lead">Your app library. Apps you add land in <b>Recent</b>; move them into your own boxes to organise them. The same boxes show on your desk when the App launcher widget is on${S.on.launcher?'':' (it is off right now)'}.</p>
+      <div class="acts" style="margin-bottom:16px"><button class="db pri" data-a="addapp">+ Add app</button><button class="db" data-a="newbox">+ New box</button></div>`;
+    h += S.boxes.map(b => { const L = appsOf(b); return `<div class="sect"><div class="sh">${b.name}<small>${L.length} app${L.length===1?'':'s'}${b.id==='recent'?' · newest first':''}</small>${b.id==='recent'?'':`<button class="db" data-a="delbox" data-b="${b.id}">Delete box</button>`}</div>${L.length?L.slice().reverse().map(a=>`<div class="ar" data-app="${a.id}">${appHtml(a)}<span class="nm">${cat(a.k).n}</span><select data-a="move">${S.boxes.map(x=>`<option value="${x.id}" ${x.id===a.box?'selected':''}>Move to: ${x.name}</option>`).join('')}</select><button class="rm" data-a="rmapp" title="Remove">✕</button></div>`).join(''):'<div class="none">No apps here yet.</div>'}</div>`; }).join('');
+  }
+  if (dpage==='settings'){
+    h = `<h1>Settings</h1><p class="lead">How Verso behaves on your desktop, and how it looks.</p><div class="tabs"><button data-tab="desktop" class="${dtab==='desktop'?'on':''}">Desktop</button><button data-tab="theme" class="${dtab==='theme'?'on':''}">Theme</button></div>`;
+    if (dtab==='desktop') h += `<div class="row2"><div class="tx"><b>Hide the taskbar</b><span>Give your wallpaper the whole screen.</span></div><i class="tg ${S.hideTaskbar?'on':''}" data-a="tb"></i></div>
+      <div class="row2"><div class="tx"><b>Hide desktop icons</b><span>Clean desktop. Your files stay where they are.</span></div><i class="tg ${S.hideIcons?'on':''}" data-a="ic"></i></div>
+      <div class="row2"><div class="tx"><b>Pause when something is in front</b><span>Verso rests (about 0% CPU) whenever a window is maximised or fullscreen.</span></div><i class="tg on"></i></div>`;
+    else h += `<p class="lead" style="margin-top:-6px">Colours for the widgets on your desk. Your wallpaper stays yours.</p><div class="pal">${PALETTES.map(p=>`<div class="pc ${S.theme===p?'on':''}" data-pal="${p}"><i style="background:${PAL_SW[p]}"></i>${p.replace('-',' ')}</div>`).join('')}</div>
+      <p class="lead" style="margin-top:22px;margin-bottom:8px"><b>This window</b> — dashboard look</p><div class="segd"><button class="on">Fieldnote</button><button>Sunburst</button></div>`;
+  }
+  m.innerHTML = h;
+}
+$('#dmain').addEventListener('click', e => {
+  const a = e.target.closest('[data-a]'), w = e.target.closest('[data-w]');
+  const tab = e.target.closest('[data-tab]'); if (tab){ dtab = tab.dataset.tab; renderDash(); return; }
+  const pal = e.target.closest('[data-pal]'); if (pal){ S.theme = pal.dataset.pal; body.dataset.theme = S.theme; save(); renderDash(); return; }
+  const f = e.target.closest('.segd [data-f]'); if (f){ S.clock24 = f.dataset.f==='24'; save(); tickAll(); renderDash(); return; }
+  if (!a) return; const act = a.dataset.a;
+  if (act==='toggle') setWidget(w.dataset.w, !S.on[w.dataset.w]);
+  if (act==='resetpos'){ delete S.pos[w.dataset.w]; save(); unmount(w.dataset.w); sync(); toast(REG.find(x=>x.id===w.dataset.w).name+' position reset'); }
+  if (act==='newnote') addNote();
+  if (act==='newbox') addBox();
+  if (act==='addapp') openAddAppDash(a);
+  if (act==='delbox'){ const b = S.boxes.find(b=>b.id===a.dataset.b); S.apps.filter(x=>x.box===b.id).forEach(x=>x.box='recent'); S.boxes = S.boxes.filter(x=>x!==b); delete S.pos['box-'+b.id]; save(); sync(true); renderDash(); }
+  if (act==='rmapp'){ const id = e.target.closest('[data-app]').dataset.app; S.apps = S.apps.filter(x=>x.id!==id); save(); sync(true); renderDash(); }
+  if (act==='tb'){ S.hideTaskbar = !S.hideTaskbar; save(); renderDash(); toast('Taskbar '+(S.hideTaskbar?'hidden':'shown')+' (mock)'); }
+  if (act==='ic'){ S.hideIcons = !S.hideIcons; body.classList.toggle('no-ctx', false); save(); renderDash(); toast('Desktop icons '+(S.hideIcons?'hidden':'shown')+' (mock)'); }
+});
+$('#dmain').addEventListener('change', e => { if (e.target.dataset.a==='move'){ const id = e.target.closest('[data-app]').dataset.app; S.apps.find(x=>x.id===id).box = e.target.value; save(); sync(true); renderDash(); toast('Moved'); } });
+function openAddAppDash(anchor){
+  const free = CATALOG.filter(c=>!S.apps.some(a=>a.k===c.k)); if(!free.length){ toast('All sample apps added'); return; }
+  addAppTo('recent', free[0].k);
+}
+
+/* ------------------------------------------------------------------ mock bar */
+$$('#mockbar [data-glyph]').forEach(b => b.onclick = () => { S.glyph = b.dataset.glyph; save(); glyph(); });
+$('#mCtx').onclick = e => { body.classList.toggle('no-ctx'); e.target.classList.toggle('on'); };
+$('#mDash').onclick = () => openDash();
+$('#mReset').onclick = () => { localStorage.removeItem(KEY); location.reload(); };
+$('#mDemo').onclick = () => {
+  S = Object.assign(first(), {theme:S.theme, glyph:S.glyph});
+  Object.keys(S.on).forEach(k => S.on[k] = true);
+  S.notes = [{id:'n1',c:NOTE_COLORS[0],text:'Research paper\n- add some in Notion',w:300,h:180},{id:'n2',c:NOTE_COLORS[1],text:'- Medilog\n- Content\n- plan for FB\n- Linkedin / FB post\n- Opticonst',w:300,h:240}];
+  S.boxes = [{id:'recent',name:'Recent',w:340,h:230},{id:'b1',name:'Work',w:340,h:230},{id:'b2',name:'Fun',w:340,h:230}];
+  S.apps = [{id:'a1',k:'vscode',box:'b1'},{id:'a2',k:'chrome',box:'b1'},{id:'a3',k:'figma',box:'b1'},{id:'a4',k:'notion',box:'b1'},{id:'a5',k:'spotify',box:'b2'},{id:'a6',k:'discord',box:'b2'},{id:'a7',k:'obs',box:'recent'}];
+  S.seq = 50; S.pos = {n1:undefined, 'note-n1':{x:210,y:120,w:300,h:180},'note-n2':{x:260,y:330,w:300,h:240},'box-b1':{x:1500,y:120,w:340,h:230},'box-b2':{x:1500,y:380,w:340,h:200},'box-recent':{x:1500,y:610,w:340,h:200},pomo:{x:SW/2-310,y:420},sw:{x:SW/2+10,y:420}};
+  save(); [...mounted.keys()].filter(k => k !== 'rb').forEach(unmount); sync(); renderDash(); toast('Demo content loaded');
+};
+
+/* ------------------------------------------------------------------ boot */
+body.dataset.theme = S.theme;
+buildRb();
+document.fonts.ready.then(() => { [...mounted.keys()].filter(k=>k!=='rb').forEach(unmount); sync(); });
+sync(); renderDash();
+</script>
+</body>
+</html>

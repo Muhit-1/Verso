@@ -181,6 +181,22 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
 
     public void PointerLeft() => RunScript("window.__verso&&window.__verso.leave()");
 
+    /// <summary>Tells the Outpost page to forget its saved positions and reload.</summary>
+    public void ResetLayout() => RunScript("window.__verso&&window.__verso.resetLayout&&window.__verso.resetLayout()");
+
+    /// <summary>Tells the Outpost page to re-read which widgets are on.</summary>
+    public void NotifyWidgetsChanged() => RunScript("window.__verso&&window.__verso.widgetsChanged&&window.__verso.widgetsChanged()");
+
+    /// <summary>Tells the Outpost page the palette changed.</summary>
+    public void NotifyThemeChanged() => RunScript("window.__verso&&window.__verso.themeChanged&&window.__verso.themeChanged()");
+
+    /// <summary>Tells the Outpost page the apps or boxes changed.</summary>
+    public void NotifyAppsChanged() => RunScript("window.__verso&&window.__verso.appsChanged&&window.__verso.appsChanged()");
+
+    /// <summary>Tells the Outpost page that a host event happened (the page forwards it to the widgets that listen).</summary>
+    public void NotifyEvent(string name)
+        => RunScript($"window.__verso&&window.__verso.emit&&window.__verso.emit({System.Text.Json.JsonSerializer.Serialize(name)})");
+
     private void RunScript(string script)
     {
         if (_disposed || _controller is null)
@@ -285,7 +301,7 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
             // The usable area (not under the taskbar), relative to this monitor, in physical pixels.
             var work = Monitors.WorkAreaOf(_bounds);
             var wa = $"{work.Left - _bounds.Left},{work.Top - _bounds.Top},{work.Width},{work.Height}";
-            core.Navigate($"https://{VirtualHost}/outpost/index.html?wa={wa}");
+            core.Navigate($"https://{VirtualHost}/outpost/index.html?wa={wa}&mo={_bounds.Left},{_bounds.Top}");
         }
         else
         {
