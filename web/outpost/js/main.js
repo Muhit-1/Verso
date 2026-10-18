@@ -24,7 +24,8 @@ async function start() {
   Background.start();
   Widgets.start();
   Layout.start();
-  Fireflies.start();
+  Fireflies.init();
+  Fireflies.setEnabled(Core.getState().flies !== false);
 }
 
 start();

@@ -14,6 +14,7 @@
 ================================================================== */
 
 import * as Core from "./core.js";
+import * as Fireflies from "./fireflies.js";
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -210,6 +211,15 @@ export function start() {
   $("#bMove").addEventListener("click", () => arrange(!isArranging()));
   $("#hDone").addEventListener("click", () => arrange(false));
   $("#hReset").addEventListener("click", resetLayout);
+  const flies = $("#hFlies");
+  const showFlies = () => flies.classList.toggle("primary", Core.getState().flies !== false);
+  flies.addEventListener("click", () => {
+    const on = Core.getState().flies === false; // toggle
+    Core.patchState({ flies: on });
+    Fireflies.setEnabled(on);
+    showFlies();
+  });
+  showFlies();
   addEventListener("resize", layout);
   document.fonts.ready.then(layout);
   layout();

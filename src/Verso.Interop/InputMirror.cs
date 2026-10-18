@@ -202,6 +202,9 @@ public sealed unsafe class InputMirror : IDisposable
             _leftDown = false;
             if (_pressTarget is { } pressed)
             {
+                // The final position first, then the release: pages that drag from pointermove (the
+                // desk does) must see where the pointer ended up before it is let go.
+                Post(pressed, WM_MOUSEMOVE, 1, cursor);
                 Post(pressed, WM_LBUTTONUP, 0, cursor);
             }
 

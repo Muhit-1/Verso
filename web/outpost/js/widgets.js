@@ -70,6 +70,8 @@ function renderNowPlaying(np) {
       if (span.scrollWidth > mq.clientWidth) {
         span.textContent = text + "   ·   " + text + "   ·   ";
         mq.style.setProperty("--mq-dur", Math.max(10, text.length * 0.32) + "s");
+        // stepped (~3 px per step): a smooth scroll keeps a 60 fps compositor busy forever
+        mq.style.setProperty("--mq-steps", Math.max(8, Math.round(span.scrollWidth / 2 / 3)));
         mq.classList.add("scroll");
       }
     });
