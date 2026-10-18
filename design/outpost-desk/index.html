@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso — Outpost desk (W1 mockup, v2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@300;400;500;600&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   VERSO — "Outpost" desk, W1 DESIGN MOCKUP v2 (static, throwaway)
+   Look and tokens from https://firewatch-outpost.vercel.app/ .
+   v2: EVERYTHING is movable (arrange mode / panel titles), and the dock and
+   button groups turn vertical on their own when dragged to a screen edge.
+   In Verso the WALLPAPER is the user's own, so a theme = palette only.
+   ===================================================================== */
+:root{
+  --font-display:'Anton',sans-serif; --font-body:'Inter',system-ui,sans-serif; --font-hand:'Caveat',cursive;
+  --taskbar:48px; --icon-gutter:104px; --t:.6s ease; --bar:34px;
+}
+body[data-theme="sunset"]{--text:#fde8d0;--text2:rgba(253,232,208,.7);--date:#d4a574;--accent:#ff9e64;--accent-h:#ffb386;--glass:rgba(40,10,20,.40);--glass-b:rgba(253,232,208,.15);--hover:rgba(255,158,100,.15);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:rgba(255,180,100,.6)}
+body[data-theme="night"]{--text:#fff;--text2:rgba(255,255,255,.6);--date:#8fb8d4;--accent:#FFD700;--accent-h:#ffe44d;--glass:rgba(0,0,0,.5);--glass-b:rgba(255,255,255,.1);--hover:rgba(255,215,0,.12);--shadow:0 4px 40px rgba(0,0,0,.6);--fly:rgba(255,215,0,.5)}
+body[data-theme="evening"]{--text:#e8d5f5;--text2:rgba(232,213,245,.65);--date:#b89cc8;--accent:#c084fc;--accent-h:#d4a5ff;--glass:rgba(30,10,50,.45);--glass-b:rgba(200,160,255,.15);--hover:rgba(192,132,252,.12);--shadow:0 4px 40px rgba(0,0,0,.5);--fly:rgba(192,132,252,.5)}
+body[data-theme="forest-green"]{--text:#e0f8e0;--text2:rgba(224,248,224,.65);--date:#a3d9b8;--accent:#66cc99;--accent-h:#8ce6b3;--glass:rgba(10,30,20,.45);--glass-b:rgba(224,248,224,.15);--hover:rgba(102,204,153,.15);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:rgba(102,204,153,.5)}
+body[data-theme="black-sunset"]{--text:#fff;--text2:rgba(255,255,255,.6);--date:#d8c8b8;--accent:#ff7a00;--accent-h:#ffa34d;--glass:rgba(0,0,0,.6);--glass-b:rgba(255,255,255,.1);--hover:rgba(255,122,0,.15);--shadow:0 4px 40px rgba(0,0,0,.6);--fly:rgba(255,122,0,.5)}
+body[data-theme="pencil"]{--text:#e0e0e0;--text2:rgba(224,224,224,.65);--date:#a0a0a0;--accent:#bbb;--accent-h:#e0e0e0;--glass:rgba(10,10,10,.4);--glass-b:rgba(224,224,224,.15);--hover:rgba(187,187,187,.15);--shadow:0 4px 40px rgba(0,0,0,.4);--fly:rgba(187,187,187,.6)}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#000}
+body{font-family:var(--font-body);color:var(--text);transition:color var(--t);user-select:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{width:1.1em;height:1.1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- mockup-only bar: NOT part of Verso ---------- */
+#mockbar{position:fixed;z-index:100;top:0;left:0;right:0;height:var(--bar);display:flex;align-items:center;gap:10px;padding:0 14px;background:#15151a;border-bottom:1px solid #2e2e38;color:#a9a9b8;font-size:12px}
+#mockbar b{color:#fff;font-weight:600;letter-spacing:.06em}
+#mockbar .sp{flex:1}
+#mockbar button{padding:4px 11px;border-radius:999px;background:#ffffff14;font-size:12px;color:#ddd}
+#mockbar button:hover{background:#ffffff2a}
+#mockbar button.on{background:#fff;color:#000}
+
+/* the 1920x1080 stage, scaled to fit the space under the bar */
+#stage{position:fixed;left:50%;top:calc(var(--bar) + (100vh - var(--bar))/2);width:1920px;height:1080px;overflow:hidden;
+  transform:translate(-50%,-50%) scale(var(--s,1));transform-origin:center}
+
+/* ---------- the wallpaper (in Verso: the user's own video) ---------- */
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;background:linear-gradient(#1a2a44,#050a14)}
+.scrim{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.45),transparent 38%),linear-gradient(to bottom,rgba(0,0,0,.25),transparent 22%)}
+#flies{position:absolute;inset:0;z-index:2;pointer-events:none}
+
+/* ---------- mock of the real Windows desktop (NOT part of Verso) ---------- */
+.ctx{position:absolute;inset:0;z-index:30;pointer-events:none;transition:opacity .3s}
+body.no-ctx .ctx{opacity:0}
+.ctx .icons{position:absolute;left:0;top:0;width:76px;padding-top:6px;text-align:center;font-size:12px;color:#fff;text-shadow:0 1px 3px #000}
+.ctx .ic{height:100px;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:6px}
+.ctx .ic i{width:40px;height:40px;border-radius:8px;display:block}
+.ctx .tb{position:absolute;left:0;right:0;bottom:0;height:var(--taskbar);background:rgba(28,28,30,.92);border-top:1px solid #ffffff14;display:flex;align-items:center;justify-content:center;gap:14px}
+.ctx .tb b{width:26px;height:26px;border-radius:6px;background:#ffffff26;display:block}
+.ctx .tb em{position:absolute;right:18px;font-style:normal;font-size:12px;color:#ddd}
+.ctx .safe{position:absolute;left:0;top:0;width:var(--icon-gutter);height:330px;border-right:1px dashed #ffffff55;background:repeating-linear-gradient(45deg,#ffffff0d 0 8px,transparent 8px 16px);opacity:0;transition:opacity .2s}
+.ctx .safe::after{content:"desktop icons live here";position:absolute;left:6px;bottom:6px;font-size:10px;color:#fffc;width:90px}
+body.arrange .ctx .safe,body.show-safe .ctx .safe{opacity:1}
+
+/* ---------- glass ---------- */
+.glass{background:var(--glass);border:1px solid var(--glass-b);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:background var(--t),border-color var(--t)}
+
+/* ---------- the desk: everything lives above the taskbar ---------- */
+.desk{position:absolute;left:0;right:0;top:0;bottom:var(--taskbar);z-index:10;transition:opacity .3s}
+body.hide-ui .desk{opacity:0;pointer-events:none}
+
+/* every movable thing */
+.mv{position:absolute;left:0;top:0}
+.mv.dragging{z-index:20;transition:none!important}
+
+/* arrange mode: every element is picked up by its body */
+body.arrange .mv:not(.panel){outline:2px dashed var(--accent);outline-offset:6px;border-radius:14px;cursor:grab}
+body.arrange .mv:not(.panel) *{pointer-events:none}
+body.arrange .mv.dragging{cursor:grabbing}
+body.arrange .mv.dragging:not(.panel){outline-style:solid}
+.panel h3{cursor:grab}
+.panel.dragging h3{cursor:grabbing}
+
+/* now playing pill */
+.np{width:262px;height:56px;border-radius:1rem;display:flex;align-items:center;gap:12px;padding:0 16px;overflow:hidden}
+.np svg{width:26px;height:26px;color:var(--accent);transition:color var(--t)}
+.np .lbl{font-size:.62rem;font-weight:600;letter-spacing:.16em;color:var(--accent);transition:color var(--t)}
+.np .tx{min-width:0;flex:1}
+.np .mq{white-space:nowrap;overflow:hidden;font-size:.82rem;color:var(--text)}
+.np .mq span{display:inline-block;padding-right:3rem;animation:mq 12s linear infinite}
+@keyframes mq{to{transform:translateX(-50%)}}
+
+/* button groups (MOVE/THEME, 12-24/hide): horizontal by default, vertical at the screen edges */
+.grp{display:flex;gap:8px;align-items:center}
+.grp.v{flex-direction:column}
+.pillbtn{height:36px;padding:0 16px;border-radius:999px;display:flex;align-items:center;gap:8px;font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.pillbtn:hover{background:var(--hover)}
+.pillbtn.on{background:var(--accent);border-color:var(--accent);color:#1a0d08}
+.grp.v .pillbtn{width:100%}
+.sq{width:40px;height:40px;border-radius:.8rem;display:grid;place-items:center}
+.sq:hover{background:var(--hover)}
+.seg{display:flex;border-radius:.8rem;padding:3px}
+.grp.v .seg{flex-direction:column}
+.seg button{padding:8px 14px;border-radius:.6rem;font-size:.78rem;font-weight:600;opacity:.6}
+.seg button.on{background:var(--hover);color:var(--accent);opacity:1}
+
+/* clock */
+.clock .time{font-family:var(--font-display);font-size:9.5rem;line-height:.95;letter-spacing:.01em;text-shadow:var(--shadow);display:flex;align-items:baseline;gap:.2rem;white-space:nowrap}
+.clock .ampm{font-family:var(--font-body);font-weight:500;font-size:1.7rem;color:var(--accent);letter-spacing:.06em;transition:color var(--t)}
+.clock .date{margin-top:.5rem;font-size:1.3rem;font-weight:300;letter-spacing:.28em;text-transform:uppercase;color:var(--date);padding-left:.3rem;white-space:nowrap}
+.sep{opacity:.9;animation:blink 2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.45}}
+
+/* dock */
+.dock{display:flex;border-radius:1rem;padding:4px}
+.dock button{display:flex;align-items:center;gap:9px;padding:12px 22px;border-radius:.75rem;font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;position:relative}
+.dock button+button::before{content:"";position:absolute;left:0;top:30%;bottom:30%;width:1px;background:var(--glass-b)}
+.dock button:hover{background:var(--hover)}
+.dock button.active{color:var(--accent);background:var(--hover)}
+.dock.v{flex-direction:column}
+.dock.v button{flex-direction:column;gap:7px;padding:14px 14px;min-width:96px;font-size:.62rem}
+.dock.v button svg{width:1.5em;height:1.5em}
+.dock.v button+button::before{left:22%;right:22%;top:0;bottom:auto;width:auto;height:1px}
+
+/* panels: one open at a time, draggable by the title */
+.panel{width:340px;border-radius:1.25rem;padding:22px;opacity:0;pointer-events:none;transform:translateY(14px) scale(.98);transition:opacity .25s,transform .25s}
+.panel.open{opacity:1;pointer-events:auto;transform:none}
+.panel h3{font-size:.7rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;padding-bottom:2px}
+.panel h3 small{font-family:var(--font-hand);font-size:1.15rem;letter-spacing:0;text-transform:none;color:var(--text2);font-weight:500}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.chip{padding:8px 0;border-radius:.6rem;font-size:.74rem;border:1px solid var(--glass-b);text-align:center}
+.chip:hover{background:var(--hover)}
+.chip.on{background:var(--hover);border-color:var(--accent);color:var(--accent)}
+.ring{position:relative;width:170px;height:170px;margin:4px auto 10px}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:5}
+.ring .tr0{stroke:var(--glass-b)}
+.ring .fg{stroke:var(--accent);stroke-linecap:round;stroke-dasharray:263.89;stroke-dashoffset:0;transition:stroke .6s,stroke-dashoffset 1s linear}
+.ring .big{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.disp{font-family:var(--font-display);font-size:3.2rem;letter-spacing:.02em;line-height:1}
+.sub{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text2);margin-top:6px}
+.row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+.btn{padding:10px 24px;border-radius:999px;border:1px solid var(--glass-b);font-size:.75rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0d08}
+.btn.primary:hover{background:var(--accent-h)}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:14px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--glass-b)}
+.dots i.d{background:var(--accent)}
+.laps{margin-top:12px;max-height:110px;overflow:auto;font-size:.8rem;color:var(--text2)}
+.laps div{display:flex;justify-content:space-between;padding:5px 2px;border-top:1px solid var(--glass-b)}
+.art{width:64px;height:64px;border-radius:.8rem;background:linear-gradient(135deg,var(--accent),#222);flex:none}
+.mrow{display:flex;gap:14px;align-items:center}
+.mrow b{display:block;font-weight:500;font-size:.95rem}
+.mrow span{font-size:.8rem;color:var(--text2)}
+.bar{height:4px;border-radius:4px;background:var(--glass-b);margin:18px 0 6px;overflow:hidden}
+.bar i{display:block;height:100%;width:30%;background:var(--accent);border-radius:4px}
+.tm{display:flex;justify-content:space-between;font-size:.7rem;color:var(--text2);font-variant-numeric:tabular-nums}
+.ctl{display:flex;justify-content:center;gap:14px;margin-top:10px}
+.ctl .sq{width:46px;height:46px;border-radius:50%}
+.ctl .sq.main{background:var(--accent);color:#1a0d08}
+.note{margin-top:14px;font-size:.72rem;color:var(--text2);text-align:center;line-height:1.4}
+
+/* arrange-mode hint (this IS part of Verso: it replaces the old MOVE cycling) */
+.hint{position:absolute;z-index:25;left:50%;top:26px;transform:translate(-50%,-10px);opacity:0;pointer-events:none;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 20px;border-radius:999px;font-size:.78rem;transition:.25s;white-space:nowrap}
+body.arrange .hint{opacity:1;pointer-events:auto;transform:translate(-50%,0)}
+.hint b{color:var(--accent);letter-spacing:.14em;font-size:.68rem;text-transform:uppercase}
+.hint .btn{padding:7px 16px;font-size:.68rem}
+
+/* snapping guides while dragging */
+.guide{position:absolute;z-index:24;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .12s}
+.guide.x{top:0;bottom:var(--taskbar);width:1px;left:960px}
+.guide.y{left:0;right:0;height:1px}
+.guide.on{opacity:.55}
+
+.toast{position:absolute;z-index:40;left:50%;top:92px;transform:translate(-50%,-8px);opacity:0;padding:8px 18px;border-radius:999px;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;transition:.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body data-theme="sunset">
+
+<!-- ===== mockup-only controls; nothing in this bar ships in Verso ===== -->
+<div id="mockbar">
+  <b>MOCKUP</b><span>this bar is only for reviewing the design — it is not part of Verso</span>
+  <span class="sp"></span>
+  <span>keys: T theme · M arrange · P S O panels · H hide · Esc done</span>
+  <button id="mCtx" class="on">show desktop icons + taskbar</button>
+  <button id="mSafe">show icon zone</button>
+</div>
+
+<div id="stage">
+  <video id="bg" src="/bg.mp4" autoplay muted loop playsinline></video>
+  <div class="scrim"></div>
+  <canvas id="flies"></canvas>
+
+  <main class="desk" id="desk">
+
+    <!-- now playing (real SMTC session in Verso) -->
+    <div class="mv np glass" data-id="np">
+      <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      <div class="tx"><div class="lbl">NOW PLAYING</div>
+        <div class="mq"><span>The ENTIRE Story of PRISON BREAK in 195 Minutes — JarToon&nbsp;&nbsp;·&nbsp;&nbsp;The ENTIRE Story of PRISON BREAK in 195 Minutes — JarToon&nbsp;&nbsp;·&nbsp;&nbsp;</span></div></div>
+    </div>
+
+    <!-- MOVE (= arrange mode) + THEME -->
+    <div class="mv grp" data-id="tr" data-orient="auto">
+      <button class="pillbtn glass" id="bMove"><svg viewBox="0 0 24 24"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>Move</button>
+      <button class="pillbtn glass" id="bTheme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Theme</button>
+    </div>
+
+    <!-- clock + date -->
+    <section class="mv clock" data-id="clock">
+      <div class="time"><span id="hh">03</span><span class="sep">:</span><span id="mm">31</span><span class="ampm" id="ap">PM</span></div>
+      <div class="date" id="dt">Monday, September 28</div>
+    </section>
+
+    <!-- dock ("dashboard"): horizontal, or vertical at the screen edges -->
+    <nav class="mv dock glass" id="dock" data-id="dock" data-orient="auto">
+      <button data-p="pomo"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>Pomodoro</button>
+      <button data-p="sw"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13l3-3M10 2h4"/></svg>Stopwatch</button>
+      <button data-p="music"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Music</button>
+    </nav>
+
+    <!-- 12/24 + hide -->
+    <div class="mv grp" data-id="br" data-orient="auto">
+      <button class="sq glass" id="bHide" title="Hide widgets"><svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>
+      <div class="seg glass"><button id="b12" class="on">12</button><button id="b24">24</button></div>
+    </div>
+
+    <!-- panels -->
+    <section class="mv panel glass" id="pomo" data-id="pomo">
+      <h3 class="grab">Pomodoro <small id="pLabel">focus session</small></h3>
+      <div class="chips" id="chips">
+        <button class="chip on" data-f="25" data-b="5">25 / 5</button><button class="chip" data-f="45" data-b="5">45 / 5</button>
+        <button class="chip" data-f="50" data-b="10">50 / 10</button><button class="chip" data-f="90" data-b="15">90 / 15</button>
+      </div>
+      <div class="ring"><svg viewBox="0 0 100 100"><circle class="tr0" cx="50" cy="50" r="42"/><circle class="fg" id="ringFg" cx="50" cy="50" r="42"/></svg>
+        <div class="big"><div class="disp" id="pDisp">25:00</div><div class="sub" id="pSub">Focus</div></div></div>
+      <div class="row"><button class="btn primary" id="pStart">Start</button><button class="btn" id="pReset">Reset</button></div>
+      <div class="dots"><i class="d"></i><i></i><i></i><i></i></div>
+    </section>
+
+    <section class="mv panel glass" id="sw" data-id="sw">
+      <h3 class="grab">Stopwatch <small>go on, I'll wait</small></h3>
+      <div class="ring" style="height:auto;width:auto;margin:10px 0 6px;text-align:center"><div class="disp" id="swDisp" style="font-size:3.6rem">00:00<span style="font-size:1.5rem;opacity:.5">.00</span></div></div>
+      <div class="row"><button class="btn primary" id="swStart">Start</button><button class="btn" id="swLap">Lap</button><button class="btn" id="swReset">Reset</button></div>
+      <div class="laps" id="laps"></div>
+    </section>
+
+    <section class="mv panel glass" id="music" data-id="music">
+      <h3 class="grab">Music <small>controls what's playing</small></h3>
+      <div class="mrow"><div class="art"></div><div><b>The ENTIRE Story of PRISON BREAK…</b><span>JarToon · Chrome</span></div></div>
+      <div class="bar"><i id="mBar"></i></div>
+      <div class="tm"><span id="mCur">58:12</span><span>195:36</span></div>
+      <div class="ctl">
+        <button class="sq glass"><svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8zM5 19V5"/></svg></button>
+        <button class="sq main" id="mPlay"><svg viewBox="0 0 24 24" id="mIcon"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg></button>
+        <button class="sq glass"><svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8zM19 5v14"/></svg></button>
+      </div>
+      <div class="note">Plays/pauses whatever Windows says is playing — Spotify, YouTube, any browser tab. No bundled soundtrack.</div>
+    </section>
+
+    <div class="guide x" id="gx"></div><div class="guide y" id="gy"></div>
+
+    <!-- arrange mode hint -->
+    <div class="hint glass" id="hint">
+      <b>Arrange</b><span>Drag anything. Near a screen edge the dock and buttons turn vertical. Panels move by their title, any time.</span>
+      <button class="btn" id="hReset">Reset layout</button><button class="btn primary" id="hDone">Done</button>
+    </div>
+  </main>
+
+  <div class="toast glass" id="toast">Sunset</div>
+
+  <!-- what the real desktop adds on top of the wallpaper -->
+  <div class="ctx" id="ctx">
+    <div class="safe"></div>
+    <div class="icons">
+      <div class="ic"><i style="background:linear-gradient(#34b5ea,#0e7ab8)"></i>This PC</div>
+      <div class="ic"><i style="background:linear-gradient(#e8f3ff,#8fb4d8)"></i>Recycle Bin</div>
+      <div class="ic"><i style="background:linear-gradient(#fff,#cfd6dd)"></i>notes.txt</div>
+    </div>
+    <div class="tb"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><em>6:00 AM<br>10/18/2026</em></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const body = document.body, desk = $('#desk'), stage = $('#stage');
+const SW = 1920, DH = 1080 - 48;           // desk area: full width, above the 48 px taskbar
+const MARGIN = 32, EDGE = 150, SNAP = 14;  // snap margin; "near an edge" distance; snap strength
+
+/* ---- fit the 1920x1080 stage under the mockup bar ---- */
+let S = 1;
+function fit(){ S = Math.min(innerWidth / 1920, (innerHeight - 34) / 1080); stage.style.setProperty('--s', S); }
+addEventListener('resize', fit); fit();
+
+/* ---- clock ---- */
+let is24 = false;
+function tick(){
+  const d = new Date(); let h = d.getHours(); const ap = h >= 12 ? 'PM' : 'AM';
+  if(!is24) h = h % 12 || 12;
+  $('#hh').textContent = String(h).padStart(2,'0'); $('#mm').textContent = String(d.getMinutes()).padStart(2,'0');
+  $('#ap').style.display = is24 ? 'none' : ''; $('#ap').textContent = ap;
+  $('#dt').textContent = d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+}
+setInterval(tick,1000); tick();
+$('#b12').onclick = () => { is24=false; $('#b12').classList.add('on'); $('#b24').classList.remove('on'); tick(); };
+$('#b24').onclick = () => { is24=true;  $('#b24').classList.add('on'); $('#b12').classList.remove('on'); tick(); };
+
+/* ---- theme (palette only: the wallpaper is the user's) ---- */
+const THEMES = ['sunset','night','evening','forest-green','black-sunset','pencil']; let ti = 0;
+function theme(n){ ti = n; body.dataset.theme = THEMES[ti]; const t = $('#toast'); t.textContent = THEMES[ti].replace('-',' ');
+  t.classList.add('show'); clearTimeout(theme.h); theme.h = setTimeout(()=>t.classList.remove('show'),1400); }
+$('#bTheme').onclick = () => theme((ti+1)%THEMES.length);
+
+/* =====================================================================
+   LAYOUT: every .mv is absolutely positioned (left/top in stage px),
+   saved per id. Defaults are computed from the real element sizes.
+   ===================================================================== */
+const KEY = 'verso.outpost.mock.v2';
+let saved = {}; try { saved = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){}
+const persist = () => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch(e){} };
+const mvs = $$('.mv'), byId = id => $(`.mv[data-id="${id}"]`);
+const size = el => ({ w: el.offsetWidth, h: el.offsetHeight });
+const clampX = (x, w) => Math.min(Math.max(0, x), SW - w);
+const clampY = (y, h) => Math.min(Math.max(0, y), DH - h);
+function put(el, x, y){ const {w,h} = size(el); el.style.left = clampX(x,w) + 'px'; el.style.top = clampY(y,h) + 'px'; }
+
+/* vertical when the element's centre is near the left/right edge */
+function orient(el, x){
+  if (el.dataset.orient !== 'auto') return false;
+  const {w} = size(el); const cx = x + w/2; const v = cx < EDGE || cx > SW - EDGE;
+  const was = el.classList.contains('v');
+  el.classList.toggle('v', v);
+  return v !== was;
+}
+
+function defaults(){
+  const set = (id, fn) => { const el = byId(id); if (el.classList.contains('panel')) return; el.classList.remove('v'); const {w,h} = size(el); const [x,y] = fn(w,h); put(el,x,y); };
+  set('np',   ()      => [112, 32]);
+  set('tr',   (w)     => [SW - MARGIN - w, 32]);
+  set('clock',(w,h)   => [48, DH - 36 - h]);
+  set('dock', (w,h)   => [(SW - w)/2, DH - 20 - h]);
+  set('br',   (w,h)   => [SW - MARGIN - w, DH - 20 - h]);
+}
+function applySaved(){
+  for (const el of mvs) {
+    const s = saved[el.dataset.id]; if (!s || el.classList.contains('panel')) continue;
+    if (el.dataset.orient === 'auto') el.classList.toggle('v', !!s.v);
+    put(el, s.x, s.y);
+  }
+}
+function layout(){ defaults(); applySaved(); }
+document.fonts.ready.then(layout); layout();
+
+/* panels: open next to the dock unless the user has already placed them */
+function placePanel(p){
+  const s = saved[p.dataset.id];
+  if (s) { put(p, s.x, s.y); return; }
+  const d = byId('dock'), dx = d.offsetLeft, dy = d.offsetTop, {w:dw,h:dh} = size(d), {w:pw,h:ph} = size(p);
+  let x, y;
+  if (d.classList.contains('v')) { y = dy + dh/2 - ph/2; x = (dx + dw/2 < SW/2) ? dx + dw + 18 : dx - pw - 18; }
+  else { x = dx + dw/2 - pw/2; y = (dy + dh/2 > DH/2) ? dy - ph - 16 : dy + dh + 16; }
+  put(p, x, y);
+}
+
+/* ---- panels: one at a time, click outside closes ---- */
+function closePanels(){ $$('.panel').forEach(x=>x.classList.remove('open')); $$('#dock button').forEach(b=>b.classList.remove('active')); }
+function openPanel(id){
+  const p = $('#'+id), was = p.classList.contains('open'); closePanels();
+  if (!was){ placePanel(p); p.classList.add('open'); $(`#dock [data-p="${id}"]`).classList.add('active'); }
+}
+$$('#dock button').forEach(b => b.onclick = e => { e.stopPropagation(); openPanel(b.dataset.p); });
+document.addEventListener('click', e => { if(!e.target.closest('.panel,.dock,.hint')) closePanels(); });
+$('#bHide').onclick = () => body.classList.toggle('hide-ui');
+
+/* =====================================================================
+   DRAGGING (pointer events; coordinates converted from window to stage px)
+   - arrange mode: pick up any element by its body
+   - panels: pick up by the title, any time
+   ===================================================================== */
+let drag = null;
+const gx = $('#gx'), gy = $('#gy');
+function toStage(e){ const r = stage.getBoundingClientRect(); return { x: (e.clientX - r.left)/S, y: (e.clientY - r.top)/S }; }
+
+addEventListener('pointerdown', e => {
+  const el = e.target.closest('.mv'); if (!el) return;
+  const isPanel = el.classList.contains('panel');
+  if (isPanel ? !e.target.closest('h3') : !body.classList.contains('arrange')) return;
+  const p = toStage(e), {w,h} = size(el);
+  drag = { el, fx: (p.x - el.offsetLeft)/w, fy: (p.y - el.offsetTop)/h };   // grab point as a fraction, survives a size change
+  el.classList.add('dragging'); el.setPointerCapture(e.pointerId); e.preventDefault();
+});
+addEventListener('pointermove', e => {
+  if (!drag) return;
+  const {el} = drag, p = toStage(e);
+  let {w,h} = size(el);
+  let x = p.x - drag.fx * w, y = p.y - drag.fy * h;
+  if (orient(el, x)) { ({w,h} = size(el)); x = p.x - drag.fx * w; y = p.y - drag.fy * h; }   // re-grab after the flip
+
+  // snap to the margins and the centre lines
+  let sx = null, sy = null;
+  for (const c of [MARGIN, (SW - w)/2, SW - MARGIN - w]) if (Math.abs(x - c) < SNAP) { x = c; sx = c; }
+  for (const c of [MARGIN, (DH - h)/2, DH - MARGIN - h]) if (Math.abs(y - c) < SNAP) { y = c; sy = c; }
+  gx.classList.toggle('on', sx !== null && Math.abs(sx - (SW - w)/2) < 1);
+  gy.classList.toggle('on', sy !== null && Math.abs(sy - (DH - h)/2) < 1);
+  gy.style.top = (DH/2) + 'px';
+  put(el, x, y);
+});
+addEventListener('pointerup', () => {
+  if (!drag) return;
+  const {el} = drag; el.classList.remove('dragging'); gx.classList.remove('on'); gy.classList.remove('on');
+  saved[el.dataset.id] = { x: el.offsetLeft, y: el.offsetTop, v: el.classList.contains('v') }; persist();
+  if (el.id === 'dock') $$('.panel').forEach(p => { if (!saved[p.dataset.id] && p.classList.contains('open')) placePanel(p); });
+  drag = null;
+});
+
+/* ---- arrange mode ---- */
+function arrange(on){ body.classList.toggle('arrange', on); $('#bMove').classList.toggle('on', on); if (on) closePanels(); }
+$('#bMove').onclick = () => arrange(!body.classList.contains('arrange'));
+$('#hDone').onclick = () => arrange(false);
+$('#hReset').onclick = () => { saved = {}; persist(); $$('.panel').forEach(p => { p.style.left = p.style.top = ''; }); layout(); };
+
+/* ---- pomodoro ---- */
+let pF=25, pB=5, pLeft=25*60, pRun=false, pBreak=false, pT=null;
+const fmt = s => String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function pDraw(){ const tot=(pBreak?pB:pF)*60; $('#pDisp').textContent=fmt(pLeft); $('#ringFg').style.strokeDashoffset = 263.89*(1-pLeft/tot);
+  $('#pSub').textContent = pBreak?'Break':'Focus'; $('#pLabel').textContent = pBreak?'take five':'focus session'; $('#pStart').textContent = pRun?'Pause':'Start'; }
+$('#pStart').onclick = () => { pRun=!pRun; clearInterval(pT); if(pRun) pT=setInterval(()=>{ if(--pLeft<=0){ pBreak=!pBreak; pLeft=(pBreak?pB:pF)*60; } pDraw(); },1000); pDraw(); };
+$('#pReset').onclick = () => { pRun=false; clearInterval(pT); pBreak=false; pLeft=pF*60; pDraw(); };
+$$('#chips .chip').forEach(c => c.onclick = () => { $$('#chips .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); pF=+c.dataset.f; pB=+c.dataset.b; $('#pReset').click(); });
+pDraw();
+
+/* ---- stopwatch ---- */
+let swT=0, swRun=false, swI=null, swLast=0;
+const swFmt = ms => { const c=Math.floor(ms/10)%100, s=Math.floor(ms/1000)%60, m=Math.floor(ms/60000); return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'<span style="font-size:1.5rem;opacity:.5">.'+String(c).padStart(2,'0')+'</span>'; };
+$('#swStart').onclick = () => { swRun=!swRun; $('#swStart').textContent = swRun?'Stop':'Start'; clearInterval(swI);
+  if(swRun){ const t0=performance.now()-swT; swI=setInterval(()=>{ swT=performance.now()-t0; $('#swDisp').innerHTML=swFmt(swT); },30); } };
+$('#swLap').onclick = () => { if(!swT) return; const d=document.createElement('div'); d.innerHTML=`<span>Lap ${$('#laps').children.length+1}</span><span>${swFmt(swT-swLast).replace(/<[^>]+>/g,'')}</span>`; swLast=swT; $('#laps').prepend(d); };
+$('#swReset').onclick = () => { swRun=false; clearInterval(swI); swT=0; swLast=0; $('#swStart').textContent='Start'; $('#swDisp').innerHTML=swFmt(0); $('#laps').innerHTML=''; };
+
+/* ---- music ---- */
+let mPlay=true, mP=0.3;
+$('#mPlay').onclick = () => { mPlay=!mPlay; $('#mIcon').innerHTML = mPlay ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>' : '<path d="M6 4l14 8-14 8z"/>'; };
+setInterval(()=>{ if(mPlay){ mP=(mP+0.0004)%1; $('#mBar').style.width=(mP*100)+'%'; const s=Math.floor(mP*195*60); $('#mCur').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); } },500);
+
+/* ---- fireflies (capped 30 fps) ---- */
+const cv=$('#flies'), cx=cv.getContext('2d'); cv.width=1920; cv.height=1080; const fl=[];
+for(let i=0;i<35;i++) fl.push({x:Math.random()*1920,y:Math.random()*1080,r:Math.random()*2.5+1,vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.3,o:Math.random()*.6,to:Math.random()*.6+.2});
+let last=0;
+(function loop(t){ requestAnimationFrame(loop); if(t-last<33) return; last=t;
+  cx.clearRect(0,0,1920,1080); const col=getComputedStyle(body).getPropertyValue('--fly').trim();
+  for(const f of fl){ f.x+=f.vx; f.y+=f.vy; f.o+=(f.to-f.o)*.01; if(f.x<0||f.x>1920) f.vx*=-1; if(f.y<0||f.y>1080) f.vy*=-1;
+    cx.beginPath(); cx.arc(f.x,f.y,f.r,0,7); cx.fillStyle=col.replace(/[\d.]+\)$/,f.o+')'); cx.shadowBlur=f.r*6; cx.shadowColor=col; cx.fill(); } })(0);
+
+/* ---- mockup bar + keys ---- */
+$('#mCtx').onclick = e => { body.classList.toggle('no-ctx'); e.target.classList.toggle('on'); };
+$('#mSafe').onclick = e => { body.classList.toggle('show-safe'); e.target.classList.toggle('on'); };
+addEventListener('keydown', e => { const k=e.key.toLowerCase();
+  if(k==='escape') arrange(false);
+  if(k==='t') $('#bTheme').click(); if(k==='m') $('#bMove').click(); if(k==='p') $('#dock [data-p=pomo]').click();
+  if(k==='s') $('#dock [data-p=sw]').click(); if(k==='o') $('#dock [data-p=music]').click(); if(k==='h') $('#bHide').click(); });
+</script>
+</body>
+</html>

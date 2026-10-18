@@ -69,7 +69,7 @@ public partial class App : Application
         _media = new SmtcNowPlayingSource();
         await _media.StartAsync();
 
-        _bridge = new ScriptBridge(new FileTaskStore(), new FileNoteStore(), new FileAgendaStore(), _themes, _widgets, _settings, _layout, _media);
+        _bridge = new ScriptBridge(new FileTaskStore(), new FileNoteStore(), new FileAgendaStore(), _themes, _widgets, _settings, _layout, new FileLayoutStore(VersoPaths.OutpostFile), _media);
 
         ApplyDesktopCleanup();
 
@@ -102,7 +102,10 @@ public partial class App : Application
         menu.Items.Add(MenuItem("Clear background", () => _ = _actions?.ClearBackground()));
         menu.Items.Add(new Separator());
         menu.Items.Add(CheckableMenuItem(
-            "Hide taskbar", _settings!.Current.DesktopCleanup.HideTaskbar,
+            "Outpost desk (clock, dock, panels)", _settings!.Current.DeskStyle == "outpost",
+            on => _ = _actions?.SetDeskStyle(on ? "outpost" : "classic")));
+        menu.Items.Add(CheckableMenuItem(
+            "Hide taskbar", _settings.Current.DesktopCleanup.HideTaskbar,
             hide => _actions?.SetTaskbarHidden(hide)));
         menu.Items.Add(CheckableMenuItem(
             "Hide desktop icons", _settings.Current.DesktopCleanup.HideDesktopIcons,

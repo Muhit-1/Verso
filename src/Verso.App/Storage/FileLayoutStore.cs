@@ -23,6 +23,13 @@ namespace Verso.App.Storage;
 internal sealed class FileLayoutStore
 {
     private readonly Lock _gate = new();
+    private readonly string _path;
+
+    /// <param name="path">Where to keep the JSON. Defaults to layout.json; the Outpost desk passes its own file.</param>
+    public FileLayoutStore(string? path = null)
+    {
+        _path = path ?? VersoPaths.LayoutFile;
+    }
 
     /// <returns>The stored JSON, or <c>"{}"</c> when there is nothing saved yet.</returns>
     public string Load()
@@ -31,12 +38,12 @@ internal sealed class FileLayoutStore
         {
             try
             {
-                if (!File.Exists(VersoPaths.LayoutFile))
+                if (!File.Exists(_path))
                 {
                     return "{}";
                 }
 
-                var text = File.ReadAllText(VersoPaths.LayoutFile).Trim();
+                var text = File.ReadAllText(_path).Trim();
                 return string.IsNullOrEmpty(text) ? "{}" : text;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -63,9 +70,9 @@ internal sealed class FileLayoutStore
 
                 // Temp-then-move, so a crash mid-write costs the change rather
                 // than the file. Same rule as JsonFile.
-                var temp = VersoPaths.LayoutFile + ".tmp";
+                var temp = _path + ".tmp";
                 File.WriteAllText(temp, json);
-                File.Move(temp, VersoPaths.LayoutFile, overwrite: true);
+                File.Move(temp, _path, overwrite: true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -82,9 +89,9 @@ internal sealed class FileLayoutStore
         {
             try
             {
-                if (File.Exists(VersoPaths.LayoutFile))
+                if (File.Exists(_path))
                 {
-                    File.Delete(VersoPaths.LayoutFile);
+                    File.Delete(_path);
                 }
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

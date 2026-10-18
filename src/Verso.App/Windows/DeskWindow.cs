@@ -45,7 +45,16 @@ internal enum DeskMode
     /// (reproduced in isolation, tools/Verso.Spike.Layers variant A).
     /// </para>
     /// </summary>
-    Background
+    Background,
+
+    /// <summary>
+    /// The Outpost desk: the same <see cref="ProgmanSurface"/> as <see cref="Background"/>, but the page is
+    /// the whole desk — the user's wallpaper <i>and</i> every widget (clock, now playing, dock, panels),
+    /// drawn together with real transparency and blur. There is no overlay window beside it. Because the
+    /// icon layer sits in front and takes all input, the mouse is mirrored in with
+    /// <see cref="InputMirror"/>. See CLAUDE.md, "WIDGETS".
+    /// </summary>
+    Outpost
 }
 
 /// <summary>
@@ -65,7 +74,7 @@ internal enum DeskMode
 /// control, which is what makes it composite inside the layered window.
 /// </para>
 /// </remarks>
-internal sealed class DeskWindow : IDisposable
+internal sealed class DeskWindow : IDisposable, IInputTarget
 {
     /// <summary>
     /// The web layer is served from https://verso.local/ rather than file://
@@ -91,9 +100,12 @@ internal sealed class DeskWindow : IDisposable
     private readonly DeskMode _mode;
     private readonly IDeskSurface _surface;
 
+    private readonly Rectangle _bounds;
     private CoreWebView2Controller? _controller;
+    private nint _renderWindow;
     private bool _usingWorkerW;
     private bool _disposed;
+    private bool _rendering = true;
 
     public DeskWindow(
         ScriptBridge bridge,
@@ -105,12 +117,13 @@ internal sealed class DeskWindow : IDisposable
         _bridge = bridge;
         _settings = settings;
         _mode = mode;
+        _bounds = bounds;
 
         // The live wallpaper lives behind the icons, in Progman. Everything else
         // is a top-level window of ours. The caller has already confirmed the
         // layer is available (ProgmanLayer.PrepareAsync); the constructor
         // throws rather than quietly producing an invisible window if not.
-        _surface = mode == DeskMode.Background
+        _surface = mode is DeskMode.Background or DeskMode.Outpost
             ? new ProgmanSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height)
             : new DesktopSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height);
 
@@ -132,6 +145,7 @@ internal sealed class DeskWindow : IDisposable
         {
             DeskMode.Wallpaper => "bottom-most layer (no WorkerW on this build)",
             DeskMode.Background => "Progman layer (behind the icons)",
+            DeskMode.Outpost => "Outpost desk in the Progman layer (mouse mirrored in)",
             _ => "bottom-most layer (overlay)"
         };
     }
@@ -141,6 +155,49 @@ internal sealed class DeskWindow : IDisposable
     /// window — it is a child of Explorer's window and goes with it. Always
     /// true for top-level desks.
     /// </summary>
+    public DeskMode Mode => _mode;
+
+    // ---- IInputTarget: how InputMirror reaches this page ----------------------
+
+    public bool IsActive => !_disposed && _rendering && _controller is not null;
+
+    public Rectangle ScreenBounds => _bounds;
+
+    public nint RenderWindow
+    {
+        get
+        {
+            if (!WindowTree.Exists(_renderWindow))
+            {
+                _renderWindow = WindowTree.FindDescendant(_surface.Handle, "Chrome_RenderWidgetHostHWND");
+            }
+
+            return _renderWindow;
+        }
+    }
+
+    public void Wheel(int clientX, int clientY, int delta)
+        => RunScript($"window.__verso&&window.__verso.wheel({clientX},{clientY},{delta})");
+
+    public void PointerLeft() => RunScript("window.__verso&&window.__verso.leave()");
+
+    private void RunScript(string script)
+    {
+        if (_disposed || _controller is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = _controller.CoreWebView2.ExecuteScriptAsync(script);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException)
+        {
+            // The page is mid-navigation or the window is going away; the next event will land.
+        }
+    }
+
     public bool IsSurfaceAlive => _surface is not ProgmanSurface progman || progman.IsAlive;
 
     /// <summary>What actually happened when this desk was placed. For the tray tooltip.</summary>
@@ -162,7 +219,7 @@ internal sealed class DeskWindow : IDisposable
         // between the controller appearing and the first region arriving.
         // The wallpaper has nothing to be transparent over; black avoids a
         // white flash while the first frame of a video decodes.
-        _controller.DefaultBackgroundColor = _mode == DeskMode.Background
+        _controller.DefaultBackgroundColor = _mode is DeskMode.Background or DeskMode.Outpost
             ? Color.Black
             : Color.Transparent;
 
@@ -222,7 +279,18 @@ internal sealed class DeskWindow : IDisposable
             DeskMode.Background => "background",
             _ => "overlay"
         };
-        core.Navigate($"https://{VirtualHost}/shell/index.html?layer={layer}");
+
+        if (_mode == DeskMode.Outpost)
+        {
+            // The usable area (not under the taskbar), relative to this monitor, in physical pixels.
+            var work = Monitors.WorkAreaOf(_bounds);
+            var wa = $"{work.Left - _bounds.Left},{work.Top - _bounds.Top},{work.Width},{work.Height}";
+            core.Navigate($"https://{VirtualHost}/outpost/index.html?wa={wa}");
+        }
+        else
+        {
+            core.Navigate($"https://{VirtualHost}/shell/index.html?layer={layer}");
+        }
 
         _controller.IsVisible = true;
         ReassertPlacement();
@@ -332,6 +400,8 @@ internal sealed class DeskWindow : IDisposable
             return;
         }
 
+        _rendering = rendering;
+
         if (rendering)
         {
             _surface.SetVisible(true);
@@ -376,7 +446,7 @@ internal sealed class DeskWindow : IDisposable
         }
 
         var background = _settings.Current.Background;
-        if (background.Kind is not ("video" or "gif" or "interactive")
+        if (background.Kind is not ("video" or "gif" or "interactive" or "image")
             || string.IsNullOrWhiteSpace(background.Source))
         {
             return;

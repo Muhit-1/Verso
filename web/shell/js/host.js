@@ -209,6 +209,14 @@ async function createDemoHost() {
     getLayout: () => null,
     saveLayout: () => {},
 
+    // The Outpost desk's state; localStorage is enough to develop it in a browser.
+    getDeskState: () => {
+      try { return JSON.parse(localStorage.getItem("verso.outpost.v1") || "{}"); } catch { return {}; }
+    },
+    saveDeskState: next => {
+      try { localStorage.setItem("verso.outpost.v1", JSON.stringify(next)); } catch { /* private mode */ }
+    },
+
     getWidgets: () => widgets,
 
     // No real apps to launch without a host. Seeded so the app-launcher
@@ -277,6 +285,9 @@ async function createRealHost(bridge) {
   // reloads the desk itself after adding or removing an entry.
   const launcherEntries = parse(await bridge.GetLauncherEntries(), []);
 
+  // The Outpost desk's own state (element positions, palette, 12/24h). Opaque to the host.
+  let deskState = parse(await bridge.GetDeskState(), {});
+
   // Polling, deliberately, even now that Phase 8 wired SMTC up for real.
   // SmtcNowPlayingSource does raise real .NET events on its side, but
   // COM events do not survive the JS boundary cleanly, and one call a
@@ -324,6 +335,12 @@ async function createRealHost(bridge) {
     },
 
     getWidgets: () => widgets,
+
+    getDeskState: () => deskState,
+    saveDeskState(next) {
+      deskState = next;                              // cache first, like layout
+      bridge.SaveDeskState(JSON.stringify(next));
+    },
 
     getLauncherEntries: () => launcherEntries,
     launchApp(id) { bridge.LaunchApp(id); }
@@ -376,6 +393,7 @@ const EMPTY_HOST = {
   play() {}, pause() {}, next() {}, previous() {}, onNowPlayingChanged() {},
   getBackground: () => ({ kind: "none", url: null }),
   getLayout: () => null, saveLayout() {},
+  getDeskState: () => ({}), saveDeskState() {},
   getWidgets: () => [],
   getLauncherEntries: () => [], launchApp() {}
 };

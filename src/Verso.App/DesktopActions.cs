@@ -83,6 +83,20 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
         desk.ReloadWeb();
     }
 
+    /// <summary>Switches between the Outpost desk and the classic overlay desk.</summary>
+    /// <param name="style">"outpost" or "classic".</param>
+    public async Task SetDeskStyle(string style)
+    {
+        if (style is not ("outpost" or "classic"))
+        {
+            return;
+        }
+
+        settings.Update(s => s.DeskStyle = style);
+        await desk.ReconcileAsync();
+        desk.ReloadWeb();
+    }
+
     public async Task ClearBackground()
     {
         settings.Update(s =>

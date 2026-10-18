@@ -32,8 +32,17 @@ internal static partial class Program
 
         // --web: Step 1b. WebView2 + video in the winning placement, then the
         // survival tests. See Program.Web.cs.
+        // --input: W0 of the widgets plan. Mirror the mouse into a page in the wallpaper window.
+        if (args.Contains("--input"))
+        {
+            _ = int.TryParse(ArgValue(args, "--seconds"), out var seconds);
+            return RunInputMode(outDir, seconds > 0 ? seconds : 25, args.Contains("--no-interactive"));
+        }
+
         if (args.Contains("--web"))
         {
+            // --hold <seconds>: keep the playing video up after S1 so a profiler can sample it.
+            _ = int.TryParse(ArgValue(args, "--hold"), out HoldSeconds);
             return RunWebMode(outDir, ArgValue(args, "--video"), args.Contains("--skip-explorer"), args.Contains("--skip-display"), args.Contains("--no-split-msg"));
         }
 

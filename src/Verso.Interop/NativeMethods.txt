@@ -69,6 +69,8 @@ SetWindowRgn
 DeleteObject
 
 # --- messages we send or listen for ---
+PostMessage
+ScreenToClient
 RegisterWindowMessageW
 IsWindow
 WM_SETTINGCHANGE

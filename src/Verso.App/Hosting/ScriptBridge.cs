@@ -57,6 +57,7 @@ public sealed class ScriptBridge : IDisposable
     private readonly WidgetCatalog _widgets;
     private readonly SettingsStore _settings;
     private readonly FileLayoutStore _layout;
+    private readonly FileLayoutStore _deskState;
     private readonly INowPlayingSource _media;
 
     internal ScriptBridge(
@@ -67,6 +68,7 @@ public sealed class ScriptBridge : IDisposable
         WidgetCatalog widgets,
         SettingsStore settings,
         FileLayoutStore layout,
+        FileLayoutStore deskState,
         INowPlayingSource media)
     {
         _tasks = tasks;
@@ -76,6 +78,7 @@ public sealed class ScriptBridge : IDisposable
         _widgets = widgets;
         _settings = settings;
         _layout = layout;
+        _deskState = deskState;
         _media = media;
     }
 
@@ -229,7 +232,9 @@ public sealed class ScriptBridge : IDisposable
         var background = _settings.Current.Background;
         string? url = null;
 
-        if (background.Kind is "video" or "gif" or "interactive"
+        // "image" is included for the Outpost desk, which draws the picture itself inside
+        // the wallpaper window; the classic desk ignores it (the image is the real Windows wallpaper there).
+        if (background.Kind is "video" or "gif" or "interactive" or "image"
             && !string.IsNullOrWhiteSpace(background.Source)
             && File.Exists(background.Source))
         {
@@ -246,6 +251,14 @@ public sealed class ScriptBridge : IDisposable
 
     /// <param name="json">Opaque layout JSON. Stored verbatim, never parsed.</param>
     public void SaveLayout(string json) => _layout.Save(json);
+
+    // ---- Outpost desk state -------------------------------------------------
+
+    /// <returns>The Outpost desk's saved state (positions, palette, 12/24h), or <c>"{}"</c>. Opaque.</returns>
+    public string GetDeskState() => _deskState.Load();
+
+    /// <param name="json">Opaque JSON, stored verbatim.</param>
+    public void SaveDeskState(string json) => _deskState.Save(json);
 
     public void Dispose()
     {

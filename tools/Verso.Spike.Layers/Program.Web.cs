@@ -24,6 +24,8 @@ internal static partial class Program
 
     private static readonly List<string> Report = [];
 
+    private static int HoldSeconds;
+
     private static void L(string line)
     {
         Console.WriteLine(line);
@@ -134,6 +136,11 @@ internal static partial class Program
             await NavigateAsync(host.Controller, new Uri(videoPage).AbsoluteUri);
             await Task.Delay(3500);
             await JudgeVideo("S1 video", host, w, h, outDir, "web-1-video");
+            if (HoldSeconds > 0)
+            {
+                L($"holding the playing video for {HoldSeconds} s (profiling)");
+                await Task.Delay(HoldSeconds * 1000);
+            }
 
             /* ---- S2: Win+D and back ---- */
             shell!.UndoMinimizeALL();
@@ -471,6 +478,9 @@ internal static partial class Native
 
     public static int TaskbarCreatedCount => Volatile.Read(ref _taskbarCreatedCount);
 
+    /// <summary>Called with the HRAWINPUT of every WM_INPUT the control window receives.</summary>
+    public static Action<nint>? RawInputHandler;
+
     public static void RegisterCtlClass()
     {
         _taskbarCreated = RegisterWindowMessageW("TaskbarCreated");
@@ -479,6 +489,10 @@ internal static partial class Native
             if (m == _taskbarCreated)
             {
                 Interlocked.Increment(ref _taskbarCreatedCount);
+            }
+            else if (m == 0x00FF /* WM_INPUT */)
+            {
+                RawInputHandler?.Invoke(l);
             }
 
             return DefWindowProcW(h, m, w, l);

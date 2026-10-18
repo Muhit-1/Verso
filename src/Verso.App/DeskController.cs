@@ -50,6 +50,8 @@ internal sealed class DeskController : IDisposable
     private readonly DispatcherTimer _reassert;
 
     private ShellRestartWatcher? _shellWatcher;
+    private InputMirror? _inputMirror;
+    private IReadOnlyList<IInputTarget> _inputTargets = [];
     private string? _backgroundNote;
     private DesktopLayer.DesktopLayout _layout;
     private bool _started;
@@ -172,37 +174,56 @@ internal sealed class DeskController : IDisposable
             : DeskMode.Overlay;
 
         var current = new HashSet<Rectangle>(Displays.All());
+        _backgroundNote = null;
 
-        foreach (var gone in _panelWindows.Keys.Except(current).ToList())
+        // The Outpost desk: one window per monitor inside the Progman layer, holding the wallpaper AND
+        // every widget, with the mouse mirrored in. It needs the layer (ProgmanLayer.PrepareAsync asks
+        // Explorer for it); if the layer is not there we say so and fall back to the classic desk
+        // rather than show nothing.
+        var wantsOutpost = _settings.Current.DeskStyle == "outpost" && mode == DeskMode.Overlay;
+        var useOutpost = false;
+        if (wantsOutpost)
+        {
+            useOutpost = await ProgmanLayer.PrepareAsync();
+            if (!useOutpost)
+            {
+                _backgroundNote = "Outpost desk unavailable (desktop layer not ready) - using the classic desk";
+            }
+        }
+
+        // Classic panel windows exist only when the Outpost desk is not in use.
+        var panelMonitors = useOutpost ? [] : current;
+
+        foreach (var gone in _panelWindows.Keys.Where(k => !panelMonitors.Contains(k)).ToList())
         {
             _panelWindows[gone].Dispose();
             _panelWindows.Remove(gone);
         }
 
-        foreach (var added in current.Except(_panelWindows.Keys))
+        foreach (var added in panelMonitors.Except(_panelWindows.Keys))
         {
             var window = new DeskWindow(_bridge, _settings, mode, _layout, added);
             _panelWindows[added] = window;
             await window.InitialiseAsync();
+            await ApplyCurrentPauseAsync(window);
         }
 
-        // Only in overlay mode: wallpaper mode's single panel window above
-        // already renders the stage itself, full-screen, with no separate
-        // surface needed. And only when there is actually something for the
-        // web stage to show — "image" goes straight to the real Windows
-        // wallpaper (DesktopWallpaper.SetImage), and "none" has nothing to
-        // draw, so a window would just be a cost with nothing to show for it.
-        var needsBackgroundWindow = mode == DeskMode.Overlay
-            && _settings.Current.Background.Kind is "video" or "gif" or "interactive";
-
-        _backgroundNote = null;
+        // Windows in the Progman layer. Outpost: always, one per monitor. Classic: only when there is
+        // a video/gif/interactive page for the web stage to show ("image" goes straight to the real
+        // Windows wallpaper, "none" has nothing to draw), and only in overlay mode — wallpaper mode's
+        // single panel window already renders the stage itself.
+        var layerMode = useOutpost ? DeskMode.Outpost : DeskMode.Background;
         var desiredBackgroundMonitors = new HashSet<Rectangle>();
-        if (needsBackgroundWindow)
+        if (useOutpost)
         {
-            // Asks Explorer for Progman's WorkerW child — without it the layer
-            // below is invisible, and a fresh Explorer never has one. If it
-            // does not appear, show nothing: never fall back to a window that
-            // would cover the icons.
+            desiredBackgroundMonitors = current;
+        }
+        else if (mode == DeskMode.Overlay
+                 && _settings.Current.Background.Kind is "video" or "gif" or "interactive")
+        {
+            // Without Progman's WorkerW child the layer is invisible, and a fresh Explorer never has
+            // one. If it does not appear, show nothing: never fall back to a window that would cover
+            // the icons.
             if (await ProgmanLayer.PrepareAsync())
             {
                 desiredBackgroundMonitors = current;
@@ -213,10 +234,12 @@ internal sealed class DeskController : IDisposable
             }
         }
 
-        // Gone monitors, a changed background, and windows whose Explorer was
-        // restarted underneath them (a Progman child dies with Progman).
+        // Gone monitors, a changed background or desk style, and windows whose Explorer was restarted
+        // underneath them (a Progman child dies with Progman).
         foreach (var gone in _backgroundWindows
-                     .Where(pair => !desiredBackgroundMonitors.Contains(pair.Key) || !pair.Value.IsSurfaceAlive)
+                     .Where(pair => !desiredBackgroundMonitors.Contains(pair.Key)
+                                    || pair.Value.Mode != layerMode
+                                    || !pair.Value.IsSurfaceAlive)
                      .Select(pair => pair.Key)
                      .ToList())
         {
@@ -228,21 +251,67 @@ internal sealed class DeskController : IDisposable
         {
             try
             {
-                var window = new DeskWindow(_bridge, _settings, DeskMode.Background, _layout, added);
+                var window = new DeskWindow(_bridge, _settings, layerMode, _layout, added);
                 _backgroundWindows[added] = window;
                 await window.InitialiseAsync();
+                await ApplyCurrentPauseAsync(window);
             }
             catch (InvalidOperationException ex)
             {
-                _backgroundNote = $"live wallpaper unavailable ({ex.Message})";
+                _backgroundWindows.Remove(added);
+                _backgroundNote = $"{(useOutpost ? "Outpost desk" : "live wallpaper")} unavailable ({ex.Message})";
             }
         }
 
-        Status = _panelWindows.Count == 0
+        UpdateInputMirror();
+
+        var first = _panelWindows.Values.Concat(_backgroundWindows.Values).FirstOrDefault();
+        Status = first is null
             ? "no displays"
-            : $"{_panelWindows.Count} display(s) · {_panelWindows.Values.First().PlacementDescription}"
-                + (_backgroundWindows.Count > 0 ? $" · {_backgroundWindows.Count} live wallpaper surface(s)" : "")
+            : $"{current.Count} display(s) · {first.PlacementDescription}"
+                + (!useOutpost && _backgroundWindows.Count > 0 ? $" · {_backgroundWindows.Count} live wallpaper surface(s)" : "")
+                + (useOutpost ? (_inputMirror?.IsListening == true ? " · mouse mirrored" : " · MOUSE NOT MIRRORED") : "")
                 + (_backgroundNote is null ? "" : $" · {_backgroundNote}");
+    }
+
+    /// <summary>Starts the mouse mirror while any Outpost window exists, stops it when none does.</summary>
+    private void UpdateInputMirror()
+    {
+        _inputTargets = _backgroundWindows.Values
+            .Where(w => w.Mode == DeskMode.Outpost)
+            .Cast<IInputTarget>()
+            .ToList();
+
+        if (_inputTargets.Count == 0)
+        {
+            _inputMirror?.Dispose();
+            _inputMirror = null;
+            return;
+        }
+
+        try
+        {
+            _inputMirror ??= new InputMirror(() => _inputTargets);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _backgroundNote = $"mouse mirror unavailable ({ex.Message})";
+        }
+    }
+
+    /// <summary>
+    /// A window created while the desk is paused (a maximised app in front, a
+    /// locked session, battery saver…) must start paused. Without this a
+    /// wallpaper picked at that moment kept decoding video nobody could see
+    /// until the next pause-state change — and left the widgets hidden while
+    /// the wallpaper showed, because only the existing windows were paused.
+    /// </summary>
+    private async Task ApplyCurrentPauseAsync(DeskWindow window)
+    {
+        if (_power.Current != PauseReason.None)
+        {
+            await window.SetRenderingAsync(false);
+        }
     }
 
     private async void OnShellRestarted()
@@ -270,13 +339,27 @@ internal sealed class DeskController : IDisposable
     private async void OnPauseChanged(object? sender, PauseReason reason)
     {
         var render = reason == PauseReason.None;
-        foreach (var window in _panelWindows.Values)
+
+        // All windows at once. Pausing one at a time let the overlay's
+        // TrySuspendAsync — which can take seconds — hold up the wallpaper
+        // window behind it, so a maximised app in front left the video
+        // decoding (measured: ~11% CPU and GPU video decode while "paused").
+        // Hiding is what saves the power, and it is quick; the slow part
+        // (suspending the renderer) must not queue behind another window's.
+        var windows = _panelWindows.Values.Concat(_backgroundWindows.Values).ToList();
+        await Task.WhenAll(windows.Select(window => SetRenderingSafeAsync(window, render)));
+    }
+
+    private static async Task SetRenderingSafeAsync(DeskWindow window, bool render)
+    {
+        try
         {
             await window.SetRenderingAsync(render);
         }
-        foreach (var window in _backgroundWindows.Values)
+        catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException)
         {
-            await window.SetRenderingAsync(render);
+            // A window that is mid-teardown (display change, Explorer restart)
+            // has nothing left to pause; the others still must be.
         }
     }
 
@@ -315,6 +398,9 @@ internal sealed class DeskController : IDisposable
             _shellWatcher.ShellRestarted -= OnShellRestarted;
             _shellWatcher.Dispose();
         }
+
+        _inputMirror?.Dispose();
+        _inputMirror = null;
 
         _reassert.Stop();
         _power.Changed -= OnPauseChanged;

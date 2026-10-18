@@ -20,6 +20,36 @@ namespace Verso.Interop;
 /// </remarks>
 public static class Monitors
 {
+    /// <summary>
+    /// The part of a monitor not covered by the taskbar (<c>rcWork</c>), in physical pixels. Falls back
+    /// to the whole monitor if it cannot be found. The Outpost desk keeps its elements inside this.
+    /// </summary>
+    public static unsafe Rectangle WorkAreaOf(Rectangle monitorBounds)
+    {
+        var result = monitorBounds;
+
+        PInvoke.EnumDisplayMonitors(default, null, Callback, default);
+
+        return result;
+
+        BOOL Callback(HMONITOR monitor, HDC hdc, RECT* rect, LPARAM data)
+        {
+            var info = new MONITORINFO { cbSize = (uint)sizeof(MONITORINFO) };
+            if (PInvoke.GetMonitorInfo(monitor, ref info))
+            {
+                var m = info.rcMonitor;
+                if (m.left == monitorBounds.Left && m.top == monitorBounds.Top
+                    && m.right - m.left == monitorBounds.Width && m.bottom - m.top == monitorBounds.Height)
+                {
+                    var w = info.rcWork;
+                    result = new Rectangle(w.left, w.top, w.right - w.left, w.bottom - w.top);
+                }
+            }
+
+            return true;
+        }
+    }
+
     public static unsafe IReadOnlyList<Rectangle> All()
     {
         var bounds = new List<Rectangle>();

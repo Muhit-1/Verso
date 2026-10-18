@@ -264,3 +264,18 @@ body.layer-wallpaper .stage{ display:block; }
    rule that makes the stage itself visible, the same one wallpaper mode
    uses. */
 body.layer-background .stage{ display:block; }
+
+/* ...and only the user's own media. The theme's decoration is for the
+   built-in gradient ground, not for a chosen video. Measured on the owner's
+   machine (1080p mp4, build 26300): with the grain layer (a 3840x2160
+   feTurbulence noise tile, mix-blend-mode:overlay) and the 90 s drift
+   animation still on, Verso's GPU process sat at ~59% of the 3D engine and
+   ~50% of a CPU core. A blend over a playing video forces every frame to be
+   composited offscreen and defeats the video overlay path; a bare <video>
+   in the same window cost ~11% of a core and 0% 3D. */
+body.layer-background{ background:#000; }
+body.layer-background .stage::before,
+body.layer-background .stage::after{
+  display:none;
+  animation:none;
+}

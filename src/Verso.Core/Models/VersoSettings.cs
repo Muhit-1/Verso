@@ -24,6 +24,14 @@ public sealed class VersoSettings
     [JsonPropertyName("dashboardThemeId")]
     public string DashboardThemeId { get; set; } = "fieldnote";
 
+    /// <summary>
+    /// "outpost" (default): the Firewatch-style desk, drawn in the wallpaper window behind the desktop
+    /// icons with the mouse mirrored into it. "classic": the original region-clipped overlay panels.
+    /// If the wallpaper layer is unavailable the app falls back to classic by itself.
+    /// </summary>
+    [JsonPropertyName("deskStyle")]
+    public string DeskStyle { get; set; } = "outpost";
+
     [JsonPropertyName("startWithWindows")]
     public bool StartWithWindows { get; set; }
 

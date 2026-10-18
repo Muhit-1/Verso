@@ -105,6 +105,13 @@ public static class VersoPaths
     /// <summary>Where the widget layout — which panel sits where — is persisted.</summary>
     public static string LayoutFile => Path.Combine(DataRoot, "layout.json");
 
+    /// <summary>
+    /// State of the Outpost desk (where each element sits, palette, 12/24h). Opaque JSON like
+    /// <see cref="LayoutFile"/>; a separate file so the classic desk and the Outpost desk can
+    /// never overwrite each other's arrangement.
+    /// </summary>
+    public static string OutpostFile => Path.Combine(DataRoot, "outpost.json");
+
     /// <summary>logs</summary>
     public static string LogDirectory => Path.Combine(DataRoot, "logs");
 
