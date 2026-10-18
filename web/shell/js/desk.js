@@ -22,44 +22,6 @@ import * as Widgets from "./widgets.js";
 const $ = id => document.getElementById(id);
 
 /* ==================================================================
-   THE MINUTE TRACK
-
-   Sixty ticks across the top edge, one per minute of the hour. This
-   stays shell-level rather than moving into the dial widget: it is
-   full-width, independent of wherever the clock itself has been
-   dragged to, and always visible in wallpaper mode — closer to
-   ground furniture than to a panel with its own chrome.
-================================================================== */
-
-function startMinuteTrack() {
-  const trackEl = $("minuteTrack");
-
-  const ticks = [];
-  for (let i = 0; i < 60; i++) {
-    const t = document.createElement("span");
-    t.className = "tick" + (i % 5 === 0 ? " major" : "");
-    trackEl.appendChild(t);
-    ticks.push(t);
-  }
-
-  let prevMinute = -1;
-
-  function paint() {
-    const minute = new Date().getMinutes();
-    if (minute === prevMinute) return;
-
-    ticks.forEach((el, i) => {
-      el.classList.toggle("spent", i < minute);
-      el.classList.toggle("now", i === minute);
-    });
-    prevMinute = minute;
-  }
-
-  paint();
-  setInterval(paint, 1000);
-}
-
-/* ==================================================================
    THEME SWITCHING
 
    The only theme UI that exists until the settings window lands.
@@ -103,7 +65,7 @@ function startThemeSwitch() {
 
 function applyLayer() {
   const requested = new URLSearchParams(location.search).get("layer");
-  const layer = ["wallpaper", "overlay"].includes(requested) ? requested : "all";
+  const layer = ["wallpaper", "overlay", "background"].includes(requested) ? requested : "all";
 
   document.body.classList.add("layer-" + layer);
   document.documentElement.dataset.layer = layer;
@@ -117,6 +79,13 @@ function applyLayer() {
    palette. Then the host, then the widgets, then layout — each
    widget has to exist in the DOM before layout can measure and place
    it, and layout has to be final before regions reports it.
+
+   "background" is the odd one out: a fully click-through window (see
+   DeskWindow.cs's DeskMode.Background) that exists only to show the
+   stage. There is nothing on it a user could ever interact with, so
+   it skips widgets, layout, regions and the minute-track/theme-switch
+   UI entirely rather than mounting interactive things nobody can
+   reach.
 ================================================================== */
 
 async function start() {
@@ -126,14 +95,17 @@ async function start() {
   await Host.connect();
   Background.start();
 
-  startMinuteTrack();
+  document.body.dataset.host = Host.get().kind;
+  document.body.dataset.layer = layer;
+
+  if (layer === "background") {
+    return;
+  }
+
   startThemeSwitch();
 
   Widgets.start();
   Layout.start();
-
-  document.body.dataset.host = Host.get().kind;
-  document.body.dataset.layer = layer;
 
   // Last: the host reshapes its window to whatever we report, so the
   // geometry has to be final before the first message goes out.

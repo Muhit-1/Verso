@@ -37,6 +37,9 @@ node_modules/
 /settings.json
 /tasks.json
 
+# ---- Local Claude guide (kept out of git on purpose) ----
+/CLAUDE.md
+
 # ---- Installer output ----
 /dist/
 /installer/Output/

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    STEP 1 of the live-wallpaper plan (see CLAUDE.md, "Plan").
+
+    Throwaway. Answers one question on this machine, with pixels instead of
+    reasoning: which way of placing a window actually shows a wallpaper while
+    leaving the desktop icons visible and clickable? Nothing here is meant to
+    survive into the app except whichever strategy wins.
+
+        dotnet run (project tools/Verso.Spike.Layers), optional arg: out FOLDER
+
+    Close Verso first: a running desk fights this tool for the bottom of the
+    z-order and spoils the measurement.
+
+    Plain P/Invoke on purpose — no CsWin32, no WPF — so a result here cannot
+    be blamed on either.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Verso.Spike.Layers</RootNamespace>
+    <AssemblyName>Verso.Spike.Layers</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4129.50" />
+  </ItemGroup>
+
+</Project>

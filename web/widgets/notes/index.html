@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes widget</title>
+
+<!--
+  NOTES — short freeform entries, not tasks: no done state, nothing to
+  tick off. Needs the "notes" permission (see docs/widget-spec.md).
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  body{ container-type:inline-size; display:flex; flex-direction:column; }
+
+  .comp-head{
+    flex:0 0 auto;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.6cqi, 13px);
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .notes{
+    flex:1 1 auto;
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
+    min-height:0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
+  }
+
+  .note{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 4px;
+    border-top:1px solid var(--rule-faint);
+  }
+  .note:first-child{ border-top:0; }
+
+  .note-text{
+    flex:1 1 auto;
+    min-width:0;
+    font-size:clamp(12.5px, 2.8cqi, 18px);
+    line-height:1.42;
+    color:var(--chalk);
+    word-break:break-word;
+    white-space:pre-wrap;
+  }
+
+  .note-remove{
+    flex:0 0 auto;
+    width:18px;
+    height:18px;
+    border:0;
+    background:transparent;
+    color:var(--slate-deep);
+    font-family:var(--font-mono);
+    font-size:13px;
+    line-height:1;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 140ms ease, color 140ms ease;
+  }
+  .note:hover .note-remove{ opacity:1; }
+  .note-remove:hover{ color:var(--lume); }
+  .note-remove:focus-visible{ opacity:1; outline:1px solid var(--lume); }
+
+  .add-note{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border-top:1px solid var(--brass-hair);
+    padding-top:12px;
+    margin-top:8px;
+  }
+
+  .add-note .plus{
+    color:var(--brass);
+    font-family:var(--font-mono);
+    font-size:14px;
+    line-height:1;
+  }
+
+  .add-note input{
+    flex:1;
+    min-width:0;
+    background:transparent;
+    border:0;
+    padding:2px 0;
+    color:var(--chalk);
+    font-family:var(--font-sans);
+    font-size:clamp(12.5px, 2.8cqi, 18px);
+  }
+  .add-note input::placeholder{ color:var(--slate-deep); }
+  .add-note input:focus{ outline:none; }
+  .add-note:focus-within{ border-top-color:var(--lume-dim); }
+
+  .empty{
+    margin:0;
+    padding:10px 4px 2px;
+    font-size:clamp(12.5px, 2.6cqi, 17px);
+    color:var(--slate-deep);
+    font-style:italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-head" id="notesHead">Notes</div>
+
+<ul class="notes" id="noteList"></ul>
+<p class="empty" id="noteEmpty" hidden>Nothing jotted down.</p>
+
+<div class="add-note">
+  <span class="plus" aria-hidden="true">+</span>
+  <input id="noteInput" type="text" placeholder="Add a note" maxlength="280"
+         autocomplete="off" spellcheck="true" aria-label="Add a note">
+</div>
+
+<script type="module">
+  const listEl = document.getElementById("noteList");
+  const emptyEl = document.getElementById("noteEmpty");
+  const inputEl = document.getElementById("noteInput");
+
+  let notes = [];
+
+  // Look up the host fresh, every time — see the timing note on rule 1
+  // in docs/widget-spec.md.
+  const host = () => window.VersoHost ?? null;
+
+  function persist() {
+    try { host()?.saveNotes?.(notes); } catch { /* host offline; keep in memory */ }
+  }
+
+  function render() {
+    listEl.textContent = "";
+
+    for (const note of notes) {
+      const li = document.createElement("li");
+      li.className = "note";
+
+      const text = document.createElement("span");
+      text.className = "note-text";
+      text.textContent = note.text;
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "note-remove";
+      remove.textContent = "✕";
+      remove.setAttribute("aria-label", "Remove note");
+      remove.addEventListener("click", () => {
+        notes = notes.filter(n => n.id !== note.id);
+        persist();
+        render();
+      });
+
+      li.append(text, remove);
+      listEl.appendChild(li);
+    }
+
+    emptyEl.hidden = notes.length > 0;
+  }
+
+  inputEl.addEventListener("keydown", ev => {
+    if (ev.key !== "Enter") return;
+    const value = inputEl.value.trim();
+    if (!value) return;
+    notes.push({ id: "n" + Date.now(), text: value });
+    inputEl.value = "";
+    persist();
+    render();
+  });
+
+  let attempts = 0;
+
+  function tryLoad() {
+    const h = host();
+    if (h?.loadNotes) {
+      try { notes = h.loadNotes() ?? []; } catch { notes = []; }
+      render();
+      return;
+    }
+
+    attempts++;
+    if (attempts < 20) {
+      setTimeout(tryLoad, 100);
+    } else {
+      render(); // no host arrived — render the empty state, still usable
+    }
+  }
+
+  tryLoad();
+</script>
+</body>
+</html>

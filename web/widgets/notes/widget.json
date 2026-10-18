@@ -1,0 +1,13 @@
+{
+  "id": "notes",
+  "name": "Notes",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Short freeform notes you can jot down from the desktop.",
+  "entry": "index.html",
+  "permissions": ["notes"],
+  "defaultSize": { "w": 4, "h": 4 },
+  "interactive": true,
+  "tickMs": 0,
+  "minShellVersion": "0.1.0"
+}

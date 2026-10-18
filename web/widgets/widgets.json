@@ -1,3 +1,3 @@
 {
-  "widgets": ["dial", "tasks", "player", "digital-clock", "app-launcher"]
+  "widgets": ["dial", "tasks", "player", "digital-clock", "app-launcher", "notes", "agenda", "focus-timer"]
 }

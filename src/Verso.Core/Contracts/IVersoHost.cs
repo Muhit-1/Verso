@@ -37,6 +37,22 @@ public interface IVersoHost
     /// <summary>Writes the task list. Persisted atomically to tasks.json.</summary>
     void SaveTasks(IReadOnlyList<TaskItem> tasks);
 
+    // ---- notes (permission: "notes") ----
+
+    /// <summary>Reads the note list. Returns an empty list rather than throwing.</summary>
+    IReadOnlyList<NoteItem> LoadNotes();
+
+    /// <summary>Writes the note list. Persisted atomically to notes.json.</summary>
+    void SaveNotes(IReadOnlyList<NoteItem> notes);
+
+    // ---- agenda (permission: "agenda") ----
+
+    /// <summary>Reads today's time-blocked items. Returns an empty list rather than throwing.</summary>
+    IReadOnlyList<AgendaItem> LoadAgenda();
+
+    /// <summary>Writes the agenda. Persisted atomically to agenda.json.</summary>
+    void SaveAgenda(IReadOnlyList<AgendaItem> items);
+
     // ---- media (permission: "media") ----
 
     /// <summary>Current playback state, or null when nothing has a media session.</summary>

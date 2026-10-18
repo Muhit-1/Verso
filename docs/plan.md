@@ -466,6 +466,28 @@ pipeline (permission scoping confirmed for `apps` the same way it was for
 both the browser preview and a live native run with a real window-region
 readback showing five geometry rectangles instead of four).*
 
+**Follow-up, alongside Phase 9's dashboard: three more widgets.** Two new
+permissions (`notes`, `agenda`), each following the exact `tasks`
+shape end to end — model, `I*Store` contract, `File*Store`, a pair of
+`ScriptBridge` methods, a demo-host fallback, a `PERMISSION_METHODS` entry
+in `widgets.js` — because that shape was already proven and there was no
+reason to invent a second one.
+
+- **`notes`** — short freeform entries, no done state. `notes.json`.
+- **`agenda`** — today's time-blocked items, same-day "HH:mm" strings, not
+  dates; filters to what's still ahead and sorts by start time on a
+  30-second repaint. `agenda.json`.
+- **`focus-timer`** — work/break interval rings with playback controls.
+  Deliberately **zero permissions** — nothing here needs the machine, only
+  its own countdown, so it never touches `window.VersoHost` at all; state
+  lives in the widget's own namespaced `localStorage` key.
+
+**Two more widgets from the same request, deliberately not built yet:** a
+weather widget and a conversational-assistant widget. Both need a real
+service decision first — which weather API and how location is obtained;
+which LLM backend, and where its API key lives — and guessing either would
+risk building against the wrong one. Held back on purpose, not forgotten.
+
 ### Phase 8 — real music data, SMTC ✅ *built*
 
 `SmtcNowPlayingSource` wraps `GlobalSystemMediaTransportControlsSessionManager`
@@ -545,27 +567,87 @@ theme picker for both the desk and the dashboard itself. Switching
 dashboard themes is instant, no window reload; switching the desk's
 theme still reloads the desk, same as it always has.
 
-### Phase 10 — theme pass for the desk (open-ended) ← **your 3a, next**
+### Phase 10 — theme pass for the desk ✅ *built, Smoked Petrol reworked*
 
-Now that background, cleanup toggles, the widget loader, drag/drop, new
-widgets and music are all real, design the actual look of the desk
-itself: a new `theme.json`/`theme.css`, or a reworked Smoked Petrol. Not
-to be confused with Phase 9's dashboard theme, which is a separate
-contract this phase does not touch.
+Chose to rework Smoked Petrol rather than add a fourth theme — same watch-
+dial identity (one accent that means "now," gilt for structure, nothing
+else coloured), refreshed execution:
 
-**You'll see:** switch themes, the whole desk changes skin, nothing
-functional breaks — the payoff of doing 3b before 3a.
+- **`--stage`** gained a fourth, tighter gradient layer — a highlight at
+  the top edge, the way light catches a watch's crystal rather than the
+  dial under it — and the corner vignette deepens further, so the two
+  original glows read as glows instead of flattening into the ground.
+- **`--lume`** shifted to a more phosphorescent `#93E8C4`, with its glow
+  pushed from .55 to .60 alpha.
+- **`--brass`** warmed to `#D4B274`; the (currently unused) tick tokens
+  were updated to match, so the file stays internally consistent if the
+  minute-track pattern is ever reused elsewhere.
+- **Panels**: `--panel-blur` up to `blur(24px) saturate(128%)` for a
+  richer glass read, `--panel-shadow`/`--dial-shadow` both deepened
+  slightly. `--panel-radius` untouched — 3px is the instrument identity,
+  not something a "refresh" should move.
+- Fonts and layout tokens untouched on purpose — a refresh, not a
+  reinvention, per your call between reworking Smoked Petrol vs. adding a
+  fourth theme vs. a fresh brief.
+
+Deliberately **not touched**: Paper Recto, Carbon Signal, `_template`, or
+the token contract in `theme-spec.md` itself — the (currently orphaned,
+since the minute-track that consumed them is gone) `--tick*` tokens stay
+defined rather than being pulled from the contract, since that's a
+different, larger change than "rework one theme" and wasn't asked for.
+
+*Verified: theme applies with no console errors, all eight desk widgets
+mount correctly under it, and the token values read back exactly as
+authored (`--lume:#93E8C4`, `--brass:#D4B274`, `--panel-solid:#102024`,
+`--panel-blur:blur(24px) saturate(128%)`).*
 
 ---
 
 **Stop here if it's just for you.**
 
-### Phase 11 — don't be a hog, the rest (3–4 days)
+### Phase 11 — don't be a hog, the rest ✅ *built*
 
-The remaining pause rules: battery, monitor off, throttle-when-hidden.
-Multi-monitor: one window per display, correct DPI, handle monitor
-hot-plug. Tedious, unglamorous, load-bearing. Unchanged from the original
-plan's Phase 4.
+Battery and monitor-off turned out to already be built and wired into
+`PowerGate.Evaluate()` — not narrated as their own phase at the time, but
+real. Two genuine gaps remained, both now closed:
+
+- **Throttle-when-hidden.** `PauseReason.NotVisible` was declared in the
+  `[Flags]` enum from early on and never once set — this is what actually
+  wires it up. `DesktopState.Query()` now also samples
+  `IsZoomed(GetForegroundWindow())`: a maximised foreground window covers
+  the whole monitor it's on, which for a widget desk with no fixed
+  rectangle is close enough to "nothing of ours is visible" to act on.
+  Deliberately not a full Z-order occlusion walk — a large-but-not-quite-
+  maximised window sitting on top of the desk is a real gap this leaves,
+  accepted rather than missed: the alternative is real complexity for a
+  case that's rare and buys little over the fullscreen check already
+  sitting right above it. Unconditional, same as monitor-off — there is
+  no scenario where a user wants to keep rendering something with nothing
+  of it on screen.
+- **Real multi-monitor.** `Verso.Interop/Monitors.cs` is new:
+  `EnumDisplayMonitors`/`GetMonitorInfoW` (both already sitting unused in
+  `NativeMethods.txt` since Phase 4 was first written) replace the single
+  `SystemParameters`-derived rectangle spanning the whole virtual screen —
+  which had put every monitor's share of the desk in one combined canvas
+  and could not tell a bezel gap from a widget's own position.
+  `rcMonitor` is already physical pixels under the PerMonitorV2 manifest
+  from Phase 1, so no separate per-monitor DPI pass is needed.
+  `DeskController` now keeps a desk window per monitor in a dictionary
+  keyed by bounds (Windows hands out no stable monitor id through this
+  API) and reconciles it against `SystemEvents.DisplaySettingsChanged` —
+  plugging in, unplugging, or rearranging a monitor adds or removes desk
+  windows without a restart. A debounce guards against two hot-plug events
+  landing before the first reconcile's `await`s finish, rather than
+  letting a second pass run concurrently against the same dictionary.
+
+**Honestly flagged, not swept under anything:** the occlusion heuristic
+and the hot-plug reconciliation both build clean against well-documented,
+stable Win32 APIs — a different risk class entirely from the WorkerW
+saga — but neither has been exercised against real hot-plug hardware or
+watched live through a maximise/restore cycle in this pass. Worth a
+deliberate look before trusting it the way the WorkerW numbers in
+[desktop-layer.md](desktop-layer.md) were trusted only after being
+measured, not just reasoned about.
 
 ### Phase 12 — could ship it (+6–10 weeks)
 

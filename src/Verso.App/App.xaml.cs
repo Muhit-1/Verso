@@ -69,7 +69,7 @@ public partial class App : Application
         _media = new SmtcNowPlayingSource();
         await _media.StartAsync();
 
-        _bridge = new ScriptBridge(new FileTaskStore(), _themes, _widgets, _settings, _layout, _media);
+        _bridge = new ScriptBridge(new FileTaskStore(), new FileNoteStore(), new FileAgendaStore(), _themes, _widgets, _settings, _layout, _media);
 
         ApplyDesktopCleanup();
 
@@ -81,6 +81,11 @@ public partial class App : Application
         await _desk.StartAsync();
 
         RefreshTray();
+
+        // The dashboard, not the desk's widgets, is what greets a launch —
+        // that's where widgets/background/theme actually get chosen. The
+        // desk itself still starts above, since it's the real wallpaper.
+        OpenSettingsWindow();
     }
 
     private TaskbarIcon BuildTrayIcon()
@@ -93,8 +98,8 @@ public partial class App : Application
         menu.Items.Add(_pauseItem);
         menu.Items.Add(MenuItem("Reload", () => _desk?.ReloadWeb()));
         menu.Items.Add(new Separator());
-        menu.Items.Add(MenuItem("Set background…", () => _actions?.PickBackground(null)));
-        menu.Items.Add(MenuItem("Clear background", () => _actions?.ClearBackground()));
+        menu.Items.Add(MenuItem("Set background…", () => _ = _actions?.PickBackground(null)));
+        menu.Items.Add(MenuItem("Clear background", () => _ = _actions?.ClearBackground()));
         menu.Items.Add(new Separator());
         menu.Items.Add(CheckableMenuItem(
             "Hide taskbar", _settings!.Current.DesktopCleanup.HideTaskbar,

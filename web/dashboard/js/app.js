@@ -42,11 +42,13 @@ function startNav() {
 
 /* ---- wallpaper ------------------------------------------------------ */
 
+const BACKGROUND_LABELS = { video: "Video", gif: "Animated GIF", interactive: "Interactive" };
+
 function describeBackground(bg) {
   if (!bg || bg.kind === "none") return "None set — the theme's own backdrop shows.";
   if (bg.kind === "image") return "Image — applied to the desktop wallpaper directly.";
   const name = bg.url ? decodeURIComponent(bg.url.split("/").pop()) : "";
-  return `${bg.kind === "video" ? "Video" : "Interactive"}: ${name}`;
+  return `${BACKGROUND_LABELS[bg.kind] ?? bg.kind}: ${name}`;
 }
 
 async function renderWallpaper() {

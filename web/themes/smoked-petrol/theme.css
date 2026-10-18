@@ -13,31 +13,36 @@
 :root{
   /* ---- ground ---- */
   --ink:          #0B1416;
-  --ink-deep:     #05090B;
-  --ink-panel:    rgba(14, 27, 30, 0.42);
+  --ink-deep:     #04080A;
+  --ink-panel:    rgba(15, 29, 32, 0.46);
 
-  /* two off-centre glows over a deep vignette */
+  /* A fourth layer over the original two: a tight highlight at the top
+     edge, the way light catches the crystal of a real watch rather than
+     the dial underneath it. The vignette itself deepens a touch further
+     at the corners than before, for more room for the glows to read as
+     glows instead of flattening into the ground. */
   --stage:
-    radial-gradient(1100px 780px at 68% 18%, rgba(38, 82, 84, 0.55), transparent 62%),
-    radial-gradient(900px 900px at 22% 88%,  rgba(24, 46, 58, 0.60), transparent 60%),
-    radial-gradient(1600px 1100px at 50% 50%, #12222A 0%, #0B1416 48%, #05090B 100%);
+    radial-gradient(900px 620px at 50% -6%,  rgba(78, 146, 146, 0.18), transparent 55%),
+    radial-gradient(1150px 820px at 70% 16%, rgba(40, 90, 92, 0.58),  transparent 62%),
+    radial-gradient(920px 920px at 20% 90%,  rgba(22, 50, 62, 0.62),  transparent 60%),
+    radial-gradient(1650px 1150px at 50% 50%, #12242C 0%, #0B1416 48%, #04080A 100%);
 
   --photo:        none;
-  --grain:        0.045;
+  --grain:        0.05;
   --grain-blend:  overlay;
 
   /* ---- primary accent: pale luminova ---- */
-  --lume:         #9FE0C4;
-  --lume-dim:     rgba(159, 224, 196, 0.30);
-  --lume-wash:    rgba(159, 224, 196, 0.045);
-  --lume-glow:    rgba(159, 224, 196, 0.55);
-  --lume-hot:     #B6EAD3;
-  --on-lume:      #05090B;
+  --lume:         #93E8C4;
+  --lume-dim:     rgba(147, 232, 196, 0.30);
+  --lume-wash:    rgba(147, 232, 196, 0.05);
+  --lume-glow:    rgba(147, 232, 196, 0.60);
+  --lume-hot:     #ACEFD6;
+  --on-lume:      #04080A;
 
   /* ---- secondary accent: gilt ---- */
-  --brass:        #C9A96A;
-  --brass-dim:    rgba(201, 169, 106, 0.22);
-  --brass-hair:   rgba(201, 169, 106, 0.14);
+  --brass:        #D4B274;
+  --brass-dim:    rgba(212, 178, 116, 0.22);
+  --brass-hair:   rgba(212, 178, 116, 0.14);
 
   /* ---- type ---- */
   --chalk:        #E6EEEC;
@@ -48,20 +53,20 @@
   --rule-faint:       rgba(124, 145, 152, 0.09);
   --track:            rgba(124, 145, 152, 0.16);
   --tick:             rgba(124, 145, 152, 0.28);
-  --tick-major:       rgba(201, 169, 106, 0.32);
-  --tick-spent:       rgba(201, 169, 106, 0.42);
-  --tick-spent-major: rgba(201, 169, 106, 0.64);
+  --tick-major:       rgba(212, 178, 116, 0.32);
+  --tick-spent:       rgba(212, 178, 116, 0.42);
+  --tick-spent-major: rgba(212, 178, 116, 0.64);
 
   /* ---- panels ---- */
   /* Opaque panel fill, used in overlay mode where there is nothing behind
      a panel but the colour key. --ink-panel is translucent by design and
      turns purple over the key, so themes give an opaque equivalent here. */
-  --panel-solid:  #0F1D20;
+  --panel-solid:  #102024;
 
-  --panel-blur:   blur(22px) saturate(120%);
+  --panel-blur:   blur(24px) saturate(128%);
   --panel-radius: 3px;
-  --panel-shadow: 0 8px 26px rgba(3, 9, 11, 0.55);
-  --dial-shadow:  0 2px 60px rgba(4, 12, 14, 0.75);
+  --panel-shadow: 0 10px 30px rgba(2, 7, 9, 0.60);
+  --dial-shadow:  0 2px 60px rgba(3, 10, 12, 0.78);
 
   /* ---- type stacks ----
      Every stack ends in a face that is already on a Windows machine,

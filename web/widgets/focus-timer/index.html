@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Timer widget</title>
+
+<!--
+  FOCUS TIMER — work/break interval rings with playback controls.
+  Deliberately zero permissions (see widget.json): nothing here needs
+  the machine, only the widget's own countdown, so it never touches
+  window.VersoHost at all. State lives in this widget's own
+  localStorage, same origin as every other bundled widget, hence the
+  namespaced key.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  body{
+    container-type:inline-size;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+
+  .comp-head{
+    align-self:flex-start;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.6cqi, 13px);
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .modes{
+    display:flex;
+    gap:6px;
+  }
+
+  .mode-btn{
+    padding:5px 12px;
+    border:1px solid var(--rule-faint);
+    border-radius:999px;
+    background:transparent;
+    color:var(--slate);
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.2cqi, 12px);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+  }
+  .mode-btn.active{
+    border-color:var(--lume);
+    color:var(--lume);
+  }
+
+  .ring-wrap{
+    flex:1 1 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:0;
+  }
+
+  .ring{
+    width:clamp(70px, 40cqi, 150px);
+    aspect-ratio:1;
+    border-radius:50%;
+    background:conic-gradient(var(--lume) 0%, var(--track) 0%);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    transition:background 240ms linear;
+  }
+
+  .ring-inner{
+    width:80%;
+    aspect-ratio:1;
+    border-radius:50%;
+    background:var(--ink-panel, var(--ink));
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .ring-time{
+    font-family:var(--font-mono);
+    font-size:clamp(14px, 8cqi, 24px);
+    font-variant-numeric:tabular-nums;
+    color:var(--chalk);
+  }
+
+  .controls{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding-bottom:2px;
+  }
+
+  .ctrl-btn{
+    border:0;
+    background:transparent;
+    color:var(--slate);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:4px;
+  }
+  .ctrl-btn:hover{ color:var(--lume); }
+  .ctrl-btn:focus-visible{ outline:1px solid var(--lume); }
+  .ctrl-btn svg{ width:16px; height:16px; }
+
+  .ctrl-btn.primary{
+    width:34px; height:34px;
+    border-radius:50%;
+    background:var(--lume);
+    color:var(--on-lume);
+  }
+  .ctrl-btn.primary:hover{ background:var(--lume-hot); color:var(--on-lume); }
+  .ctrl-btn.primary svg{ width:14px; height:14px; }
+</style>
+</head>
+<body>
+
+<div class="comp-head">Focus Timer</div>
+
+<div class="modes">
+  <button type="button" class="mode-btn active" id="modeWork" data-mode="work">Work</button>
+  <button type="button" class="mode-btn" id="modeBreak" data-mode="break">Break</button>
+</div>
+
+<div class="ring-wrap">
+  <div class="ring" id="ring">
+    <div class="ring-inner">
+      <span class="ring-time" id="ringTime">25:00</span>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <button type="button" class="ctrl-btn" id="resetBtn" aria-label="Reset">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+  </button>
+  <button type="button" class="ctrl-btn primary" id="playBtn" aria-label="Start">
+    <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"/></svg>
+    <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" hidden><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+  </button>
+</div>
+
+<script type="module">
+  const STORE_KEY = "verso.focus-timer.v1";
+  const DURATIONS = { work: 25 * 60, break: 5 * 60 };
+
+  const modeButtons = { work: document.getElementById("modeWork"), break: document.getElementById("modeBreak") };
+  const ringEl = document.getElementById("ring");
+  const timeEl = document.getElementById("ringTime");
+  const playBtn = document.getElementById("playBtn");
+  const playIcon = document.getElementById("playIcon");
+  const pauseIcon = document.getElementById("pauseIcon");
+  const resetBtn = document.getElementById("resetBtn");
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch { /* storage disabled */ }
+  }
+
+  const saved = load();
+  let state = saved && DURATIONS[saved.mode] ? saved : {
+    mode: "work",
+    remainingSec: DURATIONS.work,
+    running: false
+  };
+
+  // A saved "running" state was mid-countdown at some earlier wall-clock
+  // moment we have no record of — resume paused rather than guess how
+  // much time actually passed while the desk was closed.
+  state.running = false;
+
+  let timer = null;
+
+  function format(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, "0");
+    const s = Math.floor(sec % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  function paint() {
+    const total = DURATIONS[state.mode];
+    const elapsed = total - state.remainingSec;
+    const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+
+    ringEl.style.background = `conic-gradient(var(--lume) ${pct}%, var(--track) ${pct}%)`;
+    timeEl.textContent = format(state.remainingSec);
+
+    modeButtons.work.classList.toggle("active", state.mode === "work");
+    modeButtons.break.classList.toggle("active", state.mode === "break");
+
+    playIcon.hidden = state.running;
+    pauseIcon.hidden = !state.running;
+    playBtn.setAttribute("aria-label", state.running ? "Pause" : "Start");
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    state.remainingSec = DURATIONS[mode];
+    state.running = false;
+    stopTicking();
+    save();
+    paint();
+  }
+
+  function tick() {
+    if (state.remainingSec <= 0) {
+      // Interval finished — hand off to the other one, paused, so the
+      // ring is never left sitting at zero.
+      setMode(state.mode === "work" ? "break" : "work");
+      return;
+    }
+    state.remainingSec -= 1;
+    save();
+    paint();
+  }
+
+  function startTicking() {
+    stopTicking();
+    timer = setInterval(tick, 1000);
+  }
+
+  function stopTicking() {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+  }
+
+  playBtn.addEventListener("click", () => {
+    state.running = !state.running;
+    if (state.running) startTicking();
+    else stopTicking();
+    save();
+    paint();
+  });
+
+  resetBtn.addEventListener("click", () => setMode(state.mode));
+
+  modeButtons.work.addEventListener("click", () => setMode("work"));
+  modeButtons.break.addEventListener("click", () => setMode("break"));
+
+  paint();
+</script>
+</body>
+</html>

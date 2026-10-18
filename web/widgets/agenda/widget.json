@@ -1,0 +1,13 @@
+{
+  "id": "agenda",
+  "name": "Agenda",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Today's time-blocked items, upcoming first.",
+  "entry": "index.html",
+  "permissions": ["agenda"],
+  "defaultSize": { "w": 4, "h": 4 },
+  "interactive": true,
+  "tickMs": 30000,
+  "minShellVersion": "0.1.0"
+}

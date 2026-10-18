@@ -104,6 +104,8 @@ function defaultPositionFor(id) {
  */
 const PERMISSION_METHODS = {
   tasks: ["loadTasks", "saveTasks"],
+  notes: ["loadNotes", "saveNotes"],
+  agenda: ["loadAgenda", "saveAgenda"],
   media: ["getNowPlaying", "getQueue", "play", "pause", "next", "previous", "onNowPlayingChanged"],
   apps: ["getLauncherEntries", "launchApp"]
 };

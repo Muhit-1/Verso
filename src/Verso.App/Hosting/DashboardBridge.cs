@@ -106,7 +106,7 @@ public sealed class DashboardBridge
         var background = _settings.Current.Background;
         string? url = null;
 
-        if (background.Kind is "video" or "interactive" && !string.IsNullOrWhiteSpace(background.Source))
+        if (background.Kind is "video" or "gif" or "interactive" && !string.IsNullOrWhiteSpace(background.Source))
         {
             url = $"https://{ScriptBridge.BackgroundVirtualHost}/{Uri.EscapeDataString(Path.GetFileName(background.Source))}";
         }
@@ -114,9 +114,9 @@ public sealed class DashboardBridge
         return JsonSerializer.Serialize(new { kind = background.Kind, url }, Json);
     }
 
-    public void PickBackground() => _actions.PickBackground(_owner);
+    public void PickBackground() => _ = _actions.PickBackground(_owner);
 
-    public void ClearBackground() => _actions.ClearBackground();
+    public void ClearBackground() => _ = _actions.ClearBackground();
 
     // ---- desktop cleanup ------------------------------------------------------
 

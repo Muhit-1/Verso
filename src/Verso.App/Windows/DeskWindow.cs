@@ -27,7 +27,25 @@ internal enum DeskMode
     /// <see cref="DesktopLayer.DesktopLayout.Splittable"/>, so it can go into
     /// the WorkerW and sit genuinely behind the icons.
     /// </summary>
-    Wallpaper
+    Wallpaper,
+
+    /// <summary>
+    /// The live wallpaper: a second window that exists alongside
+    /// <see cref="Overlay"/>, hosted in a <see cref="ProgmanSurface"/> — a
+    /// layered child of Progman directly behind the desktop icons. Shows only
+    /// the stage (a chosen video, gif, or interactive page), full-screen. The
+    /// icon layer sits in front of it, so the icons and taskbar stay visible
+    /// and clickable and the page itself receives no input (a wallpaper is
+    /// look-only). Only created when a background that actually needs the web
+    /// stage is set, and only where the layer is available — see
+    /// <c>DeskController</c>.
+    /// <para>
+    /// Previously this was a click-through top-level bottom-most window, which
+    /// sat <em>above</em> Explorer's desktop and covered the icons and taskbar
+    /// (reproduced in isolation, tools/Verso.Spike.Layers variant A).
+    /// </para>
+    /// </summary>
+    Background
 }
 
 /// <summary>
@@ -71,7 +89,7 @@ internal sealed class DeskWindow : IDisposable
     private readonly ScriptBridge _bridge;
     private readonly SettingsStore _settings;
     private readonly DeskMode _mode;
-    private readonly DesktopSurface _surface;
+    private readonly IDeskSurface _surface;
 
     private CoreWebView2Controller? _controller;
     private bool _usingWorkerW;
@@ -88,7 +106,13 @@ internal sealed class DeskWindow : IDisposable
         _settings = settings;
         _mode = mode;
 
-        _surface = new DesktopSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height);
+        // The live wallpaper lives behind the icons, in Progman. Everything else
+        // is a top-level window of ours. The caller has already confirmed the
+        // layer is available (ProgmanLayer.PrepareAsync); the constructor
+        // throws rather than quietly producing an invisible window if not.
+        _surface = mode == DeskMode.Background
+            ? new ProgmanSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height)
+            : new DesktopSurface(bounds.X, bounds.Y, bounds.Width, bounds.Height);
 
         // The WorkerW route is only taken when the desktop is genuinely
         // splittable. On builds where it is not, attaching still reports success
@@ -104,10 +128,20 @@ internal sealed class DeskWindow : IDisposable
             }
         }
 
-        PlacementDescription ??= mode == DeskMode.Wallpaper
-            ? "bottom-most layer (no WorkerW on this build)"
-            : "bottom-most layer (overlay)";
+        PlacementDescription ??= mode switch
+        {
+            DeskMode.Wallpaper => "bottom-most layer (no WorkerW on this build)",
+            DeskMode.Background => "Progman layer (behind the icons)",
+            _ => "bottom-most layer (overlay)"
+        };
     }
+
+    /// <summary>
+    /// False once Explorer has been restarted underneath a Progman-hosted
+    /// window — it is a child of Explorer's window and goes with it. Always
+    /// true for top-level desks.
+    /// </summary>
+    public bool IsSurfaceAlive => _surface is not ProgmanSurface progman || progman.IsAlive;
 
     /// <summary>What actually happened when this desk was placed. For the tray tooltip.</summary>
     public string? PlacementDescription { get; private set; }
@@ -126,7 +160,11 @@ internal sealed class DeskWindow : IDisposable
         // Never actually seen in overlay mode — the window region excludes
         // every pixel the page does not draw in. It matters for the instant
         // between the controller appearing and the first region arriving.
-        _controller.DefaultBackgroundColor = Color.Transparent;
+        // The wallpaper has nothing to be transparent over; black avoids a
+        // white flash while the first frame of a video decodes.
+        _controller.DefaultBackgroundColor = _mode == DeskMode.Background
+            ? Color.Black
+            : Color.Transparent;
 
         var core = _controller.CoreWebView2;
 
@@ -178,7 +216,12 @@ internal sealed class DeskWindow : IDisposable
         // key or per-pixel alpha.
         core.WebMessageReceived += OnWebMessage;
 
-        var layer = _mode == DeskMode.Wallpaper ? "wallpaper" : "overlay";
+        var layer = _mode switch
+        {
+            DeskMode.Wallpaper => "wallpaper",
+            DeskMode.Background => "background",
+            _ => "overlay"
+        };
         core.Navigate($"https://{VirtualHost}/shell/index.html?layer={layer}");
 
         _controller.IsVisible = true;
@@ -318,7 +361,7 @@ internal sealed class DeskWindow : IDisposable
     }
 
     /// <summary>
-    /// Maps the folder holding the chosen video/interactive background to
+    /// Maps the folder holding the chosen video/gif/interactive background to
     /// its own virtual host, so the web layer can load it as
     /// <c>https://verso.bg.local/name.ext</c> instead of a filesystem path
     /// script has no business seeing. A no-op for "image" and "none" — an
@@ -333,7 +376,7 @@ internal sealed class DeskWindow : IDisposable
         }
 
         var background = _settings.Current.Background;
-        if (background.Kind is not ("video" or "interactive")
+        if (background.Kind is not ("video" or "gif" or "interactive")
             || string.IsNullOrWhiteSpace(background.Source))
         {
             return;
@@ -359,7 +402,15 @@ internal sealed class DeskWindow : IDisposable
         }
 
         _disposed = true;
-        _controller?.Close();
+        try
+        {
+            _controller?.Close();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.Runtime.InteropServices.COMException)
+        {
+            // The window it was hosted in may already be gone with Explorer.
+        }
+
         _surface.Dispose();
     }
 }

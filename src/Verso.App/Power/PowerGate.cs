@@ -118,6 +118,15 @@ internal sealed class PowerGate : IPowerGate
             reason |= PauseReason.MonitorOff;
         }
 
+        // Unconditional, same as MonitorOff — there is no scenario where
+        // rendering something with nothing of it on screen is a choice a
+        // user would want to keep. See DesktopState.Query() for what this
+        // heuristic does and does not catch.
+        if (state.LikelyOccluded)
+        {
+            reason |= PauseReason.NotVisible;
+        }
+
         if (_settings.PauseOnBattery
             && state.OnBattery
             && state.BatteryPercent >= 0

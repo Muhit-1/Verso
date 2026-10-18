@@ -96,6 +96,12 @@ public static class VersoPaths
     /// <summary>tasks.json</summary>
     public static string TasksFile => Path.Combine(DataRoot, "tasks.json");
 
+    /// <summary>notes.json — the notes widget's entries.</summary>
+    public static string NotesFile => Path.Combine(DataRoot, "notes.json");
+
+    /// <summary>agenda.json — the agenda widget's time-blocked items.</summary>
+    public static string AgendaFile => Path.Combine(DataRoot, "agenda.json");
+
     /// <summary>Where the widget layout — which panel sits where — is persisted.</summary>
     public static string LayoutFile => Path.Combine(DataRoot, "layout.json");
 

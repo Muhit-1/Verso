@@ -30,6 +30,12 @@ VersoHost.hostVersion                      // "0.1.0"
 VersoHost.loadTasks()                      // -> [{id, text, done}]
 VersoHost.saveTasks(tasks)                 // -> void
 
+VersoHost.loadNotes()                      // -> [{id, text}]
+VersoHost.saveNotes(notes)                 // -> void
+
+VersoHost.loadAgenda()                     // -> [{id, title, start, end}]  "HH:mm" strings
+VersoHost.saveAgenda(items)                // -> void
+
 VersoHost.getNowPlaying()                  // -> NowPlaying | null
 VersoHost.getQueue()                       // -> [{title, artist}]
 VersoHost.play()
@@ -128,6 +134,8 @@ and cannot load module scripts.
 | | |
 |---|---|
 | tasks | **Real.** Persisted to `%APPDATA%\Verso\tasks.json`, written atomically. |
+| notes | **Real.** Persisted to `%APPDATA%\Verso\notes.json`, same as tasks. |
+| agenda | **Real.** Persisted to `%APPDATA%\Verso\agenda.json`, same as tasks. |
 | themes | **Real.** Scans both theme folders; the choice persists to `settings.json`. |
 | widgets | **Real.** Scans both widget folders; see [widget-spec.md](widget-spec.md) and `web/shell/js/widgets.js`. |
 | launcher | **Real.** Entries are added from the dashboard, persisted to `settings.json`, launched via `Process.Start`. |

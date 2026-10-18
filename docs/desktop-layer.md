@@ -161,3 +161,34 @@ Progman=0x203D2  DefView-under-Progman=yes  sibling-WorkerW=none  Progman-child-
 `sibling-WorkerW=none` with `DefView-under-Progman=yes` is the signature of a
 build where the technique is dead. If `sibling-WorkerW` ever becomes a handle,
 the split is back and `DeskMode.Wallpaper` starts working again on its own.
+
+---
+
+## Update 2026-10-18 — a layer behind the icons does exist (build 26300)
+
+Everything above stays true for the *WorkerW* routes. What was missing was one more
+placement, found by painting a test window seven different ways and checking the
+**composed screen** (`tools/Verso.Spike.Layers`), not Win32's return values:
+
+> A **layered child of `Progman`** (`WS_CHILD | WS_EX_LAYERED`, alpha 255), inserted
+> **directly behind `SHELLDLL_DefView`**, is visible with the desktop icons and taskbar
+> drawn on top of it, and a WebView2 playing a 1080p mp4 inside it shows and animates.
+
+Requirements, each measured:
+
+- Progman must already have its extra `WorkerW` child. A freshly started Explorer does
+  **not**; it appears when `0x052C` (`0xD`, `1`) is sent. Without it the same window is
+  invisible (checked both ways). `DetectLayout()` always sent the message but only looked
+  for a *top-level* WorkerW, so it called this build "not splittable" and never tried this.
+- `WS_EX_LAYERED` is needed (`NOREDIRECTIONBITMAP`, or no style, or bottom-of-Progman
+  placement: all invisible). The z-position behind DefView is needed too.
+- The window is a child of Explorer's window, so it dies when Explorer restarts. Explorer
+  broadcasts `TaskbarCreated` when it is back (received); rebuild then, incl. the WebView2.
+- Progman resizes itself on a display change; the child does not.
+
+In Verso this is `ProgmanLayer` / `ProgmanSurface` (`Verso.Interop`), used by
+`DeskMode.Background`. The old click-through top-level background window covered the
+icons and taskbar and has been removed. Layout value: `DesktopLayout.LayeredChild`.
+
+Limitation by design: the icon layer is in front, so a wallpaper hosted here receives no
+mouse input. Re-run the spike after Windows updates.

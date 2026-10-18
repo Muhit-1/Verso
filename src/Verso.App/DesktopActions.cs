@@ -1,4 +1,5 @@
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
 using Verso.App.Storage;
@@ -34,7 +35,7 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
         desk.ReloadWeb();
     }
 
-    public void PickBackground(Window? owner)
+    public async Task PickBackground(Window? owner)
     {
         var dialog = new OpenFileDialog
         {
@@ -42,7 +43,8 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
             Filter =
                 "Supported files (*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.mp4;*.webm;*.html;*.htm)"
                     + "|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.mp4;*.webm;*.html;*.htm"
-                + "|Image (*.jpg;*.jpeg;*.png;*.bmp;*.gif)|*.jpg;*.jpeg;*.png;*.bmp;*.gif"
+                + "|Image (*.jpg;*.jpeg;*.png;*.bmp)|*.jpg;*.jpeg;*.png;*.bmp"
+                + "|Animated GIF (*.gif)|*.gif"
                 + "|Video (*.mp4;*.webm)|*.mp4;*.webm"
                 + "|Interactive page (*.html;*.htm)|*.html;*.htm"
         };
@@ -72,10 +74,16 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
             DesktopWallpaper.SetImage(dialog.FileName);
         }
 
+        // Order matters: reconcile first, so a "video"/"gif"/"interactive"
+        // pick creates the click-through background window (or an "image"
+        // pick tears one down) before the reload — otherwise a freshly
+        // created window would show whatever it navigated to at creation
+        // and then immediately reload a second time for no reason.
+        await desk.ReconcileAsync();
         desk.ReloadWeb();
     }
 
-    public void ClearBackground()
+    public async Task ClearBackground()
     {
         settings.Update(s =>
         {
@@ -83,6 +91,7 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
             s.Background.Source = string.Empty;
         });
 
+        await desk.ReconcileAsync();
         desk.ReloadWeb();
     }
 
@@ -111,7 +120,12 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
 
     public static string DetectBackgroundKind(string path) => Path.GetExtension(path).ToLowerInvariant() switch
     {
-        ".jpg" or ".jpeg" or ".png" or ".bmp" or ".gif" => "image",
+        // Not grouped with the static images below: the real Windows
+        // wallpaper (DesktopWallpaper.SetImage) shows only a GIF's first
+        // frame, so it needs the same web-stage path as video, not the
+        // image one. See web/shell/js/background.js.
+        ".gif" => "gif",
+        ".jpg" or ".jpeg" or ".png" or ".bmp" => "image",
         ".mp4" or ".webm" => "video",
         ".html" or ".htm" => "interactive",
         _ => "none"

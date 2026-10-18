@@ -173,7 +173,7 @@
 /* ==================================================================
    LAYERS
 
-   The shell renders in one of three modes, chosen by ?layer= :
+   The shell renders in one of four modes, chosen by ?layer= :
 
      (none)      everything. Opened in a browser, or previewing.
      wallpaper   Verso IS the wallpaper. The stage fills the screen.
@@ -184,6 +184,12 @@
                  turns fully transparent AND click-through, so the real
                  wallpaper and the desktop icons show through and stay
                  usable. This is the default on current Windows.
+     background  A second, fully click-through window that exists
+                 alongside overlay mode whenever a video/gif/interactive
+                 background is set — see DeskMode.Background in
+                 DeskWindow.cs. Shows only the stage, full-screen,
+                 nothing else: no panels ever render here, so there is
+                 nothing on this layer for --key to matter to.
 
    THE COLOUR-KEY RULE
    A colour key is binary: a pixel is either fully opaque or fully
@@ -229,7 +235,6 @@ body.layer-overlay .dial{
 
 /* Glows bleed into the key. Off. */
 body.layer-overlay .hhmm{ text-shadow:none; }
-body.layer-overlay .tick.now{ box-shadow:none; }
 body.layer-overlay .bar .fill{ box-shadow:none; }
 body.layer-overlay .playing .live{ box-shadow:none; }
 body.layer-overlay .art{ box-shadow:none; }
@@ -247,16 +252,15 @@ body.layer-overlay .dial{
   -webkit-backdrop-filter:none;
 }
 
-/* The minute track is 60 hairlines directly on the key. Give it a strip
-   to sit on so the ticks have crisp edges against something. */
-body.layer-overlay .minute-track{
-  height:24px;
-  padding-top:5px;
-  background:var(--panel-solid);
-  border-bottom:1px solid var(--brass-hair);
-}
-
 /* Wallpaper mode: the rail is drawn by the same window, so nothing to
    hide. This mode exists mainly for machines that can still reach the
    WorkerW, where Verso really is the desktop background. */
 body.layer-wallpaper .stage{ display:block; }
+
+/* Background mode: the stage and nothing else. There are no panels on
+   this layer to begin with (js/desk.js never mounts them here), but the
+   dial/minute-track/theme-toast rules above are scoped to layer-overlay
+   specifically, so nothing needs excluding — this is just the positive
+   rule that makes the stage itself visible, the same one wallpaper mode
+   uses. */
+body.layer-background .stage{ display:block; }

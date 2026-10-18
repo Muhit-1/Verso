@@ -128,10 +128,11 @@ body{
   z-index:0;
 }
 
-/* A chosen video or interactive background — see js/background.js.
+/* A chosen video, gif or interactive background — see js/background.js.
    Sits between the theme's own gradient stage and the grain layer, so
    the grain still dithers it the same way it dithers a flat gradient. */
 .stage video,
+.stage img,
 .stage iframe{
   position:absolute;
   inset:0;
@@ -156,42 +157,6 @@ body{
 @keyframes drift{
   from{ transform:scale(1.02) translate3d(0,0,0); }
   to  { transform:scale(1.06) translate3d(-1.4%, 1%, 0); }
-}
-
-/* ------------------------------------------------------------------
-   SIGNATURE — the minute track
-   Sixty ticks across the top edge, one per minute of the hour, every
-   fifth one long. The current minute is lit; minutes already spent
-   are brass, minutes still to come are barely there. It sweeps left
-   to right over the hour, so you read how far into the hour you are
-   without reading anything at all.
------------------------------------------------------------------- */
-.minute-track{
-  position:absolute;
-  top:0; left:0; right:0;
-  height:34px;
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  padding:0 26px;
-  z-index:3;
-  pointer-events:none;
-}
-
-.tick{
-  width:1px;
-  height:8px;
-  background:var(--tick);
-  transition:background 700ms ease, height 700ms ease, box-shadow 700ms ease;
-}
-.tick.major{ height:16px; background:var(--tick-major); }
-.tick.spent{ background:var(--tick-spent); }
-.tick.spent.major{ background:var(--tick-spent-major); }
-.tick.now{
-  height:20px;
-  width:2px;
-  background:var(--lume);
-  box-shadow:0 0 12px 1px var(--lume-glow);
 }
 
 /* ------------------------------------------------------------------

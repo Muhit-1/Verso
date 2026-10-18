@@ -6,13 +6,15 @@
 
    "image" never reaches here — it goes straight to the real Windows
    wallpaper on the native side (see DesktopWallpaper.SetImage), so
-   the web layer has nothing to draw for it. This module only ever
-   handles "video" and "interactive".
+   the web layer has nothing to draw for it. This module handles
+   "video", "gif" and "interactive".
 
-   The stage is hidden by CSS in overlay mode (see the LAYERS block in
-   css/desk.css — a reshaped window has no pixels outside the widget
-   panels to draw a background into at all), so this is a no-op there
-   rather than silently loading a file nobody will ever see.
+   The stage only ever has pixels to draw into on the "wallpaper" and
+   "background" layers (see the LAYERS block in css/desk.css) — never
+   "overlay", which is reshaped down to just the widget panels. A
+   background layer's own window exists specifically so there is
+   somewhere for this to draw on builds where wallpaper mode is not
+   reachable; see DeskMode.Background in DeskWindow.cs.
 ================================================================== */
 
 import * as Host from "./host.js";
@@ -40,6 +42,13 @@ export function start() {
     video.muted = true;
     video.playsInline = true;
     stage.appendChild(video);
+  } else if (background.kind === "gif") {
+    // GIF animation only ever plays through <img> — a <video> element
+    // will not decode one at all, regardless of its src's actual format.
+    const img = document.createElement("img");
+    img.src = background.url;
+    img.alt = "";
+    stage.appendChild(img);
   } else if (background.kind === "interactive") {
     const frame = document.createElement("iframe");
     frame.src = background.url;

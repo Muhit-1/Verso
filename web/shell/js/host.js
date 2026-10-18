@@ -21,6 +21,8 @@
 ================================================================== */
 
 const TASKS_KEY = "verso.tasks.v1";
+const NOTES_KEY = "verso.notes.v1";
+const AGENDA_KEY = "verso.agenda.v1";
 
 /* ---- demo implementation ---------------------------------------- */
 
@@ -36,6 +38,40 @@ function readLocalTasks() {
 function writeLocalTasks(tasks) {
   try {
     localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+  } catch {
+    /* private window or storage disabled — run in memory */
+  }
+}
+
+function readLocalNotes() {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalNotes(notes) {
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+  } catch {
+    /* private window or storage disabled — run in memory */
+  }
+}
+
+function readLocalAgenda() {
+  try {
+    const raw = localStorage.getItem(AGENDA_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalAgenda(items) {
+  try {
+    localStorage.setItem(AGENDA_KEY, JSON.stringify(items));
   } catch {
     /* private window or storage disabled — run in memory */
   }
@@ -77,6 +113,17 @@ async function createDemoHost() {
     { id: "t2", text: "Decide: mouse hook, or a layered widget window", done: false },
     { id: "t3", text: "Read how Lively forwards input", done: false },
     { id: "t4", text: "Write a second theme, to test the token contract", done: true }
+  ];
+
+  const seededNotes = [
+    { id: "n1", text: "Ring the ticket desk about the printer" },
+    { id: "n2", text: "Half caf, oat milk" }
+  ];
+
+  const seededAgenda = [
+    { id: "a1", title: "Stand-up", start: "09:00", end: "09:15" },
+    { id: "a2", title: "Design review", start: "11:00", end: "12:00" },
+    { id: "a3", title: "Focus block", start: "14:00", end: "16:00" }
   ];
 
   const library = [
@@ -139,6 +186,10 @@ async function createDemoHost() {
     hostVersion: "demo",
     loadTasks: () => readLocalTasks() ?? seeded.slice(),
     saveTasks: writeLocalTasks,
+    loadNotes: () => readLocalNotes() ?? seededNotes.slice(),
+    saveNotes: writeLocalNotes,
+    loadAgenda: () => readLocalAgenda() ?? seededAgenda.slice(),
+    saveAgenda: writeLocalAgenda,
     getNowPlaying,
     getQueue: () => [1, 2, 3].map(o => {
       const t = library[(idx + o) % library.length];
@@ -178,6 +229,8 @@ async function createRealHost(bridge) {
   const listeners = [];
 
   let tasks = [];
+  let notes = [];
+  let agenda = [];
   let nowPlaying = null;
   let queue = [];
 
@@ -202,6 +255,8 @@ async function createRealHost(bridge) {
   }
 
   tasks = parse(await bridge.LoadTasks(), []);
+  notes = parse(await bridge.LoadNotes(), []);
+  agenda = parse(await bridge.LoadAgenda(), []);
   await refreshMedia();
 
   // Read once, at startup. Unlike media it never changes mid-session — the
@@ -237,6 +292,18 @@ async function createRealHost(bridge) {
     saveTasks(next) {
       tasks = next;                                  // cache first, so the
       bridge.SaveTasks(JSON.stringify(next));        // UI never waits on IO
+    },
+
+    loadNotes: () => notes,
+    saveNotes(next) {
+      notes = next;
+      bridge.SaveNotes(JSON.stringify(next));
+    },
+
+    loadAgenda: () => agenda,
+    saveAgenda(next) {
+      agenda = next;
+      bridge.SaveAgenda(JSON.stringify(next));
     },
 
     getNowPlaying: () => nowPlaying,
@@ -303,6 +370,8 @@ export async function connect() {
 const EMPTY_HOST = {
   kind: "demo", hostVersion: "demo",
   loadTasks: () => [], saveTasks() {},
+  loadNotes: () => [], saveNotes() {},
+  loadAgenda: () => [], saveAgenda() {},
   getNowPlaying: () => null, getQueue: () => [],
   play() {}, pause() {}, next() {}, previous() {}, onNowPlayingChanged() {},
   getBackground: () => ({ kind: "none", url: null }),

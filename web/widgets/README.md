@@ -41,6 +41,8 @@ else. Ask for nothing and the bridge you get has no methods on it.
 | | |
 |---|---|
 | `tasks` | read and write the task list |
+| `notes` | read and write the note list |
+| `agenda` | read and write today's time-blocked items |
 | `media` | read what is playing and control transport |
 | `apps` | list and launch the apps the user added from the dashboard |
 | `system` | CPU, memory, battery, network |

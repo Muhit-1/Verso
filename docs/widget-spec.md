@@ -59,6 +59,8 @@ nothing and the bridge you get has no methods on it.
 | | |
 |---|---|
 | `tasks` | Read and write the task list. |
+| `notes` | Read and write the note list. |
+| `agenda` | Read and write today's time-blocked items. |
 | `media` | Read what is playing; control transport. |
 | `apps` | List and launch the apps the user added from the dashboard. |
 | `system` | CPU, memory, battery, network. |

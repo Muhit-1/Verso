@@ -32,9 +32,9 @@ namespace Verso.Interop;
 /// pumping messages for that thread, so it needs no message loop of its own.
 /// </para>
 /// </remarks>
-public sealed unsafe class DesktopSurface : IDisposable
+public sealed unsafe class DesktopSurface : IDeskSurface
 {
-    private const string ClassName = "VersoDesktopSurface";
+    internal const string ClassName = "VersoDesktopSurface";
 
     /// <summary>
     /// Held in a static field for the lifetime of the process. If this is
@@ -152,7 +152,7 @@ public sealed unsafe class DesktopSurface : IDisposable
         }
     }
 
-    private static void EnsureClassRegistered()
+    internal static void EnsureClassRegistered()
     {
         if (_classAtom != 0)
         {

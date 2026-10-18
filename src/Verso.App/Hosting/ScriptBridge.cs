@@ -51,15 +51,27 @@ public sealed class ScriptBridge : IDisposable
     };
 
     private readonly ITaskStore _tasks;
+    private readonly INoteStore _notes;
+    private readonly IAgendaStore _agenda;
     private readonly ThemeCatalog _themes;
     private readonly WidgetCatalog _widgets;
     private readonly SettingsStore _settings;
     private readonly FileLayoutStore _layout;
     private readonly INowPlayingSource _media;
 
-    internal ScriptBridge(ITaskStore tasks, ThemeCatalog themes, WidgetCatalog widgets, SettingsStore settings, FileLayoutStore layout, INowPlayingSource media)
+    internal ScriptBridge(
+        ITaskStore tasks,
+        INoteStore notes,
+        IAgendaStore agenda,
+        ThemeCatalog themes,
+        WidgetCatalog widgets,
+        SettingsStore settings,
+        FileLayoutStore layout,
+        INowPlayingSource media)
     {
         _tasks = tasks;
+        _notes = notes;
+        _agenda = agenda;
         _themes = themes;
         _widgets = widgets;
         _settings = settings;
@@ -83,6 +95,36 @@ public sealed class ScriptBridge : IDisposable
         if (parsed is not null)
         {
             _tasks.Save(parsed);
+        }
+    }
+
+    // ---- notes ------------------------------------------------------------
+
+    /// <returns>JSON array of <c>{id, text}</c>.</returns>
+    public string LoadNotes() => JsonSerializer.Serialize(_notes.Load(), Json);
+
+    /// <param name="json">JSON array of <c>{id, text}</c>.</param>
+    public void SaveNotes(string json)
+    {
+        var parsed = JsonSerializer.Deserialize<List<NoteItem>>(json, Json);
+        if (parsed is not null)
+        {
+            _notes.Save(parsed);
+        }
+    }
+
+    // ---- agenda -------------------------------------------------------------
+
+    /// <returns>JSON array of <c>{id, title, start, end}</c>.</returns>
+    public string LoadAgenda() => JsonSerializer.Serialize(_agenda.Load(), Json);
+
+    /// <param name="json">JSON array of <c>{id, title, start, end}</c>.</param>
+    public void SaveAgenda(string json)
+    {
+        var parsed = JsonSerializer.Deserialize<List<AgendaItem>>(json, Json);
+        if (parsed is not null)
+        {
+            _agenda.Save(parsed);
         }
     }
 
@@ -187,7 +229,7 @@ public sealed class ScriptBridge : IDisposable
         var background = _settings.Current.Background;
         string? url = null;
 
-        if (background.Kind is "video" or "interactive"
+        if (background.Kind is "video" or "gif" or "interactive"
             && !string.IsNullOrWhiteSpace(background.Source)
             && File.Exists(background.Source))
         {

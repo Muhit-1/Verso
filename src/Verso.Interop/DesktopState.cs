@@ -1,6 +1,7 @@
 using Windows.Win32;
 using Windows.Win32.System.Power;
 using Windows.Win32.UI.Shell;
+using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Verso.Interop;
 
@@ -16,7 +17,8 @@ public readonly record struct DesktopState(
     bool MonitorOff,
     bool PresentationMode,
     bool OnBattery,
-    int BatteryPercent)
+    int BatteryPercent,
+    bool LikelyOccluded)
 {
     /// <summary>
     /// Samples the current state. Cheap enough to poll every couple of seconds.
@@ -63,6 +65,24 @@ public readonly record struct DesktopState(
             batteryPercent = power.BatteryLifePercent == 255 ? -1 : power.BatteryLifePercent;
         }
 
-        return new DesktopState(fullscreen, monitorOff, presenting, onBattery, batteryPercent);
+        // Cheap, deliberately approximate occlusion: a maximised foreground
+        // window covers the whole monitor it's on, which for a widget desk —
+        // scattered panels, no fixed rectangle — is close enough to "nothing
+        // of ours is visible" to be worth acting on. It will not catch a
+        // large-but-not-maximised window sitting on top of the desk; that is
+        // an accepted gap, not an oversight — the alternative is walking the
+        // full Z-order and intersecting rectangles against every panel's
+        // actual position, which is real complexity for a case (someone
+        // sized a window to almost-but-not-quite cover the desk) that is
+        // rare and, unlike this rule, buys nothing over the fullscreen check
+        // already above it if they maximise a moment later anyway.
+        var likelyOccluded = false;
+        var foreground = PInvoke.GetForegroundWindow();
+        if (!foreground.IsNull)
+        {
+            likelyOccluded = PInvoke.IsZoomed(foreground);
+        }
+
+        return new DesktopState(fullscreen, monitorOff, presenting, onBattery, batteryPercent, likelyOccluded);
     }
 }

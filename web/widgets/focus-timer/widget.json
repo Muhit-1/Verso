@@ -1,0 +1,13 @@
+{
+  "id": "focus-timer",
+  "name": "Focus Timer",
+  "author": "Verso",
+  "version": "1.0.0",
+  "description": "Work and break intervals with a ring and playback controls.",
+  "entry": "index.html",
+  "permissions": [],
+  "defaultSize": { "w": 3, "h": 4 },
+  "interactive": true,
+  "tickMs": 1000,
+  "minShellVersion": "0.1.0"
+}

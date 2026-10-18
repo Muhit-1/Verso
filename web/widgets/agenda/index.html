@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda widget</title>
+
+<!--
+  AGENDA — today's time-blocked items, upcoming first. Same-day only:
+  start/end are "HH:mm" strings, not dates — this is "what's left of
+  today", not a calendar. Needs the "agenda" permission (see
+  docs/widget-spec.md). tickMs:30000 in widget.json — the host uses
+  that to know how often paint() needs to run to notice the current
+  item change or an item fall off the list.
+-->
+
+<style>
+  html, body{
+    margin:0;
+    height:100%;
+    background:transparent;
+    font-family:var(--font-sans);
+    user-select:none;
+    overflow:hidden;
+  }
+
+  body{ container-type:inline-size; display:flex; flex-direction:column; }
+
+  .comp-head{
+    flex:0 0 auto;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.6cqi, 13px);
+    font-weight:500;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--slate);
+  }
+
+  .agenda{
+    flex:1 1 auto;
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    overflow-y:auto;
+    min-height:0;
+    scrollbar-width:thin;
+    scrollbar-color:var(--brass-dim) transparent;
+  }
+
+  .item{
+    padding:9px 4px;
+    border-top:1px solid var(--rule-faint);
+  }
+  .item:first-child{ border-top:0; }
+
+  .item-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+  }
+
+  .dot{
+    flex:0 0 auto;
+    width:7px; height:7px;
+    border-radius:50%;
+    background:var(--brass);
+    transition:background 180ms ease, box-shadow 180ms ease;
+  }
+  .item.now .dot{ background:var(--lume); box-shadow:0 0 7px 1px var(--lume-glow); }
+
+  .title{
+    flex:1 1 auto;
+    min-width:0;
+    font-size:clamp(12.5px, 2.8cqi, 18px);
+    color:var(--chalk);
+    word-break:break-word;
+  }
+
+  .time{
+    flex:0 0 auto;
+    font-family:var(--font-mono);
+    font-size:clamp(9.5px, 2.2cqi, 12px);
+    color:var(--slate);
+    font-variant-numeric:tabular-nums;
+  }
+
+  .remove{
+    flex:0 0 auto;
+    width:16px; height:16px;
+    border:0;
+    background:transparent;
+    color:var(--slate-deep);
+    font-family:var(--font-mono);
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    opacity:0;
+    transition:opacity 140ms ease, color 140ms ease;
+  }
+  .item:hover .remove{ opacity:1; }
+  .remove:hover{ color:var(--lume); }
+  .remove:focus-visible{ opacity:1; outline:1px solid var(--lume); }
+
+  .track{
+    height:4px;
+    border-radius:2px;
+    background:var(--track);
+    margin:6px 0 0 16px;
+    overflow:hidden;
+  }
+  .track .fill{
+    height:100%;
+    width:0%;
+    background:var(--brass-dim);
+  }
+  .item.now .track .fill{ background:var(--lume); }
+
+  .add-agenda{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border-top:1px solid var(--brass-hair);
+    padding-top:12px;
+    margin-top:8px;
+  }
+
+  .add-agenda input[type="text"]{
+    flex:1 1 auto;
+    min-width:0;
+    background:transparent;
+    border:0;
+    padding:2px 0;
+    color:var(--chalk);
+    font-family:var(--font-sans);
+    font-size:clamp(12px, 2.6cqi, 16px);
+  }
+  .add-agenda input[type="text"]::placeholder{ color:var(--slate-deep); }
+  .add-agenda input[type="time"]{
+    flex:0 0 auto;
+    width:74px;
+    background:transparent;
+    border:0;
+    color:var(--slate);
+    font-family:var(--font-mono);
+    font-size:clamp(10.5px, 2.2cqi, 13px);
+  }
+  .add-agenda input:focus{ outline:none; }
+  .add-agenda:focus-within{ border-top-color:var(--lume-dim); }
+
+  .add-btn{
+    flex:0 0 auto;
+    width:20px; height:20px;
+    border:0;
+    border-radius:4px;
+    background:transparent;
+    color:var(--brass);
+    font-family:var(--font-mono);
+    font-size:15px;
+    line-height:1;
+    cursor:pointer;
+  }
+  .add-btn:hover{ color:var(--lume); }
+
+  .empty{
+    margin:0;
+    padding:10px 4px 2px;
+    font-size:clamp(12.5px, 2.6cqi, 17px);
+    color:var(--slate-deep);
+    font-style:italic;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-head" id="agendaHead">Agenda</div>
+
+<ul class="agenda" id="agendaList"></ul>
+<p class="empty" id="agendaEmpty" hidden>Nothing left today.</p>
+
+<div class="add-agenda">
+  <input id="agendaTitle" type="text" placeholder="Add an item" maxlength="80" autocomplete="off" aria-label="Item title">
+  <input id="agendaStart" type="time" aria-label="Start time">
+  <input id="agendaEnd" type="time" aria-label="End time">
+  <button id="agendaAdd" type="button" class="add-btn" aria-label="Add item">+</button>
+</div>
+
+<script type="module">
+  const listEl = document.getElementById("agendaList");
+  const emptyEl = document.getElementById("agendaEmpty");
+  const titleEl = document.getElementById("agendaTitle");
+  const startEl = document.getElementById("agendaStart");
+  const endEl = document.getElementById("agendaEnd");
+  const addBtn = document.getElementById("agendaAdd");
+
+  let items = [];
+
+  const host = () => window.VersoHost ?? null;
+
+  function persist() {
+    try { host()?.saveAgenda?.(items); } catch { /* host offline; keep in memory */ }
+  }
+
+  function toMinutes(hhmm) {
+    const [h, m] = String(hhmm ?? "00:00").split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }
+
+  function nowMinutes() {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  function render() {
+    const now = nowMinutes();
+
+    // Upcoming first: drop anything already finished, sort by start.
+    const upcoming = items
+      .filter(it => toMinutes(it.end) > now)
+      .sort((a, b) => toMinutes(a.start) - toMinutes(b.start));
+
+    listEl.textContent = "";
+
+    for (const it of upcoming) {
+      const start = toMinutes(it.start);
+      const end = toMinutes(it.end);
+      const isNow = now >= start && now < end;
+      const progress = isNow ? Math.round(((now - start) / Math.max(1, end - start)) * 100) : 0;
+
+      const li = document.createElement("li");
+      li.className = "item" + (isNow ? " now" : "");
+
+      const row = document.createElement("div");
+      row.className = "item-row";
+
+      const dot = document.createElement("span");
+      dot.className = "dot";
+
+      const title = document.createElement("span");
+      title.className = "title";
+      title.textContent = it.title;
+
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = `${it.start}–${it.end}`;
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "remove";
+      remove.textContent = "✕";
+      remove.setAttribute("aria-label", `Remove ${it.title}`);
+      remove.addEventListener("click", () => {
+        items = items.filter(x => x.id !== it.id);
+        persist();
+        render();
+      });
+
+      row.append(dot, title, time, remove);
+
+      const track = document.createElement("div");
+      track.className = "track";
+      const fill = document.createElement("div");
+      fill.className = "fill";
+      fill.style.width = progress + "%";
+      track.appendChild(fill);
+
+      li.append(row, track);
+      listEl.appendChild(li);
+    }
+
+    emptyEl.hidden = upcoming.length > 0;
+  }
+
+  function addItem() {
+    const title = titleEl.value.trim();
+    const start = startEl.value;
+    const end = endEl.value;
+    if (!title || !start || !end) return;
+
+    items.push({ id: "a" + Date.now(), title, start, end });
+    titleEl.value = "";
+    startEl.value = "";
+    endEl.value = "";
+    persist();
+    render();
+  }
+
+  addBtn.addEventListener("click", addItem);
+  titleEl.addEventListener("keydown", ev => { if (ev.key === "Enter") addItem(); });
+
+  let attempts = 0;
+
+  function tryLoad() {
+    const h = host();
+    if (h?.loadAgenda) {
+      try { items = h.loadAgenda() ?? []; } catch { items = []; }
+      render();
+      return;
+    }
+
+    attempts++;
+    if (attempts < 20) {
+      setTimeout(tryLoad, 100);
+    } else {
+      render();
+    }
+  }
+
+  tryLoad();
+
+  // Repaint on the host's own clock — an item can start, finish, or fall
+  // off the "upcoming" list without anyone touching this widget.
+  setInterval(render, 30000);
+</script>
+</body>
+</html>

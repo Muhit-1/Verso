@@ -82,6 +82,19 @@ public static class DesktopLayer
         /// </summary>
         NotSplittable,
 
+        /// <summary>
+        /// No top-level <c>WorkerW</c> split — but the split message did make
+        /// <c>Progman</c> grow its extra <c>WorkerW</c> child, which is all
+        /// <see cref="ProgmanSurface"/> needs. A layered child of Progman placed
+        /// directly behind <c>SHELLDLL_DefView</c> is genuinely visible and
+        /// genuinely behind the icons here. Measured on Windows 11 build 26300
+        /// (see CLAUDE.md, "Step 1 result"): with the child present a WebView2
+        /// video wallpaper shows with the icons and taskbar on top; without it
+        /// the same window is invisible. This is the layout where a live
+        /// wallpaper works.
+        /// </summary>
+        LayeredChild,
+
         /// <summary>Explorer is not running.</summary>
         NoShell
     }
@@ -119,8 +132,17 @@ public static class DesktopLayer
             (WPARAM)(nuint)0xD, (LPARAM)(nint)0x1,
             SEND_MESSAGE_TIMEOUT_FLAGS.SMTO_NORMAL, uTimeout: 1000);
 
-        return HasVisibleTopLevelWorkerW()
-            ? DesktopLayout.Splittable
+        if (HasVisibleTopLevelWorkerW())
+        {
+            return DesktopLayout.Splittable;
+        }
+
+        // No top-level split. On current Windows 11 the message still makes
+        // Progman create its own WorkerW child, which is what the layered-child
+        // placement depends on. Explorer answers before the window exists on
+        // some machines, so give it a moment rather than reading it once.
+        return ProgmanLayer.WaitForWorkerWChild(progman, timeoutMs: 500)
+            ? DesktopLayout.LayeredChild
             : DesktopLayout.NotSplittable;
     }
 
@@ -305,7 +327,7 @@ public static class DesktopLayer
     /// <c>SHELLDLL_DefView</c>: that one is the icon layer, and parenting into
     /// it would put the wallpaper in front of the icons.
     /// </remarks>
-    private static HWND FindProgmanChildWorkerW(HWND progman)
+    internal static HWND FindProgmanChildWorkerW(HWND progman)
     {
         var candidate = PInvoke.FindWindowEx(progman, HWND.Null, "WorkerW", null);
 
