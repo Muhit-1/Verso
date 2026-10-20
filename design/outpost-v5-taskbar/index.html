@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso — Taskbar settings (mockup)</title>
+<!--
+  MOCKUP for Settings > Desktop > Taskbar. Not product code, nothing here ships as-is.
+  Uses the dashboard's Fieldnote look (cream, terracotta, serif headings) so it can be compared
+  one to one with web/dashboard. Mock-only: the live taskbar preview strip, the "Applied" toast,
+  and the bar at the top (state buttons). Real build writes HKCU registry values and refreshes Explorer.
+-->
+<style>
+:root{
+  --ink:#2B2620;--ink-muted:#847A67;--surface:#FFFDF7;--sidebar:#F1E9D8;--card:#FFFDF7;--border:#E4DAC5;
+  --accent:#B85C38;--accent-soft:#F2E1D6;--accent-2:#6E7B4F;--on-accent:#fff;--radius:12px;
+  --serif:"Fraunces",Georgia,serif;--sans:"Work Sans","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#cfc6b2;font-family:var(--sans);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.mockbar{width:min(1000px,100%);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:#5a513f;margin-bottom:12px}
+.mockbar b{margin-right:4px}
+.mockbar button{font:inherit;padding:5px 10px;border-radius:8px;border:1px solid #a89f89;background:#e9e1cd;cursor:pointer}
+.mockbar .tag{margin-left:auto;font-style:italic}
+.win{width:min(1000px,100%);background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(40,30,10,.25);display:grid;grid-template-columns:200px 1fr;grid-template-rows:38px 1fr}
+.titlebar{grid-column:1/-1;display:flex;align-items:center;padding:0 14px;background:var(--sidebar);border-bottom:1px solid var(--border);font-family:var(--serif);font-weight:600}
+.titlebar i{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:8px}
+nav{background:var(--sidebar);padding:14px 10px;border-right:1px solid var(--border)}
+nav a{display:block;padding:9px 12px;border-radius:9px;font-size:14px;color:var(--ink-muted);margin-bottom:3px}
+nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+main{padding:26px 34px 34px;min-width:0}
+h1{font-family:var(--serif);font-size:30px;margin:0 0 4px;font-weight:600}
+.sub{margin:0 0 18px;color:var(--ink-muted)}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:9px 16px;font-size:14px;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+.hint{color:var(--ink-muted);font-size:13.5px;margin:0 0 12px}
+.divider{font-family:var(--serif);font-size:17px;font-weight:600;margin:26px 0 4px;display:flex;align-items:center;gap:10px}
+.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+.divider small{font:500 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2);background:#e8ecd9;padding:2px 8px;border-radius:999px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:13px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-top:8px}
+.row .l{font-weight:600;font-size:14.5px}
+.row .d{font-size:12.5px;color:var(--ink-muted);margin-top:2px}
+.row.off{opacity:.45;pointer-events:none}
+.switch{width:44px;height:25px;border-radius:999px;background:#d9cfb8;border:0;position:relative;cursor:pointer;flex:none;transition:background .15s}
+.switch .k{position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch.on{background:var(--accent)}
+.switch.on .k{transform:translateX(19px)}
+.seg{display:flex;background:#efe6d2;border-radius:999px;padding:3px;flex:none}
+.seg button{border:0;background:none;font:inherit;font-size:13px;padding:6px 15px;border-radius:999px;color:var(--ink-muted);cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--accent);font-weight:600;box-shadow:0 1px 3px rgba(60,50,30,.15)}
+.warn{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:#7a5a1c;background:#faf0d4;border:1px solid #ecd9a1;border-radius:9px;padding:8px 11px;margin-top:8px}
+.btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.btn{font:inherit;font-size:13.5px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn.link::after{content:" ↗"}
+.btn:hover{filter:brightness(.97)}
+
+/* live preview of the taskbar (mock-only helper that makes the choices visible) */
+.preview{margin-top:10px;border-radius:var(--radius);padding:14px 14px 0;background:linear-gradient(135deg,#3b4a5c,#7d5a50 60%,#c28b55);overflow:hidden;position:relative;height:118px}
+.preview .ph{position:absolute;left:14px;top:10px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.tb{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;padding:0 10px;background:rgba(28,28,32,.82);backdrop-filter:blur(6px);transition:height .2s,transform .25s,justify-content .2s}
+.tb.left{justify-content:flex-start}.tb.center{justify-content:center}
+.tb.small{height:30px}.tb.medium{height:40px}.tb.large{height:52px}
+.tb.autohide{transform:translateY(80%)}
+.tb .ic{width:20px;height:20px;border-radius:5px;background:#e9e1cd;opacity:.9;flex:none}
+.tb .ic.start{background:#6aa8e8}
+.tb .ic.search{background:#d9d9d9;width:auto;padding:0 10px;font-size:10px;line-height:20px;color:#333;border-radius:999px}
+.tb .ic.tv{background:#a7c7a0}.tb .ic.wd{background:#e8b66a}
+.tb .ic.app{background:#8d8da8}
+.tb.small .ic{width:15px;height:15px}.tb.small .ic.search{height:15px;line-height:15px;font-size:9px}
+.tb.large .ic{width:26px;height:26px}.tb.large .ic.search{height:26px;line-height:26px}
+.tb .gap{flex:0}
+.tb .tray{margin-left:auto;font-size:10px;color:#ddd;display:none}
+.tb.left .tray{display:block}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;gap:14px;align-items:center}
+.toast.show{opacity:1;pointer-events:auto}
+.toast button{border:0;background:var(--accent);color:#fff;font:inherit;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer}
+.notes{width:min(1000px,100%);margin-top:14px;font-size:12.5px;color:#4d4534;line-height:1.55;background:#e9e1cd;border-radius:10px;padding:12px 16px}
+.notes b{color:#2b2620}
+@media (max-width:760px){.win{grid-template-columns:1fr}nav{display:none}main{padding:20px 16px}.row{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<div class="mockbar">
+  <b>Mock controls (do not ship):</b>
+  <button id="mRestore">Windows defaults</button>
+  <button id="mTweaked">Example tweaked setup</button>
+  <span class="tag">Settings &gt; Desktop &gt; Taskbar — mockup v5</span>
+</div>
+
+<div class="win">
+  <div class="titlebar"><i></i>Verso</div>
+  <nav>
+    <a>Wallpaper</a><a>Widgets</a><a>Apps</a><a class="on">Settings</a>
+  </nav>
+  <main>
+    <h1>Settings</h1>
+    <p class="sub">How Verso behaves on your desktop, and how it looks.</p>
+    <div class="tabs"><span class="tab on">Desktop</span><span class="tab">Theme</span></div>
+
+    <p class="hint">Keep the real desktop clean while Verso is running.</p>
+    <div class="row"><div><div class="l">Hide taskbar</div></div><button class="switch" data-k="hide"><span class="k"></span></button></div>
+    <div class="row"><div><div class="l">Hide desktop icons</div></div><button class="switch" data-k="icons"><span class="k"></span></button></div>
+
+    <div class="divider">Taskbar <small>New</small></div>
+    <p class="hint">The few Windows taskbar options people change most, here next to Verso's own. Changes apply straight away and are Windows' own settings — they stay when Verso is closed.</p>
+
+    <div class="preview" aria-hidden="true">
+      <div class="ph">Preview</div>
+      <div class="tb center medium" id="tb"></div>
+    </div>
+
+    <div class="row" id="rAuto"><div><div class="l">Automatically hide the taskbar</div><div class="d">It slides away and comes back when you touch the bottom edge. (Different from “Hide taskbar” above, which removes it completely.)</div></div><button class="switch" data-k="auto"><span class="k"></span></button></div>
+
+    <div class="row"><div><div class="l">Alignment</div><div class="d">Where the Start button and apps sit.</div></div>
+      <div class="seg" data-k="align"><button data-v="left">Left</button><button data-v="center">Centre</button></div></div>
+
+    <div class="row"><div><div class="l">Size</div><div class="d">Small, medium (Windows default) or large icons.</div></div>
+      <div class="seg" data-k="size"><button data-v="small">Small</button><button data-v="medium">Medium</button><button data-v="large">Large</button></div></div>
+    <div class="warn" id="sizeWarn" hidden><span>⚠</span><span>Taskbar size is an undocumented Windows setting. A Windows update can change or ignore it; “Reset to Windows defaults” always brings the normal size back.</span></div>
+
+    <div class="row"><div><div class="l">Show Search</div></div><button class="switch" data-k="search"><span class="k"></span></button></div>
+    <div class="row"><div><div class="l">Show Task view</div></div><button class="switch" data-k="taskview"><span class="k"></span></button></div>
+    <div class="row"><div><div class="l">Show Widgets</div></div><button class="switch" data-k="widgets"><span class="k"></span></button></div>
+
+    <div class="btns">
+      <button class="btn link" id="openWin">Open Windows taskbar settings</button>
+      <button class="btn" id="reset">Reset to Windows defaults</button>
+    </div>
+  </main>
+</div>
+
+<div class="notes">
+  <b>What this mockup decides:</b> (1) taskbar options live under <b>Settings &gt; Desktop</b>, not as a desk widget; (2) six controls only — auto-hide, alignment, size, and the three buttons — everything else stays in Windows' own page, one click away; (3) a small preview shows what each choice does; (4) every change applies immediately and shows a toast with <b>Undo</b>, the same pattern as the launcher; (5) “Reset to Windows defaults” puts all six back (Left is NOT default on Windows 11 — default = centred, medium, all three buttons on, auto-hide off).<br>
+  <b>Real build, not shown here:</b> values are written to <code>HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced</code> (<code>TaskbarAl</code>, <code>ShowTaskViewButton</code>, <code>TaskbarDa</code>, <code>TaskbarSi</code>), <code>…\Search\SearchboxTaskbarMode</code>, and auto-hide through the taskbar's own <code>StuckRects3</code> setting; Explorer is told to refresh (no restart); on a read error a control shows as unavailable instead of guessing. Changes made in Windows' own settings page show up here when the tab is opened.
+</div>
+
+<div class="toast" id="toast"><span id="toastT"></span><button id="undo">Undo</button></div>
+
+<script>
+const WIN = {hide:false,icons:false,auto:false,align:'center',size:'medium',search:true,taskview:true,widgets:true};
+let st = {...WIN}, prev = null, timer;
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+
+function render(){
+  $$('.switch').forEach(b => b.classList.toggle('on', !!st[b.dataset.k]));
+  $$('.seg').forEach(g => [...g.children].forEach(b => b.classList.toggle('on', st[g.dataset.k] === b.dataset.v)));
+  $('#sizeWarn').hidden = st.size === 'medium';
+  const tb = $('#tb');
+  tb.className = 'tb ' + st.align + ' ' + st.size + (st.auto ? ' autohide' : '');
+  tb.style.display = st.hide ? 'none' : 'flex';
+  tb.innerHTML = '<span class="ic start"></span>' + (st.search ? '<span class="ic search">Search</span>' : '') + (st.taskview ? '<span class="ic tv"></span>' : '') + (st.widgets ? '<span class="ic wd"></span>' : '') + '<span class="ic app"></span><span class="ic app"></span><span class="ic app"></span><span class="tray">12:40</span>';
+  $('#rAuto').classList.toggle('off', st.hide);
+}
+function toast(text){
+  $('#toastT').textContent = text; $('#toast').classList.add('show');
+  clearTimeout(timer); timer = setTimeout(() => $('#toast').classList.remove('show'), 9000);
+}
+const names = {hide:'Taskbar hidden',icons:'Desktop icons hidden',auto:'Auto-hide',align:'Alignment',size:'Size',search:'Search button',taskview:'Task view button',widgets:'Widgets button'};
+function set(k, v){
+  prev = {...st}; st[k] = v; render();
+  toast(`${names[k]} updated — applied`);
+}
+$$('.switch').forEach(b => b.onclick = () => set(b.dataset.k, !st[b.dataset.k]));
+$$('.seg').forEach(g => g.onclick = e => { const b = e.target.closest('button'); if (b) set(g.dataset.k, b.dataset.v); });
+$('#undo').onclick = () => { if (prev) { st = prev; prev = null; render(); } $('#toast').classList.remove('show'); };
+$('#reset').onclick = () => { prev = {...st}; st = {...WIN, hide: st.hide, icons: st.icons}; render(); toast('Taskbar reset to Windows defaults'); };
+$('#openWin').onclick = () => toast('Would open ms-settings:taskbar');
+$('#mRestore').onclick = () => { st = {...WIN}; render(); };
+$('#mTweaked').onclick = () => { st = {...WIN, align:'left', size:'small', search:false, widgets:false}; render(); };
+render();
+</script>
+</body>
+</html>

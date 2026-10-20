@@ -124,7 +124,7 @@ core.AddHostObjectToScript("VersoHost", bridge);
 That single line is the whole integration. The class it is given must be
 `[ComVisible(true)]` and `[ClassInterface(ClassInterfaceType.AutoDual)]`.
 
-The web layer is served from `https://verso.local/` via
+The web layer is served from `https://verso.example/` via
 `SetVirtualHostNameToFolderMapping` rather than from `file://`, because
 `file://` pages get no useful `localStorage`, cannot fetch sibling files,
 and cannot load module scripts.

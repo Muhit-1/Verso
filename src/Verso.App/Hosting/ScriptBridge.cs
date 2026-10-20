@@ -43,7 +43,7 @@ public sealed class ScriptBridge : IDisposable
     /// constant, so the URL built in <see cref="GetBackground"/> and the
     /// mapping set up there can never drift apart.
     /// </summary>
-    public const string BackgroundVirtualHost = "verso.bg.local";
+    public const string BackgroundVirtualHost = "verso.bg.example";
 
     private static readonly JsonSerializerOptions Json = new()
     {
@@ -209,32 +209,47 @@ public sealed class ScriptBridge : IDisposable
         return JsonSerializer.Serialize(info, Json);
     }
 
-    /// <param name="id">An id from <see cref="GetLauncherEntries"/>. Anything else is silently ignored.</param>
-    public void LaunchApp(string id)
+    /// <param name="id">An id from <see cref="GetLauncherEntries"/>. Anything else is ignored.</param>
+    /// <returns>
+    /// <c>"ok"</c> when the app was handed to Windows to start, <c>"missing"</c> when the file behind it is gone (so the desk can
+    /// say so instead of pretending to open it).
+    /// </returns>
+    /// <remarks>
+    /// The start itself runs on its own thread: ShellExecute can take 100+ ms (measured 90-160 ms) and Store apps longer, and this
+    /// call arrives on the UI thread that also serves the mouse mirror, the tray and every window.
+    /// </remarks>
+    public string LaunchApp(string id)
     {
         var entry = _settings.Current.Launcher.Entries.Find(e => e.Id == id);
-        if (entry is null || string.IsNullOrWhiteSpace(entry.Path))
+        if (entry is null || !LauncherLibrary.Exists(entry.Path))
         {
-            return;
+            return "missing";
         }
 
-        try
+        var path = entry.Path;
+        var thread = new Thread(() =>
         {
-            Process.Start(new ProcessStartInfo(entry.Path) { UseShellExecute = true });
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException)
-        {
-            // The app was uninstalled or moved since it was added. A widget
-            // button that silently does nothing is a far better failure
-            // than one that throws into a COM call.
-        }
+            try
+            {
+                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or FileNotFoundException or InvalidOperationException)
+            {
+                // Windows refused (no program for this file type, access denied...). Nothing to show here; the trace has it.
+                StartupLog.Mark($"launch failed: {path}: {ex.Message}");
+            }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Start();
+        return "ok";
     }
 
     // ---- background -------------------------------------------------------
 
     /// <returns>
     /// JSON <c>{ kind, url }</c>. <c>url</c> is a
-    /// <c>https://verso.bg.local/...</c> address the web layer can load
+    /// <c>https://verso.bg.example/...</c> address the web layer can load
     /// directly — never the filesystem path, which script has no business
     /// seeing. There is no <c>SetBackground</c>: the choice is made from the
     /// tray's file picker, native-side, not from script.
@@ -289,6 +304,18 @@ public sealed class ScriptBridge : IDisposable
 
     public void OpenDashboard() => OpenDashboardRequested?.Invoke();
 
+    // ---- Desktop: hide the taskbar / the desktop icons (the desk menu's Desktop group) ---------------
+
+    /// <summary>Raised when the desk menu flips one of the two switches; the app applies it (see DesktopActions).</summary>
+    internal event Action<string, bool>? DesktopCleanupRequested;
+
+    /// <returns>JSON <c>{hideTaskbar, hideDesktopIcons}</c>, read fresh.</returns>
+    public string GetDesktopCleanup() => JsonSerializer.Serialize(_settings.Current.DesktopCleanup, Json);
+
+    public void SetTaskbarHidden(bool hide) => DesktopCleanupRequested?.Invoke("taskbar", hide);
+
+    public void SetDesktopIconsHidden(bool hide) => DesktopCleanupRequested?.Invoke("icons", hide);
+
     // ---- Outpost palette: owned by the host so the desk menu and the dashboard agree ----------
 
     /// <summary>Raised when the palette is changed from the desk, so every desk window follows.</summary>
@@ -324,6 +351,38 @@ public sealed class ScriptBridge : IDisposable
 
     /// <summary>Opens the file picker; the chosen apps land in the given box.</summary>
     public void AddApp(string boxId) => _library.PickAndAdd(boxId, null);
+
+    /// <summary>Opens the app picker next to a box.</summary>
+    /// <param name="screenRectJson"><c>{x, y, w, h}</c>: where the box is on screen, in physical pixels.</param>
+    public void OpenAppPicker(string boxId, string screenRectJson)
+    {
+        System.Drawing.Rectangle? anchor = TryRect(screenRectJson, out var r)
+            ? new System.Drawing.Rectangle(r.x, r.y, r.w, r.h)
+            : null;
+        _library.RequestPicker(boxId, anchor);
+    }
+
+    /// <returns>How many real desktop icons are selected right now (Explorer's selection, This PC / Recycle Bin not counted).</returns>
+    public int GetDesktopSelectionCount() => DesktopSelection.Read().Count;
+
+    /// <summary>The user dropped the selected desktop icon(s) on a box: add them there.</summary>
+    /// <returns>JSON <c>{found, added, already, moved, undo}</c>; <c>undo</c> is a token for <see cref="UndoLauncher"/>.</returns>
+    public string AddDesktopSelection(string boxId)
+    {
+        var (found, added, already, moved, undo) = _library.AddDesktopSelection(boxId);
+        return JsonSerializer.Serialize(new { found, added, already, moved, undo }, Json);
+    }
+
+    /// <summary>The user dragged a tile out of its box onto the bare desktop: put the app back there.</summary>
+    /// <returns>JSON <c>{result, name, undo}</c>; result is moved | created | store | missing | failed.</returns>
+    public string PutOnDesktop(string appId)
+    {
+        var (result, name, undo) = _library.PutOnDesktop(appId);
+        return JsonSerializer.Serialize(new { result, name, undo }, Json);
+    }
+
+    /// <summary>Takes back the last move into / out of a box (the Undo button of the desk's toast).</summary>
+    public bool UndoLauncher(string token) => _library.Undo(token);
 
     public void RemoveApp(string id) => _library.RemoveApp(id);
 

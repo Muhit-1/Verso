@@ -135,10 +135,61 @@ internal sealed class DesktopActions(SettingsStore settings, DeskController desk
         desk.ReloadWeb();
     }
 
+    public TaskbarState GetTaskbar() => TaskbarSettings.Read();
+
+    /// <summary>Changes one Windows taskbar option and returns the state as Windows now has it.</summary>
+    public TaskbarState SetTaskbar(string name, int value)
+    {
+        // Remember how it was before the first change, once, so "restore" is exact.
+        if (settings.Current.TaskbarOriginal is null)
+        {
+            var original = TaskbarSettings.Read();
+            settings.Update(s => s.TaskbarOriginal ??= original);
+        }
+
+        TaskbarSettings.Set(name, value);
+        return TaskbarSettings.Read();
+    }
+
+    public TaskbarState RestoreTaskbar()
+    {
+        if (settings.Current.TaskbarOriginal is { } original)
+        {
+            TaskbarSettings.Apply(original);
+        }
+
+        return TaskbarSettings.Read();
+    }
+
     public void SetTaskbarHidden(bool hide)
     {
         settings.Update(s => s.DesktopCleanup.HideTaskbar = hide);
-        DesktopChrome.SetTaskbarVisible(!hide);
+        DesktopChrome.SetTaskbarVisible(!(hide || settings.Current.Dock.Enabled));
+    }
+
+    /// <summary>Raised after a compact-dock setting changed; the app applies it (creates/closes the dock, hides/shows the taskbar).</summary>
+    public event Action? DockChanged;
+
+    public DockSettings GetDock() => settings.Current.Dock;
+
+    public DockSettings SetDock(string name, string value)
+    {
+        settings.Update(s =>
+        {
+            var d = s.Dock;
+            var on = value is "1" or "true";
+            switch (name)
+            {
+                case "enabled": d.Enabled = on; break;
+                case "showStart": d.ShowStart = on; break;
+                case "peek": d.Peek = on; break;
+                case "showMinimised": d.ShowMinimised = on; break;
+                case "when": d.When = value == "always" ? "always" : "apps"; break;
+            }
+        });
+
+        DockChanged?.Invoke();
+        return settings.Current.Dock;
     }
 
     public void SetDesktopIconsHidden(bool hide)

@@ -45,6 +45,8 @@ async function createDemoHost() {
   const disabledWidgets = new Set();
   let background = { kind: "none", url: null };
   const cleanup = { hideTaskbar: false, hideDesktopIcons: false };
+  const demoDock = { enabled: false, when: "apps", showStart: true, peek: true, showMinimised: true };
+  const demoTaskbar = { position: 3, align: 1, small: false, auto: false, badges: true, flash: true, share: true, corner: true, combine: 0, search: true, taskview: true };
   const launcher = [{ id: "demo-1", name: "Notepad" }, { id: "demo-2", name: "Calculator" }];
   const outpostThemes = [
     { id: "sunset", name: "Sunset", from: "#3a2540", to: "#ff9e64" },
@@ -88,6 +90,20 @@ async function createDemoHost() {
     setTaskbarHidden(hide) { cleanup.hideTaskbar = hide; },
     setDesktopIconsHidden(hide) { cleanup.hideDesktopIcons = hide; },
 
+    getDock: () => ({ ...demoDock }),
+    setDock(name, value) { demoDock[name] = name === "when" ? value : value === "1"; return { ...demoDock }; },
+
+    getTaskbar: () => ({ ...demoTaskbar }),
+    setTaskbar(name, value) {
+      const key = name === "size" ? "small" : name;
+      demoTaskbar[key] = typeof demoTaskbar[key] === "boolean" ? !!value : value;
+      if (name === "position" && value !== 3) demoTaskbar.auto = false;
+      return { ...demoTaskbar };
+    },
+    restoreTaskbar() { return { ...demoTaskbar }; },
+    hasTaskbarBackup: () => false,
+    openWindowsTaskbarSettings() { console.log("Verso (demo): would open ms-settings:taskbar."); },
+
     getDeskStyle: () => "outpost",
     getOutpostThemes: () => outpostThemes.map(t => ({ ...t, selected: t.id === outpostTheme })),
     getOutpostTheme: () => outpostTheme,
@@ -99,6 +115,7 @@ async function createDemoHost() {
     getApps: () => boxes.map(b => ({ ...b, apps: b.apps.slice() })),
     getAppIcon: () => "",
     async addApp() { console.log("Verso (demo): no native file picker in a plain browser."); },
+    openAppPicker() { console.log("Verso (demo): the app picker needs the real host."); },
     removeApp(id) { boxes.forEach(b => { b.apps = b.apps.filter(a => a.id !== id); }); },
     moveApp(id, boxId) {
       let app = null;
@@ -173,6 +190,15 @@ async function createRealHost(bridge) {
     setTaskbarHidden: hide => bridge.SetTaskbarHidden(hide),
     setDesktopIconsHidden: hide => bridge.SetDesktopIconsHidden(hide),
 
+    getDock: async () => parse(await bridge.GetDock(), null),
+    setDock: async (name, value) => parse(await bridge.SetDock(name, String(value)), null),
+
+    getTaskbar: async () => parse(await bridge.GetTaskbar(), null),
+    setTaskbar: async (name, value) => parse(await bridge.SetTaskbar(name, value), null),
+    restoreTaskbar: async () => parse(await bridge.RestoreTaskbar(), null),
+    hasTaskbarBackup: async () => !!(await bridge.HasTaskbarBackup()),
+    openWindowsTaskbarSettings: () => bridge.OpenWindowsTaskbarSettings(),
+
     getDeskStyle: async () => (await bridge.GetDeskStyle()) || "outpost",
     getOutpostThemes: async () => parse(await bridge.GetOutpostThemes(), []),
     getOutpostTheme: async () => (await bridge.GetOutpostTheme()) || "",
@@ -187,6 +213,7 @@ async function createRealHost(bridge) {
       return iconCache.get(id);
     },
     addApp: boxId => bridge.AddApp(boxId || "recent"),
+    openAppPicker: boxId => bridge.OpenAppPicker(boxId || "recent"),
     removeApp: id => bridge.RemoveApp(id),
     moveApp: (id, boxId) => bridge.MoveApp(id, boxId),
     addBox: () => bridge.AddBox(),

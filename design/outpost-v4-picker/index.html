@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso — app picker mockup</title>
+<!--
+  MOCKUP (not product code): the "Add apps" picker window for the App launcher boxes.
+  It is a real pop-up window in the product (same technique as the note editor), so the search box takes real typing.
+  Opened from the "+" of a desk box (appears next to that box) or from the dashboard's "Add app…" (centred).
+  Mock-only: the strip above the stage, the fake desk, and the app list (real list = Start menu + Store apps + Desktop shortcuts).
+-->
+<style>
+:root{--text:#fde8d0;--text2:rgba(253,232,208,.68);--accent:#ff9e64;--on:#1a0d08;--glass:rgba(40,10,20,.62);--glass-b:rgba(253,232,208,.16);--hover:rgba(255,158,100,.16)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#14100d;font-family:Inter,system-ui,Segoe UI,sans-serif;color:#eee;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.mockbar{width:100%;display:flex;gap:10px;align-items:center;justify-content:center;padding:10px;background:#222;font-size:.78rem;color:#bbb;flex-wrap:wrap}
+.mockbar b{color:#ffcf9e}.mockbar button{padding:6px 14px;border-radius:999px;background:#3a3a3a;color:#fff}.mockbar button:hover{background:#555}
+.wrap{position:relative;margin:14px auto}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:top left;overflow:hidden;background:linear-gradient(#3a2540,#8a4a3a 70%,#2a1418);border-radius:8px;font-size:16px}
+#stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.45),transparent 40%)}
+.glass{background:var(--glass);border:1px solid var(--glass-b);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 8px 28px rgba(0,0,0,.25)}
+/* fake desk */
+.clock{position:absolute;left:48px;bottom:70px;font:9.5rem/0.95 Anton,Impact,sans-serif;color:#fde8d0;text-shadow:0 4px 40px rgba(0,0,0,.4)}
+.clock small{font:500 1.7rem Inter,sans-serif;color:var(--accent);margin-left:.4rem}
+.icons{position:absolute;left:16px;top:16px;display:flex;flex-direction:column;gap:22px;font-size:.72rem;color:#fff;text-align:center}
+.icons i{display:block;width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,.2);margin:0 auto 4px}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:48px;background:rgba(20,20,24,.85)}
+.rb{position:absolute;right:32px;top:32px;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:1.25rem;color:#fde8d0}
+.box{position:absolute;width:340px;height:230px;border-radius:1rem;display:flex;flex-direction:column;overflow:hidden}
+.box .bh{display:flex;align-items:center;justify-content:space-between;padding:10px 12px 6px 16px}
+.box .nm{font-size:.7rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+.mini{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:var(--text2)}.mini:hover,.mini.on{background:var(--hover);color:var(--text)}
+.mini svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.apps{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:4px 10px 12px;overflow:hidden}
+.tile{width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px;border-radius:.7rem;font-size:.66rem;text-align:center;line-height:1.15;color:#fde8d0}
+.tile.new{animation:pop .5s ease}@keyframes pop{from{transform:scale(.6);opacity:0}}
+.aico{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-weight:700;color:#fff;font-size:1rem}
+.empty{font-size:.74rem;color:var(--text2);padding:14px 6px}
+/* the picker window */
+#picker{position:absolute;width:560px;height:640px;border-radius:14px;background:#2b2b2b;color:#f4f4f4;display:none;flex-direction:column;box-shadow:0 0 0 2px var(--accent),0 24px 60px rgba(0,0,0,.6);z-index:30}
+#picker.open{display:flex;animation:pop2 .18s ease}@keyframes pop2{from{opacity:0;transform:scale(.97)}}
+.ph{display:flex;align-items:center;gap:12px;padding:16px 18px 6px}
+.ph h2{font-size:1.05rem;font-weight:600;flex:1}
+.ph .to{font-size:.78rem;color:#aaa;display:flex;align-items:center;gap:8px}
+select{font:inherit;font-size:.8rem;background:#3a3a3a;color:#fff;border:1px solid #555;border-radius:8px;padding:5px 8px}
+.search{margin:8px 18px 4px;display:flex;align-items:center;gap:10px;background:#1f1f1f;border:1px solid #444;border-radius:10px;padding:0 12px}
+.search:focus-within{border-color:var(--accent)}
+.search svg{width:16px;height:16px;fill:none;stroke:#999;stroke-width:2;stroke-linecap:round}
+.search input{flex:1;background:none;border:0;outline:0;color:#fff;font:inherit;font-size:.95rem;padding:11px 0}
+.chips{display:flex;gap:6px;padding:8px 18px 8px}
+.chip{padding:5px 12px;border-radius:999px;font-size:.74rem;background:#383838;color:#ccc}.chip.on{background:var(--accent);color:var(--on);font-weight:600}
+.list{flex:1;overflow:auto;padding:0 8px 6px;scrollbar-width:thin;scrollbar-color:#555 transparent}
+.sec{position:sticky;top:0;background:#2b2b2b;font-size:.68rem;letter-spacing:.14em;color:var(--accent);padding:8px 12px 4px;font-weight:600}
+.row{display:flex;align-items:center;gap:12px;padding:7px 12px;border-radius:10px;cursor:pointer}
+.row:hover,.row.hl{background:#383838}
+.row .aico{width:34px;height:34px;border-radius:9px;font-size:.85rem;flex:none}
+.row .nm2{flex:1;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .tag{font-size:.66rem;color:#999;letter-spacing:.04em}
+.row .ck{width:20px;height:20px;border-radius:6px;border:2px solid #666;display:grid;place-items:center;flex:none;color:transparent;font-size:.8rem;font-weight:700}
+.row.sel .ck{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.row.added{opacity:.45;cursor:default}.row.added .ck{border-style:dashed}
+.row.added .tag::after{content:" · already added"}
+.none{padding:36px 18px;text-align:center;color:#999;font-size:.9rem}
+.pf{display:flex;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid #444;background:#262626;border-radius:0 0 14px 14px}
+.pf .sp{flex:1}.pf .cnt{font-size:.8rem;color:#aaa}
+.btn{padding:9px 16px;border-radius:999px;font-size:.8rem;font-weight:600;background:#3a3a3a}.btn:hover{background:#4a4a4a}
+.btn.primary{background:var(--accent);color:var(--on)}.btn.primary[disabled]{opacity:.4;cursor:default}
+.btn.link{background:none;color:#cfcfcf;font-weight:500;text-decoration:underline;padding-left:2px}
+.mocktag{position:absolute;left:0;top:-26px;background:var(--accent);color:var(--on);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 9px;border-radius:5px 5px 0 0;font-weight:600}
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <b>MOCKUP — not part of Verso</b>
+  <button id="openDesk">Open from the desk box “+”</button>
+  <button id="openDash">Open from the dashboard “Add app…”</button>
+  <button id="reset">Reset</button>
+  <span>Keys: type to search · ↑↓ move · Space tick · Enter add · Esc close</span>
+</div>
+<div class="wrap"><div id="stage">
+  <video src="/bg.mp4" autoplay loop muted playsinline onerror="this.remove()"></video>
+  <div class="scrim"></div>
+  <div class="icons"><div><i></i>This PC</div><div><i></i>Recycle Bin</div><div><i></i>WorkStationX</div></div>
+  <button class="rb glass">!</button>
+  <div class="clock">05:36<small>AM</small></div>
+  <div class="taskbar"></div>
+  <div class="box glass" id="boxRecent" style="left:1540px;top:110px"><div class="bh"><span class="nm">Recent</span><div><button class="mini" data-box="recent" title="Add apps"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="apps"></div></div>
+  <div class="box glass" id="boxWork" style="left:1540px;top:370px"><div class="bh"><span class="nm">Work</span><div><button class="mini" data-box="work" title="Add apps"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="apps"></div></div>
+
+  <div id="picker">
+    <div class="mocktag" id="ptag">App picker — real pop-up window</div>
+    <div class="ph"><h2>Add apps</h2><div class="to">to <select id="target"></select></div></div>
+    <div class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg><input id="q" placeholder="Search your installed apps" autocomplete="off" spellcheck="false"></div>
+    <div class="chips" id="chips"></div>
+    <div class="list" id="list"></div>
+    <div class="pf"><button class="btn link" id="browse">Browse for a file…</button><span class="sp"></span><span class="cnt" id="cnt">Nothing selected</span><button class="btn" id="cancel">Cancel</button><button class="btn primary" id="add" disabled>Add</button></div>
+  </div>
+</div></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const COL = n => `hsl(${[...n].reduce((h,c)=>(h*31+c.charCodeAt(0))%360,7)} 45% 42%)`;
+// source: "Start menu" (classic apps), "Store app", "Desktop" (shortcut on the desktop)
+const APPS = [
+ ['Calculator','Store app'],['Calendar','Store app'],['Camera','Store app'],['Clock','Store app'],['Command Prompt','Start menu'],['Discord','Start menu'],
+ ['Excel','Start menu'],['File Explorer','Start menu'],['Figma','Start menu'],['Firefox','Start menu'],['Google Chrome','Start menu'],['Mail','Store app'],
+ ['Microsoft Edge','Start menu'],['Microsoft Store','Store app'],['Notepad','Store app'],['OBS Studio','Start menu'],['Paint','Store app'],['Photos','Store app'],
+ ['PowerPoint','Start menu'],['Settings','Store app'],['Snipping Tool','Store app'],['Spotify','Start menu'],['Steam','Start menu'],['Task Manager','Start menu'],
+ ['Terminal','Store app'],['VLC media player','Start menu'],['Visual Studio Code','Start menu'],['WhatsApp','Store app'],['Word','Start menu'],['WorkStationX','Desktop'],
+ ['Zoom','Start menu'],['Project notes (shortcut)','Desktop']
+].map(([name,src],i)=>({id:i,name,src}));
+const BOXES = [{id:'recent',name:'Recent'},{id:'work',name:'Work'}];
+let state, filter, hl, selected, added;
+function reset(){ state = {recent:[APPS[30]], work:[APPS[14],APPS[26]]}; added = new Set(Object.values(state).flat().map(a=>a.id)); renderBoxes(); closeP(); }
+function renderBoxes(newIds=[]){
+  for (const b of BOXES){ const el = $('#box'+b.id[0].toUpperCase()+b.id.slice(1)+' .apps'); el.innerHTML='';
+    if(!state[b.id].length) el.innerHTML = `<div class="empty">${b.id==='recent'?'New apps land here.':'Empty box. Use + to add apps.'}</div>`;
+    state[b.id].forEach(a=>{ const t=document.createElement('div'); t.className='tile'+(newIds.includes(a.id)?' new':''); t.innerHTML=`<div class="aico" style="background:${COL(a.name)}">${a.name[0]}</div><span>${a.name.length>11?a.name.slice(0,10)+'…':a.name}</span>`; el.appendChild(t); }); }
+}
+function openP(boxId, near){
+  selected = new Set(); filter='All'; hl=0; $('#q').value='';
+  $('#target').innerHTML = BOXES.map(b=>`<option value="${b.id}" ${b.id===boxId?'selected':''}>${b.name}</option>`).join('');
+  const p = $('#picker'); p.classList.add('open');
+  if (near==='desk'){ p.style.left='900px'; p.style.top='200px'; $('#ptag').textContent='App picker — opens next to the box'; }
+  else { p.style.left='680px'; p.style.top='190px'; $('#ptag').textContent='App picker — opened from the dashboard'; }
+  draw(); $('#q').focus();
+}
+function closeP(){ $('#picker').classList.remove('open'); }
+function visible(){ const q=$('#q').value.trim().toLowerCase(); return APPS.filter(a=>(filter==='All'||a.src===filter)&&(!q||a.name.toLowerCase().includes(q))).sort((a,b)=>a.name.localeCompare(b.name)); }
+function draw(){
+  $('#chips').innerHTML = ['All','Start menu','Store app','Desktop'].map(f=>`<button class="chip${f===filter?' on':''}" data-f="${f}">${f==='Desktop'?'Desktop shortcuts':f==='Store app'?'Store apps':f}</button>`).join('');
+  const list = visible(); hl = Math.min(hl, Math.max(0,list.length-1));
+  let html='', last='';
+  if(!list.length) html = `<div class="none">No installed app matches “${$('#q').value}”.<br><button class="btn link" id="browse2">Browse for a file instead…</button></div>`;
+  list.forEach((a,i)=>{ const L=a.name[0].toUpperCase(); if(L!==last && !$('#q').value){ html+=`<div class="sec">${L}</div>`; last=L; }
+    const isAdded = added.has(a.id);
+    html+=`<div class="row${selected.has(a.id)?' sel':''}${isAdded?' added':''}${i===hl?' hl':''}" data-id="${a.id}"><div class="aico" style="background:${COL(a.name)}">${a.name[0]}</div><span class="nm2">${a.name}</span><span class="tag">${a.src==='Desktop'?'Desktop shortcut':a.src}</span><span class="ck">✓</span></div>`; });
+  $('#list').innerHTML = html;
+  const n = selected.size; $('#cnt').textContent = n? `${n} selected` : 'Nothing selected';
+  $('#add').disabled = !n; $('#add').textContent = n? `Add ${n} app${n>1?'s':''}` : 'Add';
+}
+function toggle(id){ if(added.has(id)) return; selected.has(id)?selected.delete(id):selected.add(id); draw(); }
+function commit(){ if(!selected.size) return; const to=$('#target').value; const ids=[...selected]; ids.forEach(id=>{ state[to].push(APPS[id]); added.add(id); }); renderBoxes(ids); closeP(); }
+$('#list').addEventListener('click', e=>{ const r=e.target.closest('.row'); if(r) toggle(+r.dataset.id); if(e.target.id==='browse2') alert('Mock: the real build opens the Windows file picker (.exe / .lnk) here.'); });
+$('#chips').addEventListener('click', e=>{ const c=e.target.closest('.chip'); if(c){ filter=c.dataset.f; hl=0; draw(); $('#q').focus(); }});
+$('#q').addEventListener('input', ()=>{ hl=0; draw(); });
+$('#add').onclick = commit; $('#cancel').onclick = closeP; $('#browse').onclick = ()=>alert('Mock: the real build opens the Windows file picker (.exe / .lnk) here.');
+addEventListener('keydown', e=>{ if(!$('#picker').classList.contains('open')) return; const list=visible();
+  if(e.key==='Escape') closeP();
+  else if(e.key==='ArrowDown'){ e.preventDefault(); hl=Math.min(list.length-1,hl+1); draw(); $('.row.hl')?.scrollIntoView({block:'nearest'}); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); hl=Math.max(0,hl-1); draw(); $('.row.hl')?.scrollIntoView({block:'nearest'}); }
+  else if(e.key===' ' && document.activeElement!==$('#q')){ e.preventDefault(); if(list[hl]) toggle(list[hl].id); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(selected.size) commit(); else if(list[hl]) { toggle(list[hl].id); commit(); } } });
+document.querySelectorAll('[data-box]').forEach(b=>b.onclick=()=>openP(b.dataset.box,'desk'));
+$('#openDesk').onclick=()=>openP('work','desk'); $('#openDash').onclick=()=>openP('recent','dash'); $('#reset').onclick=reset;
+function fit(){ const s=Math.min(1,(document.documentElement.clientWidth-28)/1920); $('#stage').style.transform=`scale(${s})`; const w=$('.wrap'); w.style.width=(1920*s)+'px'; w.style.height=(1080*s)+'px'; }
+addEventListener('resize',fit); fit(); reset();
+</script>
+</body>
+</html>

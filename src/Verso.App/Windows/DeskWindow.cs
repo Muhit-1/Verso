@@ -77,11 +77,11 @@ internal enum DeskMode
 internal sealed class DeskWindow : IDisposable, IInputTarget
 {
     /// <summary>
-    /// The web layer is served from https://verso.local/ rather than file://
+    /// The web layer is served from https://verso.example/ rather than file://
     /// so it gets a real origin. file:// pages have no useful localStorage,
     /// cannot fetch sibling files, and cannot load module scripts.
     /// </summary>
-    private const string VirtualHost = "verso.local";
+    private const string VirtualHost = "verso.example";
 
     /// <summary>
     /// User-installed themes live under <see cref="VersoPaths.UserThemes"/>, a
@@ -90,10 +90,10 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
     /// user theme's own CSS 404s the instant the page fetches it, even though
     /// the catalog scan on the C# side finds the theme fine.
     /// </summary>
-    private const string UserThemesVirtualHost = "verso.user-themes.local";
+    private const string UserThemesVirtualHost = "verso.user-themes.example";
 
     /// <summary>Same reasoning as <see cref="UserThemesVirtualHost"/>, for <see cref="VersoPaths.UserWidgets"/>.</summary>
-    private const string UserWidgetsVirtualHost = "verso.user-widgets.local";
+    private const string UserWidgetsVirtualHost = "verso.user-widgets.example";
 
     private readonly ScriptBridge _bridge;
     private readonly SettingsStore _settings;
@@ -221,11 +221,14 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
 
     public async Task InitialiseAsync()
     {
+        Hosting.StartupLog.Mark("desk window: creating WebView2 environment");
         var environment = await CoreWebView2Environment.CreateAsync(
             browserExecutableFolder: null,
             userDataFolder: VersoPaths.WebViewUserData);
 
+        Hosting.StartupLog.Mark("desk window: environment ready; creating controller");
         _controller = await environment.CreateCoreWebView2ControllerAsync(_surface.Handle);
+        Hosting.StartupLog.Mark("desk window: controller ready");
 
         var (width, height) = _surface.ClientSize;
         _controller.Bounds = new Rectangle(0, 0, width, height);
@@ -282,7 +285,7 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
 
         // Starting WebView2 can raise the surface. Put it back once there is
         // something to look at.
-        core.NavigationCompleted += (_, _) => ReassertPlacement();
+        core.NavigationCompleted += (_, _) => { Hosting.StartupLog.Mark("desk window: page navigation completed"); ReassertPlacement(); };
 
         // The page tells us which rectangles it occupies; we reshape the window
         // to exactly those. See SurfaceRegion for why this rather than a colour
@@ -449,7 +452,7 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
     /// <summary>
     /// Maps the folder holding the chosen video/gif/interactive background to
     /// its own virtual host, so the web layer can load it as
-    /// <c>https://verso.bg.local/name.ext</c> instead of a filesystem path
+    /// <c>https://verso.bg.example/name.ext</c> instead of a filesystem path
     /// script has no business seeing. A no-op for "image" and "none" — an
     /// image is applied straight to the real Windows wallpaper, and there is
     /// nothing to map for "none".

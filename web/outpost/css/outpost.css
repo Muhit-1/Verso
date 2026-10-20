@@ -118,9 +118,11 @@ body.arrange .grip{opacity:1}
 .sw{width:34px;height:20px;border-radius:999px;background:var(--glass-b);position:relative;display:inline-block;transition:.2s}
 .sw::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.2s}
 .sw.on{background:var(--accent)}.sw.on::after{left:16px}
-.dots.themes,.menu .dots{display:flex;gap:8px;padding:6px 10px 8px;margin:0}
-.dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent;display:block}
-.dot.hv{border-color:var(--text2)}.dot.on{border-color:#fff}
+.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:6px 10px 10px}
+.swatch{width:100%;aspect-ratio:1;border-radius:50%;border:2px solid transparent;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 2px 8px rgba(0,0,0,.3)}
+.swatch.hv{border-color:var(--text2);transform:scale(1.06)}
+.swatch.on{border-color:#fff}
+.menu h4 .tname{color:var(--text);letter-spacing:.08em;margin-left:6px;text-transform:none;font-weight:500;font-size:.72rem}
 .sep1{height:1px;background:var(--glass-b);margin:6px 4px}
 
 /* ---------- arrange hint, guides, toast ---------- */
@@ -144,7 +146,7 @@ body.arrange .hint{opacity:1;visibility:visible;pointer-events:auto;transform:tr
 .box .acts{display:flex;gap:2px}
 .mini{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:var(--text2)}
 .mini.hv{background:var(--hover);color:var(--text)}
-.box .apps{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:4px 10px 12px;overflow:hidden}
+.box .apps{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:6px;padding:4px 10px 12px;overflow-y:auto;scrollbar-width:none}
 .tile{width:74px;display:flex;flex-direction:column;align-items:center;gap:5px;padding:7px 2px;border-radius:.7rem;font-size:.66rem;text-align:center;line-height:1.15}
 .tile.hv{background:var(--hover)}
 .tile span{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -166,7 +168,7 @@ body.arrange .hint{opacity:1;visibility:visible;pointer-events:auto;transform:tr
 .note .strip .sp{flex:1}
 .note .strip .mini{color:#1a1a1a}
 .note .strip .mini.hv{background:rgba(0,0,0,.14);color:#000}
-.note .nb{flex:1;padding:12px 14px;font-size:.95rem;line-height:1.4;overflow:hidden;cursor:text;word-break:break-word}
+.note .nb{flex:1;padding:12px 14px;font-size:.95rem;line-height:1.4;overflow-y:auto;scrollbar-width:none;cursor:text;word-break:break-word}
 .note .nb:empty::before{content:"Take a note…";color:var(--text2)}
 .note .nb ul,.note .nb ol{padding-left:1.3em}
 .note.editing .nb{opacity:.35}
@@ -178,3 +180,14 @@ body.arrange .hint{opacity:1;visibility:visible;pointer-events:auto;transform:tr
 .note .del{font-size:.76rem}
 .note .del.armed{color:#ff8a7a}
 .box .bh .nm.editable{cursor:text}
+
+.tile.missing{opacity:.4}
+.tile.missing .aico::after{content:"!";position:absolute;right:-4px;top:-4px;width:16px;height:16px;border-radius:50%;background:#e5533d;color:#fff;font-size:.7rem;display:grid;place-items:center}
+.tile .aico{position:relative}
+
+/* ---------- launcher: dragging a tile out onto the desktop, and the Undo toast ---------- */
+.ghost.out{outline:2px dashed var(--accent);outline-offset:4px;border-radius:.7rem}
+.ghost.out::after{content:"Put on desktop";position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:8px;white-space:nowrap;font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--on);background:var(--accent);padding:3px 9px;border-radius:999px}
+.utoast{position:fixed;z-index:42;left:50%;bottom:96px;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:10px 12px 10px 20px;border-radius:999px;font-size:.8rem;background:var(--glass);border:1px solid var(--glass-b);box-shadow:0 10px 30px rgba(0,0,0,.4);animation:pop .25s ease}
+.utoast .ubtn{padding:7px 16px;border-radius:999px;background:var(--accent);color:var(--on);font-weight:600;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase}
+.utoast .ubtn.hv{background:var(--accent-h)}

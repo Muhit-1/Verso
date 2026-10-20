@@ -113,9 +113,12 @@ internal sealed class DeskController : IDisposable
         // does not change while the session is running — including across a
         // hot-plug, which is why ReconcileAsync() reuses this rather than
         // re-detecting it on every monitor or background change.
+        Hosting.StartupLog.Mark("desk: DetectLayout begins");
         _layout = DesktopLayer.DetectLayout();
+        Hosting.StartupLog.Mark("desk: DetectLayout done; reconcile begins");
 
         await ReconcileAsync();
+        Hosting.StartupLog.Mark("desk: reconcile done");
 
         IsShown = true;
         _started = true;

@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Text.Json.Serialization;
 using System.Windows;
@@ -34,6 +32,9 @@ internal sealed class LauncherLibrary(SettingsStore settings)
     {
         [JsonPropertyName("id")] public string Id { get; set; } = "";
         [JsonPropertyName("name")] public string Name { get; set; } = "";
+
+        /// <summary>The file behind this app is gone (deleted or moved); launching it cannot work.</summary>
+        [JsonPropertyName("missing")] public bool Missing { get; set; }
     }
 
     public sealed class BoxInfo
@@ -52,7 +53,7 @@ internal sealed class LauncherLibrary(SettingsStore settings)
 
         // An app whose box was removed some other way is still shown — in Recent.
         string BoxOf(LauncherEntry e) => known.Contains(e.BoxId) ? e.BoxId : LauncherBox.RecentId;
-        static AppInfo ToInfo(LauncherEntry e) => new() { Id = e.Id, Name = e.Name };
+        static AppInfo ToInfo(LauncherEntry e) => new() { Id = e.Id, Name = e.Name, Missing = !Exists(e.Path) };
 
         var result = new List<BoxInfo>
         {
@@ -131,34 +132,365 @@ internal sealed class LauncherLibrary(SettingsStore settings)
         Changed?.Invoke();
     }
 
-    public void AddApp(string path, string? boxId, bool raise = true)
+    /// <summary>
+    /// Adds the icons currently selected on the real desktop to a box (the user dragged them onto it).
+    /// </summary>
+    /// <remarks>
+    /// A shortcut (.lnk / .url) on the user's own Desktop is <b>moved</b> into Verso's folder: the desktop icon disappears and
+    /// the box owns it. Anything else (documents, programs, folders, the shared desktop) is only referenced, never touched.
+    /// Undoable with <see cref="Undo"/> for a short while.
+    /// </remarks>
+    /// <returns><c>found</c> = items with a real file behind them, <c>added</c> = new ones, <c>already</c> = were in the library,
+    /// <c>moved</c> = how many shortcuts left the desktop, <c>undo</c> = token for <see cref="Undo"/> (or "").</returns>
+    public (int Found, int Added, int Already, int Moved, string Undo) AddDesktopSelection(string boxId)
     {
-        if (string.IsNullOrWhiteSpace(path))
+        var items = DesktopSelection.Read();
+        var taken = Targets();
+        var desktop = DesktopFolder();
+        var moved = new List<LauncherEntry>();
+        int added = 0, already = 0;
+
+        foreach (var item in items)
         {
-            return;
+            if (taken.Contains(item.Path))
+            {
+                already++;
+                continue;
+            }
+
+            var isShortcut = System.IO.Path.GetExtension(item.Path).ToLowerInvariant() is ".lnk" or ".url";
+            var onUserDesktop = string.Equals(System.IO.Path.GetDirectoryName(item.Path), desktop, StringComparison.OrdinalIgnoreCase);
+            var entry = AddApp(item.Path, boxId, raise: false, name: item.Name, move: isShortcut && onUserDesktop);
+            if (entry is null)
+            {
+                continue;
+            }
+
+            added++;
+            if (!string.IsNullOrEmpty(entry.From) && !File.Exists(entry.From))
+            {
+                moved.Add(entry);   // really left the desktop
+            }
         }
 
+        var undo = "";
+        if (moved.Count > 0)
+        {
+            var back = moved.ToList();
+            undo = SetUndo(() =>
+            {
+                foreach (var e in back)
+                {
+                    RestoreToDesktop(e, out _);
+                    RemoveEntryKeepFile(e.Id);
+                }
+            });
+        }
+
+        if (added > 0)
+        {
+            Changed?.Invoke();
+        }
+
+        return (items.Count, added, already, moved.Count, undo);
+    }
+
+    // ---- put an app back on the desktop ----------------------------------------------
+
+    /// <summary>
+    /// The user dragged a tile out of its box onto the bare desktop. A shortcut Verso holds goes back to the Desktop folder
+    /// (the icon reappears); a program or other file gets a new shortcut there. Store apps have no file to place yet. The tile
+    /// leaves the box. Undoable with <see cref="Undo"/>.
+    /// </summary>
+    /// <returns><c>result</c> = "moved" | "created" | "store" | "missing" | "failed"; <c>undo</c> = token (or "").</returns>
+    public (string Result, string Name, string Undo) PutOnDesktop(string id)
+    {
+        var entry = settings.Current.Launcher.Entries.Find(e => e.Id == id);
+        if (entry is null)
+        {
+            return ("missing", "", "");
+        }
+
+        if (entry.Path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+        {
+            return ("store", entry.Name, "");   // nothing to place on the desktop: no file, no icon file
+        }
+
+        if (!Exists(entry.Path))
+        {
+            return ("missing", entry.Name, "");
+        }
+
+        var saved = new LauncherEntry { Id = entry.Id, Name = entry.Name, Path = entry.Path, From = entry.From, BoxId = entry.BoxId };
+        try
+        {
+            string result;
+            Action undo;
+            if (entry.Path.StartsWith(Verso.Core.VersoPaths.Shortcuts, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!RestoreToDesktop(entry, out var placed))
+                {
+                    return ("failed", entry.Name, "");
+                }
+
+                RemoveEntryKeepFile(id);
+                result = "moved";
+                undo = () =>
+                {
+                    File.Move(placed, saved.Path);
+                    ReAdd(saved);
+                };
+            }
+            else
+            {
+                var placed = UniquePath(DesktopFolder(), MakeFileName(entry.Name) + ".lnk");
+                CreateShortcut(placed, entry.Path);
+                RemoveEntryKeepFile(id);
+                result = "created";
+                undo = () =>
+                {
+                    File.Delete(placed);
+                    ReAdd(saved);
+                };
+            }
+
+            var token = SetUndo(undo);
+            Changed?.Invoke();
+            return (result, saved.Name, token);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+        {
+            StartupLog.Mark($"put on desktop failed: {entry.Path}: {ex.Message}");
+            return ("failed", entry.Name, "");
+        }
+    }
+
+    // ---- undo (one step, for a short while) ----------------------------------------------
+
+    private sealed record UndoStep(string Token, Action Undo, DateTime Expires);
+
+    private UndoStep? _undo;
+
+    private string SetUndo(Action undo)
+    {
+        var token = Guid.NewGuid().ToString("N")[..8];
+        _undo = new UndoStep(token, undo, DateTime.UtcNow.AddSeconds(30));
+        return token;
+    }
+
+    /// <summary>Takes back the last move (into a box or out onto the desktop) if the token is the latest and still fresh.</summary>
+    public bool Undo(string token)
+    {
+        var step = _undo;
+        if (step is null || step.Token != token || DateTime.UtcNow > step.Expires)
+        {
+            return false;
+        }
+
+        _undo = null;
+        try
+        {
+            step.Undo();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            StartupLog.Mark($"undo failed: {ex.Message}");
+            return false;
+        }
+
+        Changed?.Invoke();
+        return true;
+    }
+
+    private static string DesktopFolder() => Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+
+    /// <summary>The file name a shortcut had on the desktop (Verso prefixes its copies with s&lt;id&gt;-).</summary>
+    private static string RestoreName(LauncherEntry e)
+    {
+        if (!string.IsNullOrEmpty(e.From))
+        {
+            return System.IO.Path.GetFileName(e.From);
+        }
+
+        var name = System.IO.Path.GetFileName(e.Path);
+        return System.Text.RegularExpressions.Regex.Replace(name, "^s[0-9a-f]{8}-", "");
+    }
+
+    private static string MakeFileName(string name)
+    {
+        var bad = System.IO.Path.GetInvalidFileNameChars();
+        var clean = new string(name.Select(c => bad.Contains(c) ? '_' : c).ToArray()).Trim();
+        return clean.Length == 0 ? "App" : clean;
+    }
+
+    private static string UniquePath(string folder, string fileName)
+    {
+        var path = System.IO.Path.Combine(folder, fileName);
+        for (var n = 2; File.Exists(path); n++)
+        {
+            path = System.IO.Path.Combine(folder, $"{System.IO.Path.GetFileNameWithoutExtension(fileName)} ({n}){System.IO.Path.GetExtension(fileName)}");
+        }
+
+        return path;
+    }
+
+    /// <summary>Moves Verso's copy of a shortcut back to the Desktop folder under its old name.</summary>
+    private static bool RestoreToDesktop(LauncherEntry entry, out string placed)
+    {
+        placed = UniquePath(DesktopFolder(), RestoreName(entry));
+        try
+        {
+            File.Move(entry.Path, placed);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static void CreateShortcut(string lnkPath, string target)
+    {
+        var shellType = Type.GetTypeFromProgID("WScript.Shell") ?? throw new System.Runtime.InteropServices.COMException("WScript.Shell is not available");
+        dynamic shell = Activator.CreateInstance(shellType)!;
+        dynamic link = shell.CreateShortcut(lnkPath);
+        link.TargetPath = target;
+        var folder = System.IO.Path.GetDirectoryName(target);
+        if (!string.IsNullOrEmpty(folder))
+        {
+            link.WorkingDirectory = folder;
+        }
+
+        link.Save();
+    }
+
+    private void RemoveEntryKeepFile(string id)
+    {
+        settings.Update(s => s.Launcher.Entries.RemoveAll(e => e.Id == id));
+        _icons.TryRemove(id, out _);
+    }
+
+    private void ReAdd(LauncherEntry entry)
+    {
+        settings.Update(s =>
+        {
+            // the box may have been deleted in the meantime: then the app comes back in Recent
+            if (entry.BoxId != LauncherBox.RecentId && !s.Launcher.Boxes.Any(b => b.Id == entry.BoxId))
+            {
+                entry.BoxId = LauncherBox.RecentId;
+            }
+
+            s.Launcher.Entries.Add(entry);
+        });
+    }
+
+    /// <summary>The targets (paths / shell addresses) already in the library, for the picker's "already added" marks.</summary>
+    public HashSet<string> Targets() => settings.Current.Launcher.Entries
+        .SelectMany(e => string.IsNullOrEmpty(e.From) ? new[] { e.Path } : new[] { e.Path, e.From })
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Whether something launchable is still there: a file, a folder, or a shell address (Store apps).</summary>
+    public static bool Exists(string path)
+        => !string.IsNullOrWhiteSpace(path)
+           && (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase) || File.Exists(path) || Directory.Exists(path));
+
+    /// <summary>
+    /// For a shortcut (.lnk / .url) makes Verso's own copy and returns it, so the box does not depend on a file the user
+    /// may delete or move. Anything else is returned as it is.
+    /// </summary>
+    private static string KeepShortcut(string path, out string from, bool move = false)
+    {
+        from = "";
+        var extension = System.IO.Path.GetExtension(path).ToLowerInvariant();
+        if (extension is not (".lnk" or ".url") || !File.Exists(path))
+        {
+            return path;
+        }
+
+        var folder = Verso.Core.VersoPaths.Shortcuts;
+        if (path.StartsWith(folder, StringComparison.OrdinalIgnoreCase))
+        {
+            return path;   // already ours
+        }
+
+        try
+        {
+            Directory.CreateDirectory(folder);
+            var copy = System.IO.Path.Combine(folder, "s" + Guid.NewGuid().ToString("N")[..8] + "-" + System.IO.Path.GetFileName(path));
+            if (move)
+            {
+                try
+                {
+                    File.Move(path, copy);   // the desktop icon disappears: it now lives in the box
+                    from = path;
+                    return copy;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // cannot move (the shared desktop needs admin, a sync client holds the file...): copy it instead
+                }
+            }
+
+            File.Copy(path, copy, overwrite: false);
+            from = path;
+            return copy;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return path;   // could not copy: keep pointing at the original rather than fail the add
+        }
+    }
+
+    /// <summary>Tells the desk and the dashboard that something changed (after a batch of adds with raise: false).</summary>
+    public void NotifyChanged() => Changed?.Invoke();
+
+    /// <summary>Raised when something asks for the app picker: the box to add to and, from the desk, where that box is on screen.</summary>
+    public event Action<string, System.Drawing.Rectangle?>? PickerRequested;
+
+    public void RequestPicker(string boxId, System.Drawing.Rectangle? anchor) => PickerRequested?.Invoke(boxId, anchor);
+
+    public LauncherEntry? AddApp(string path, string? boxId, bool raise = true, string? name = null, bool move = false)
+    {
+        if (string.IsNullOrWhiteSpace(path) || Targets().Contains(path))
+        {
+            return null;
+        }
+
+        var stored = KeepShortcut(path, out var from, move);
+        LauncherEntry? added = null;
         settings.Update(s =>
         {
             var target = s.Launcher.Boxes.Any(b => b.Id == boxId) ? boxId! : LauncherBox.RecentId;
-            s.Launcher.Entries.Add(new LauncherEntry
+            added = new LauncherEntry
             {
                 Id = "a" + Guid.NewGuid().ToString("N")[..10],
-                Name = System.IO.Path.GetFileNameWithoutExtension(path),
-                Path = path,
+                Name = string.IsNullOrWhiteSpace(name) ? System.IO.Path.GetFileNameWithoutExtension(path) : name,
+                Path = stored,
+                From = from,
                 BoxId = target
-            });
+            };
+            s.Launcher.Entries.Add(added);
         });
 
         if (raise)
         {
             Changed?.Invoke();
         }
+
+        return added;
     }
 
     public void RemoveApp(string id)
     {
+        var owned = settings.Current.Launcher.Entries.Find(e => e.Id == id)?.Path;
         settings.Update(s => s.Launcher.Entries.RemoveAll(e => e.Id == id));
+
+        // Verso's own copy of a shortcut goes with the entry (never anything else)
+        if (owned is not null && owned.StartsWith(Verso.Core.VersoPaths.Shortcuts, StringComparison.OrdinalIgnoreCase))
+        {
+            try { File.Delete(owned); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* leave it */ }
+        }
+
         _icons.TryRemove(id, out _);
         Changed?.Invoke();
     }
@@ -246,34 +578,8 @@ internal sealed class LauncherLibrary(SettingsStore settings)
         }
 
         var entry = settings.Current.Launcher.Entries.Find(e => e.Id == id);
-        var url = entry is null ? "" : ExtractIcon(entry.Path);
+        var url = entry is null ? "" : ShellIcons.GetDataUrl(entry.Path);
         _icons[id] = url;
         return url;
-    }
-
-    private static string ExtractIcon(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
-            {
-                return "";
-            }
-
-            using var icon = Icon.ExtractAssociatedIcon(path);
-            if (icon is null)
-            {
-                return "";
-            }
-
-            using var bitmap = icon.ToBitmap();
-            using var stream = new MemoryStream();
-            bitmap.Save(stream, ImageFormat.Png);
-            return "data:image/png;base64," + Convert.ToBase64String(stream.ToArray());
-        }
-        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException or System.ComponentModel.Win32Exception)
-        {
-            return "";
-        }
     }
 }

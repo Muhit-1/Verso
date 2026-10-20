@@ -46,6 +46,16 @@ public sealed class VersoSettings
     [JsonPropertyName("desktopCleanup")]
     public DesktopCleanupSettings DesktopCleanup { get; set; } = new();
 
+    [JsonPropertyName("dock")]
+    public DockSettings Dock { get; set; } = new();
+
+    /// <summary>
+    /// How the Windows taskbar options looked before Verso first changed one,
+    /// so "restore" can put them back exactly. Null until the first change.
+    /// </summary>
+    [JsonPropertyName("taskbarOriginal")]
+    public TaskbarState? TaskbarOriginal { get; set; }
+
     /// <summary>Apps shown in the app-launcher widget. See <see cref="LauncherSettings"/>.</summary>
     [JsonPropertyName("launcher")]
     public LauncherSettings Launcher { get; set; } = new();
@@ -98,6 +108,30 @@ public sealed class PowerSettings
     /// <summary>Ceiling for the video layer. 30 is invisible on a wallpaper and halves the cost.</summary>
     [JsonPropertyName("maxFps")]
     public int MaxFps { get; set; } = 30;
+}
+
+/// <summary>
+/// The compact dock: Windows' taskbar is hidden and a small floating dock shows only
+/// the apps that are open right now. See CLAUDE.md, "taskbar spike S0".
+/// </summary>
+public sealed class DockSettings
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    /// <summary>"apps" = only while an app is open; "always" = also when empty (just Start).</summary>
+    [JsonPropertyName("when")]
+    public string When { get; set; } = "apps";
+
+    [JsonPropertyName("showStart")]
+    public bool ShowStart { get; set; } = true;
+
+    /// <summary>Pushing the pointer to the screen edge slides the real taskbar in for a moment.</summary>
+    [JsonPropertyName("peek")]
+    public bool Peek { get; set; } = true;
+
+    [JsonPropertyName("showMinimised")]
+    public bool ShowMinimised { get; set; } = true;
 }
 
 /// <summary>

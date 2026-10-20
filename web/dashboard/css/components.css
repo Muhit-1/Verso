@@ -188,12 +188,18 @@
   font-size: 20px;
 }
 
+.card { display: flex; flex-direction: column; }
+
 .card-foot {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+  flex: 1 1 auto;
 }
+
+.card-foot .switch { margin-top: 2px; }
+.card-icon { width: 34px; height: 34px; color: var(--accent); }
 
 .card-name {
   font-family: var(--font-display);
@@ -462,4 +468,68 @@ input.app-box-name:focus {
 
 .card-extra .card-sub {
   margin-top: 0;
+}
+
+.tag-missing {
+  font-size: 11px;
+  font-weight: 600;
+  color: #b3402e;
+  background: rgba(229, 83, 61, .12);
+  border-radius: var(--radius-pill);
+  padding: 2px 9px;
+}
+
+/* ---- Windows taskbar options (Settings > Desktop) ------------------------ */
+
+.tb-block { display: block; }
+.pos-row { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.pos { border: none; background: none; padding: 0; font: inherit; font-size: 12px; color: var(--ink); cursor: pointer; width: 96px; text-align: center; }
+.pos .th { display: block; height: 62px; border-radius: 6px; border: 2px solid var(--border); background: linear-gradient(135deg, #3b4a5c, #7d5a50 60%, #c28b55); position: relative; overflow: hidden; margin-bottom: 4px; }
+.pos .th i { position: absolute; background: rgba(25, 25, 28, .85); }
+.pos .th i.b { left: 0; right: 0; bottom: 0; height: 9px; }
+.pos .th i.t { left: 0; right: 0; top: 0; height: 9px; }
+.pos .th i.l { left: 0; top: 0; bottom: 0; width: 9px; }
+.pos .th i.r { right: 0; top: 0; bottom: 0; width: 9px; }
+.pos.on .th { border-color: var(--accent); }
+.pos.on { color: var(--accent); font-weight: 600; }
+.toggle-row.dis { opacity: .45; pointer-events: none; }
+.tb-toast {
+  position: fixed; right: 22px; bottom: 22px; z-index: 20;
+  display: flex; align-items: center; gap: 14px; padding: 9px 10px 9px 16px; border-radius: var(--radius-pill);
+  background: var(--ink); color: var(--surface); font-size: 12.5px; box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+}
+.tb-toast[hidden] { display: none; }
+.tb-toast button { border: none; border-radius: var(--radius-pill); padding: 5px 12px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 11.5px; cursor: pointer; }
+.toggle-row.dock-sub { margin-left: 22px; }
+.toggle-row.faded { opacity: .45; pointer-events: none; }
+
+/* ---- polish: swatches, focus rings, scrollbars, small details ------------------ */
+
+.theme-card-preview.swatches { display: flex; }
+.theme-card-preview.swatches i { flex: 1 1 0; }
+
+.card-extra { padding-top: 8px; }
+
+button:focus-visible,
+select:focus-visible,
+.pos:focus-visible,
+.theme-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.switch:focus-visible { outline-offset: 3px; }
+
+.main { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.main::-webkit-scrollbar { width: 10px; }
+.main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; border: 3px solid var(--surface); }
+.main::-webkit-scrollbar-track { background: transparent; }
+
+.switch { transition: background .12s ease; }
+.btn { transition: border-color .12s ease, opacity .12s ease; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:disabled:hover { border-color: var(--border); }
+
+@media (prefers-reduced-motion: reduce) {
+  .switch, .switch .knob, .btn { transition: none; }
 }

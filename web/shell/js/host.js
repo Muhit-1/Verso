@@ -236,6 +236,11 @@ async function createDemoHost() {
     getApps: () => demoBoxes.map(b => ({ ...b, apps: b.apps.slice() })),
     getAppIcon: () => "",
     addApp: () => console.log("Verso (demo): no native file picker in a plain browser."),
+    openAppPicker: () => console.log("Verso (demo): the app picker needs the real host."),
+    getDesktopSelectionCount: () => 0,
+    addDesktopSelection: () => ({ found: 0, added: 0, already: 0, moved: 0, undo: "" }),
+    putOnDesktop: () => ({ result: "failed", name: "", undo: "" }),
+    undoLauncher: () => false,
     removeApp: id => { demoBoxes.forEach(b => { b.apps = b.apps.filter(a => a.id !== id); }); },
     moveApp: (id, boxId) => {
       let app = null;
@@ -266,6 +271,10 @@ async function createDemoHost() {
 
     // No real apps to launch without a host. Seeded so the app-launcher
     // widget has something to show while being developed standalone.
+    getDesktopCleanup: () => ({ ...demoCleanup }),
+    setTaskbarHidden: hide => { demoCleanup.hideTaskbar = hide; },
+    setDesktopIconsHidden: hide => { demoCleanup.hideDesktopIcons = hide; },
+
     // Sticky notes: in memory here; the real host keeps them in outpost-notes.json.
     getNotes: () => demoNotes.map(n => ({ ...n })),
     newNote: () => {
@@ -284,6 +293,7 @@ async function createDemoHost() {
     ],
     launchApp(id) {
       console.log(`Verso (demo): would launch ${id}`);
+      return "ok";
     }
   };
 }
@@ -308,6 +318,7 @@ const OUTPOST_THEMES = [
   { id: "pencil", name: "Pencil", from: "#141414", to: "#bbbbbb" }
 ];
 let demoTheme = "";
+const demoCleanup = { hideTaskbar: false, hideDesktopIcons: false };
 const NOTE_COLORS = ["#7ac55c", "#5aa9e6", "#f2c94c", "#f08fb0", "#b48ae0", "#a8a8a8"];
 const demoNotes = [{ id: "n1", color: NOTE_COLORS[2], html: "Ring the ticket desk<br>about the printer" }];
 const demoBoxes = [
@@ -445,6 +456,11 @@ async function createRealHost(bridge) {
       if (!iconCache.has(id)) iconCache.set(id, (await bridge.GetAppIcon(id)) || "");
       return iconCache.get(id);
     },
+    // Hide taskbar / desktop icons: read fresh (they can also change in the dashboard or the tray).
+    getDesktopCleanup: async () => parse(await bridge.GetDesktopCleanup(), { hideTaskbar: false, hideDesktopIcons: false }),
+    setTaskbarHidden: hide => bridge.SetTaskbarHidden(hide),
+    setDesktopIconsHidden: hide => bridge.SetDesktopIconsHidden(hide),
+
     // Sticky notes live in the host (their own file); the desk reads them fresh and the pop-up editor edits them.
     getNotes: async () => parse(await bridge.GetNotes(), []),
     newNote: () => bridge.NewNote(),
@@ -454,13 +470,20 @@ async function createRealHost(bridge) {
     editBoxName: (id, screenRect) => bridge.EditBoxName(id, JSON.stringify(screenRect)),
 
     addApp: boxId => bridge.AddApp(boxId),
+    openAppPicker: (boxId, screenRect) => bridge.OpenAppPicker(boxId, JSON.stringify(screenRect)),
+    // dragging a real desktop icon onto a box: Explorer's selection is read on the host
+    getDesktopSelectionCount: async () => Number(await bridge.GetDesktopSelectionCount()) || 0,
+    addDesktopSelection: async boxId => parse(await bridge.AddDesktopSelection(boxId), { found: 0, added: 0, already: 0, moved: 0, undo: "" }),
+    // dragging a tile out of its box onto the bare desktop, and the Undo for both directions
+    putOnDesktop: async appId => parse(await bridge.PutOnDesktop(appId), { result: "failed", name: "", undo: "" }),
+    undoLauncher: async token => !!(await bridge.UndoLauncher(token)),
     removeApp: id => bridge.RemoveApp(id),
     moveApp: (id, boxId) => bridge.MoveApp(id, boxId),
     addBox: () => bridge.AddBox(),
     deleteBox: id => bridge.DeleteBox(id),
 
     getLauncherEntries: () => launcherEntries,
-    launchApp(id) { bridge.LaunchApp(id); }
+    launchApp: id => bridge.LaunchApp(id),   // resolves to "ok" or "missing"
   };
 }
 
@@ -513,8 +536,9 @@ const EMPTY_HOST = {
   getDeskState: () => ({}), saveDeskState() {},
   getOutpostWidgets: () => [], setOutpostWidgetEnabled() {}, openDashboard() {},
   getOutpostThemes: () => [], getOutpostTheme: () => "", setOutpostTheme() {},
+  getDesktopCleanup: () => ({ hideTaskbar: false, hideDesktopIcons: false }), setTaskbarHidden() {}, setDesktopIconsHidden() {},
   getNotes: () => [], newNote() {}, setNoteColor() {}, deleteNote() {}, editNote() {}, editBoxName() {},
-  getApps: () => [], getAppIcon: () => "", addApp() {}, removeApp() {}, moveApp() {}, addBox() {}, deleteBox() {},
+  getApps: () => [], getAppIcon: () => "", addApp() {}, openAppPicker() {}, getDesktopSelectionCount: () => 0, addDesktopSelection: () => ({ found: 0, added: 0, already: 0, moved: 0, undo: "" }), putOnDesktop: () => ({ result: "failed", name: "", undo: "" }), undoLauncher: () => false, removeApp() {}, moveApp() {}, addBox() {}, deleteBox() {},
   getWidgets: () => [],
   getLauncherEntries: () => [], launchApp() {}
 };

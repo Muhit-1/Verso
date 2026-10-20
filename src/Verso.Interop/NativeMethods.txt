@@ -91,3 +91,5 @@ ReleaseCapture
 SendMessage
 WM_NCLBUTTONDOWN
 HTCAPTION
+SHAppBarMessage
+APPBARDATA

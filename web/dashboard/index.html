@@ -26,9 +26,6 @@
     below is drawn here and driven by js/titlebar.js.
 -->
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -85,13 +82,13 @@
         <p>What plays behind the widgets — an image, a video, or an interactive page.</p>
       </div>
 
-      <p class="hint" id="backgroundText">None set — the theme's own backdrop shows.</p>
+      <p class="hint" id="backgroundText">None set — the desk's own colours show.</p>
       <div class="btn-row">
         <button type="button" class="btn primary" id="pickBackgroundBtn">Choose file…</button>
         <button type="button" class="btn" id="clearBackgroundBtn">Clear</button>
       </div>
-      <p class="hint">Video and interactive backgrounds only render where the desk is the
-        full wallpaper, not in the panels-only overlay mode most Windows 11 builds use.</p>
+      <p class="hint">Videos, GIFs and interactive pages play <b>behind your desktop icons and taskbar</b>, and pause by
+        themselves while a full-screen app or a maximised window is in front. An image becomes your Windows wallpaper.</p>
     </section>
 
     <!-- WIDGETS -->
@@ -101,8 +98,8 @@
         <p>Choose what shows up on your desktop.</p>
       </div>
 
-      <p class="hint">Drag any panel on the desk to move it, or its corner grip to resize
-        it. Positions are remembered.</p>
+      <p class="hint">Each widget is independent: switching one off never moves another. To move or resize them, open the round
+        <b>!</b> button on the desk and choose <b>Arrange</b>. Positions are remembered.</p>
       <div class="btn-row">
         <button type="button" class="btn" id="resetLayoutBtn">Reset positions</button>
       </div>
@@ -151,7 +148,60 @@
           </div>
           <button type="button" class="switch" id="hideIconsSwitch"><div class="knob"></div></button>
         </div>
+
+        <div class="section-divider">Compact dock</div>
+        <div class="toggle-row"><div><div class="label">Use a compact dock instead of the taskbar</div>
+          <div class="sub">Windows' full-width bar is hidden. A small floating dock shows only the apps that are open right now, as wide as those icons, and goes away when the last one closes.</div></div>
+          <button type="button" class="switch" data-dock="enabled"><div class="knob"></div></button></div>
+        <div id="dockOpts">
+          <div class="toggle-row dock-sub"><div class="label">When to show it</div>
+            <select class="select" data-dock="when"><option value="apps">Only while an app is open</option><option value="always">Always (empty dock shows just Start)</option></select></div>
+          <div class="toggle-row dock-sub"><div><div class="label">Show the Start button in the dock</div><div class="sub">The Windows key always works either way.</div></div>
+            <button type="button" class="switch" data-dock="showStart"><div class="knob"></div></button></div>
+          <div class="toggle-row dock-sub"><div><div class="label">Peek at the real taskbar</div><div class="sub">Hold the pointer against the screen edge to slide Windows' taskbar in for a moment (clock, tray, notifications). It follows the position chosen below.</div></div>
+            <button type="button" class="switch" data-dock="peek"><div class="knob"></div></button></div>
+          <div class="toggle-row dock-sub"><div><div class="label">Show minimised apps</div><div class="sub">Minimised windows stay in the dock (dimmed) so you can bring them back.</div></div>
+            <button type="button" class="switch" data-dock="showMinimised"><div class="knob"></div></button></div>
+          <p class="hint">Not in the dock: badges, flashing, jump lists, apps that are pinned but closed. Turn the dock off to get them back. Position, alignment and size below also place the dock.</p>
+        </div>
+
+        <div class="section-divider">Windows taskbar</div>
+        <p class="hint" id="tbHint">Windows' own taskbar options, here so you do not have to open Settings. They are the real Windows settings and stay when Verso is closed.</p>
+
+        <div id="tbOpts">
+          <div class="toggle-row tb-block">
+            <div class="label">Taskbar position</div>
+            <div class="sub">Choose where the taskbar is positioned on your screen</div>
+            <div class="pos-row" id="tbPos">
+              <button type="button" class="pos" data-v="3"><span class="th"><i class="b"></i></span>Bottom</button>
+              <button type="button" class="pos" data-v="1"><span class="th"><i class="t"></i></span>Top</button>
+              <button type="button" class="pos" data-v="0"><span class="th"><i class="l"></i></span>Left</button>
+              <button type="button" class="pos" data-v="2"><span class="th"><i class="r"></i></span>Right</button>
+            </div>
+          </div>
+          <div class="toggle-row"><div><div class="label">Taskbar icon alignment</div><div class="sub">Choose how your icons are positioned on the taskbar</div></div>
+            <select class="select" data-tb="align"><option value="1">Center</option><option value="0">Left</option></select></div>
+          <div class="toggle-row"><div><div class="label">Taskbar size</div></div>
+            <select class="select" data-tb="size"><option value="0">Default</option><option value="1">Small</option></select></div>
+          <div class="toggle-row" id="tbAutoRow"><div><div class="label">Automatically hide the taskbar</div><div class="sub" id="tbAutoNote" hidden>This setting is only available when the taskbar is at the bottom.</div></div>
+            <button type="button" class="switch" data-tb="auto"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Show badges on taskbar apps</div><button type="button" class="switch" data-tb="badges"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Show flashing on taskbar apps</div><button type="button" class="switch" data-tb="flash"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Share any window from my taskbar</div><button type="button" class="switch" data-tb="share"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Select the far corner of the taskbar to show the desktop</div><button type="button" class="switch" data-tb="corner"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Combine taskbar buttons and hide labels</div>
+            <select class="select" data-tb="combine"><option value="0">Always</option><option value="1">When taskbar is full</option><option value="2">Never</option></select></div>
+          <div class="toggle-row"><div class="label">Show Search</div><button type="button" class="switch" data-tb="search"><div class="knob"></div></button></div>
+          <div class="toggle-row"><div class="label">Show Task view</div><button type="button" class="switch" data-tb="taskview"><div class="knob"></div></button></div>
+        </div>
+        <p class="hint">The Widgets button cannot be changed from outside Windows: use <b>Open Windows taskbar settings</b>.</p>
+        <div class="btn-row">
+          <button type="button" class="btn" id="tbOpenWin">Open Windows taskbar settings ↗</button>
+          <button type="button" class="btn" id="tbRestore">Restore how it was before Verso</button>
+        </div>
       </div>
+
+      <div class="tb-toast" id="tbToast" hidden><span id="tbToastText"></span><button type="button" id="tbUndo">Undo</button></div>
 
       <div class="tab-panel" data-panel="theme">
         <div class="section-divider" id="deskThemeTitle">Desk colours</div>

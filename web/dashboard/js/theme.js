@@ -9,7 +9,7 @@
 ================================================================== */
 
 export const THEME_ROOT = "themes";
-const USER_THEME_ROOT = "https://verso.user-dashboard-themes.local";
+const USER_THEME_ROOT = "https://verso.user-dashboard-themes.example";
 
 const STORE_KEY = "verso.dashboard-theme.v1";
 const FALLBACK_ID = "fieldnote";
@@ -79,7 +79,9 @@ export async function apply(id) {
   const manifest = manifests.find(t => t.id === id) ?? await loadManifest(id);
   if (!manifest) return null;
 
-  const fonts = manifest.fonts ?? [];
+  // A font stylesheet is a full https URL, or a path relative to the theme's own folder ("../../fonts/fonts.css" = the bundled, offline set).
+  const themeBase = new URL(`${manifest.source === "user" ? USER_THEME_ROOT : THEME_ROOT}/${id}/`, document.baseURI);
+  const fonts = (manifest.fonts ?? []).map(href => new URL(href, themeBase).href);
   fonts.forEach((href, i) => ensureLink(`verso-font-${i}`, { href }));
   for (let i = fonts.length; ; i++) {
     const stale = document.getElementById(`verso-font-${i}`);

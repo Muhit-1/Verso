@@ -58,6 +58,13 @@ public sealed class LauncherEntry
     [JsonPropertyName("path")]
     public string Path { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Where a shortcut was copied from (a desktop icon, say), if Verso made its own copy. Only used to recognise the
+    /// same icon being added twice.
+    /// </summary>
+    [JsonPropertyName("from")]
+    public string From { get; set; } = string.Empty;
+
     /// <summary>The box this app sits in. Entries saved before boxes existed read as "recent".</summary>
     [JsonPropertyName("boxId")]
     public string BoxId { get; set; } = LauncherBox.RecentId;

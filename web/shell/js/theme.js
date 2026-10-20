@@ -27,7 +27,7 @@ export const THEME_ROOT = "../themes";
  * would 404 the instant the page tried to load it, even though the host
  * found the theme fine.
  */
-const USER_THEME_ROOT = "https://verso.user-themes.local";
+const USER_THEME_ROOT = "https://verso.user-themes.example";
 
 const STORE_KEY = "verso.theme.v1";
 const FALLBACK_ID = "smoked-petrol";
