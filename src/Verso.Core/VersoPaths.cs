@@ -115,6 +115,12 @@ public static class VersoPaths
     /// <summary>The sticky notes of the Outpost desk (text and colour). Positions stay in <see cref="OutpostFile"/>.</summary>
     public static string OutpostNotesFile => Path.Combine(DataRoot, "outpost-notes.json");
 
+    /// <summary>
+    /// Verso's own copies of the shortcuts (.lnk / .url) the user put into a launcher box, so a box keeps working after
+    /// the original is deleted or moved (the usual thing to do with a desktop icon once it lives in a box).
+    /// </summary>
+    public static string Shortcuts => Path.Combine(DataRoot, "shortcuts");
+
     /// <summary>logs</summary>
     public static string LogDirectory => Path.Combine(DataRoot, "logs");
 

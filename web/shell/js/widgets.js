@@ -41,7 +41,7 @@ import * as Layout from "./layout.js";
 
 // Relative, like theme.js's THEME_ROOT — resolves against whatever origin
 // the shell is actually running under, native virtual host or the plain
-// dev server both. An absolute "https://verso.local/..." here would work
+// dev server both. An absolute "https://verso.example/..." here would work
 // in the native app and silently 404 in a plain browser.
 const BUNDLED_BASE = "../widgets";
 
@@ -49,7 +49,7 @@ const BUNDLED_BASE = "../widgets";
 // discover them from without a host — so this is native-only, and never
 // exercised when it is not (see discoverDemoWidgets in host.js, which
 // only ever returns source:"bundled").
-const USER_BASE = "https://verso.user-widgets.local";
+const USER_BASE = "https://verso.user-widgets.example";
 
 /**
  * Where a panel renders until the user drags or resizes it — see

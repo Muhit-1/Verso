@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso — Taskbar settings v2 (mockup)</title>
+<!--
+  MOCKUP v6 for Settings > Desktop > Taskbar. Supersedes outpost-v5-taskbar (six controls) after the owner's
+  screenshot of Windows' own "Taskbar behaviors" page and the request for a "compact dock".
+  Not product code. Fieldnote look = web/dashboard. Mock-only: the top bar, the live preview, the demo buttons
+  (+ Open app / - Close app), the toast.
+-->
+<style>
+:root{
+  --ink:#2B2620;--ink-muted:#847A67;--surface:#FFFDF7;--sidebar:#F1E9D8;--card:#FFFDF7;--border:#E4DAC5;
+  --accent:#B85C38;--accent-soft:#F2E1D6;--accent-2:#6E7B4F;--on-accent:#fff;--radius:12px;
+  --serif:"Fraunces",Georgia,serif;--sans:"Work Sans","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#cfc6b2;font-family:var(--sans);color:var(--ink);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.mockbar{width:min(1040px,100%);display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:#5a513f;margin-bottom:12px}
+.mockbar button{font:inherit;padding:5px 10px;border-radius:8px;border:1px solid #a89f89;background:#e9e1cd;cursor:pointer}
+.mockbar .tag{margin-left:auto;font-style:italic}
+.win{width:min(1040px,100%);background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(40,30,10,.25);display:grid;grid-template-columns:190px 1fr;grid-template-rows:38px 1fr}
+.titlebar{grid-column:1/-1;display:flex;align-items:center;padding:0 14px;background:var(--sidebar);border-bottom:1px solid var(--border);font-family:var(--serif);font-weight:600}
+.titlebar i{width:10px;height:10px;border-radius:50%;background:var(--accent);margin-right:8px}
+nav{background:var(--sidebar);padding:14px 10px;border-right:1px solid var(--border)}
+nav a{display:block;padding:9px 12px;border-radius:9px;font-size:14px;color:var(--ink-muted);margin-bottom:3px}
+nav a.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+main{padding:26px 34px 36px;min-width:0}
+h1{font-family:var(--serif);font-size:30px;margin:0 0 4px;font-weight:600}
+.sub{margin:0 0 18px;color:var(--ink-muted)}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:9px 16px;font-size:14px;color:var(--ink-muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+.hint{color:var(--ink-muted);font-size:13.5px;margin:0 0 12px}
+.divider{font-family:var(--serif);font-size:17px;font-weight:600;margin:28px 0 4px;display:flex;align-items:center;gap:10px}
+.divider::after{content:"";flex:1;height:1px;background:var(--border)}
+.divider small{font:500 11px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--accent-2);background:#e8ecd9;padding:2px 8px;border-radius:999px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:13px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-top:8px}
+.row .l{font-weight:600;font-size:14.5px}
+.row .d{font-size:12.5px;color:var(--ink-muted);margin-top:2px;max-width:520px}
+.row.dis{opacity:.45;pointer-events:none}
+.row.sub1{margin-left:22px}
+.switch{width:44px;height:25px;border-radius:999px;background:#d9cfb8;border:0;position:relative;cursor:pointer;flex:none;transition:background .15s}
+.switch .k{position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch.on{background:var(--accent)}
+.switch.on .k{transform:translateX(19px)}
+select{font:inherit;font-size:13.5px;padding:7px 30px 7px 12px;border-radius:9px;border:1px solid var(--border);background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23847A67' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center;appearance:none;color:var(--ink);cursor:pointer;flex:none}
+.info{display:flex;gap:7px;align-items:center;font-size:12.5px;color:var(--ink-muted);margin:6px 4px 0}
+.info i{width:14px;height:14px;border-radius:50%;background:#5aa9e6;color:#fff;font:700 10px/14px var(--sans);text-align:center;font-style:normal;flex:none}
+.warn{font-size:12.5px;color:#7a5a1c;background:#faf0d4;border:1px solid #ecd9a1;border-radius:9px;padding:8px 11px;margin-top:8px}
+
+/* position picker, like Windows' own */
+.posrow{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.pos{width:112px;cursor:pointer;text-align:center;font-size:13px;color:var(--ink)}
+.pos .th{height:84px;border-radius:7px;border:2px solid var(--border);background:linear-gradient(135deg,#3b4a5c,#7d5a50 60%,#c28b55);position:relative;overflow:hidden;margin-bottom:5px}
+.pos.on .th{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.pos .th i{position:absolute;background:rgba(25,25,28,.85)}
+.pos .th i.b{left:0;right:0;bottom:0;height:11px}.pos .th i.t{left:0;right:0;top:0;height:11px}
+.pos .th i.l{left:0;top:0;bottom:0;width:11px}.pos .th i.r{right:0;top:0;bottom:0;width:11px}
+.pos.on{font-weight:600;color:var(--accent)}
+
+/* ---------- live preview (mock-only) ---------- */
+.pvwrap{margin-top:12px}
+.pvhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--ink-muted);margin-bottom:6px}
+.pvhead .sp{flex:1}
+.pvhead button{white-space:nowrap;font:inherit;font-size:12px;border:1px solid var(--border);background:var(--card);padding:4px 10px;border-radius:999px;cursor:pointer;color:var(--ink)}
+.scr{position:relative;height:250px;border-radius:var(--radius);background:linear-gradient(135deg,#3b4a5c,#7d5a50 60%,#c28b55);overflow:hidden;border:1px solid var(--border)}
+.scr .wm{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:600 34px var(--serif);color:rgba(255,255,255,.18);letter-spacing:.06em}
+.app{display:flex;align-items:center;gap:6px;flex:none}
+.app .ic{width:var(--is);height:var(--is);border-radius:6px;flex:none}
+.app .lb{font-size:calc(var(--is)*.46);color:#eee;white-space:nowrap;width:76px;overflow:hidden;text-overflow:ellipsis;display:none}
+.scr.labels .app .lb{display:block}
+.scr.labels .app{background:rgba(255,255,255,.08);border-radius:6px;padding:2px 6px 2px 3px}
+.bar{position:absolute;display:flex;align-items:center;gap:5px;background:rgba(26,26,30,.88);padding:0 8px;transition:transform .25s,opacity .2s,width .2s,height .2s;--is:22px}
+.bar.b,.bar.t{left:0;right:0;height:42px}.bar.b{bottom:0}.bar.t{top:0}
+.bar.l,.bar.r{top:0;bottom:0;width:48px;flex-direction:column;padding:8px 0}.bar.l{left:0}.bar.r{right:0}
+.bar.small{--is:15px}.bar.b.small,.bar.t.small{height:30px}.bar.l.small,.bar.r.small{width:34px}
+.bar.large{--is:30px}.bar.b.large,.bar.t.large{height:56px}.bar.l.large,.bar.r.large{width:62px}
+.bar.b.center,.bar.t.center{justify-content:center}.bar.b.left,.bar.t.left{justify-content:flex-start}
+.bar.l.center,.bar.r.center{justify-content:center}.bar.l.left,.bar.r.left{justify-content:flex-start}
+.bar.hid.b{transform:translateY(88%)}.bar.hid.t{transform:translateY(-88%)}.bar.hid.l{transform:translateX(-88%)}.bar.hid.r{transform:translateX(88%)}
+.bar.off{display:none}
+.bar .start{width:var(--is);height:var(--is);border-radius:5px;background:#6aa8e8;flex:none}
+.bar .tray{font-size:10px;color:#ccc;margin-left:auto;padding-right:2px;display:none}
+.bar.b.left .tray,.bar.t.left .tray{display:block}
+.dock{position:absolute;display:flex;align-items:center;gap:7px;background:rgba(26,26,30,.78);backdrop-filter:blur(8px);padding:7px 10px;border-radius:999px;transition:opacity .25s,transform .25s;--is:24px;border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.dock.b{left:50%;bottom:10px;transform:translateX(-50%)}.dock.t{left:50%;top:10px;transform:translateX(-50%)}
+.dock.l{left:10px;top:50%;transform:translateY(-50%);flex-direction:column;padding:10px 7px}
+.dock.r{right:10px;top:50%;transform:translateY(-50%);flex-direction:column;padding:10px 7px}
+.dock.gone{opacity:0;pointer-events:none}
+.dock.b.gone{transform:translateX(-50%) translateY(14px)}.dock.t.gone{transform:translateX(-50%) translateY(-14px)}
+.dock .app.act .ic{box-shadow:0 0 0 2px rgba(255,255,255,.85)}
+.dock .dot{position:absolute}
+.dock .start{width:var(--is);height:var(--is);border-radius:6px;background:#6aa8e8;flex:none}
+.dock .sep{width:1px;height:18px;background:rgba(255,255,255,.2);flex:none}
+.dock.l .sep,.dock.r .sep{width:18px;height:1px}
+.edge{position:absolute;background:rgba(255,255,255,.35);border-radius:2px;opacity:0}
+.pvnote{font-size:12px;color:var(--ink-muted);margin-top:6px;min-height:18px}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:13.5px;box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s;display:flex;gap:14px;align-items:center;z-index:9}
+.toast.show{opacity:1;pointer-events:auto}
+.toast button{border:0;background:var(--accent);color:#fff;font:inherit;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;cursor:pointer}
+.btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.btn{font:inherit;font-size:13.5px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.link::after{content:" ↗"}
+.notes{width:min(1040px,100%);margin-top:14px;font-size:12.5px;color:#4d4534;line-height:1.6;background:#e9e1cd;border-radius:10px;padding:12px 16px}
+.notes b{color:#2b2620}
+@media (max-width:760px){.win{grid-template-columns:1fr}nav{display:none}main{padding:20px 16px}.row{flex-wrap:wrap}.row.sub1{margin-left:8px}}
+</style>
+</head>
+<body>
+
+<div class="mockbar">
+  <b>Mock controls (do not ship):</b>
+  <button id="mDef">Windows defaults</button>
+  <button id="mDock">Compact dock on</button>
+  <span class="tag">Settings &gt; Desktop &gt; Taskbar — mockup v6</span>
+</div>
+
+<div class="win">
+  <div class="titlebar"><i></i>Verso</div>
+  <nav><a>Wallpaper</a><a>Widgets</a><a>Apps</a><a class="on">Settings</a></nav>
+  <main>
+    <h1>Settings</h1>
+    <p class="sub">How Verso behaves on your desktop, and how it looks.</p>
+    <div class="tabs"><span class="tab on">Desktop</span><span class="tab">Theme</span></div>
+
+    <p class="hint">Keep the real desktop clean while Verso is running.</p>
+    <div class="row"><div><div class="l">Hide taskbar</div><div class="d">Removes Windows' taskbar completely (Verso's existing switch).</div></div><button class="switch" data-k="hide"><span class="k"></span></button></div>
+    <div class="row"><div><div class="l">Hide desktop icons</div></div><button class="switch" data-k="icons"><span class="k"></span></button></div>
+
+    <div class="divider">Taskbar <small>New</small></div>
+
+    <div class="pvwrap">
+      <div class="pvhead"><b style="color:var(--ink)">Preview</b><span class="sp"></span>
+        <button id="open">+ Open app</button><button id="close">− Close app</button><span id="appn"></span></div>
+      <div class="scr" id="scr"><div class="wm">VERSO</div></div>
+      <div class="pvnote" id="pvnote"></div>
+    </div>
+
+    <!-- 1. the NEW option -->
+    <div class="divider" style="margin-top:22px">Compact dock <small>New</small></div>
+    <div class="row"><div><div class="l">Use a compact dock instead of the taskbar</div>
+      <div class="d">Windows' full-width bar is hidden. A small floating dock shows <b>only the apps that are open right now</b> — as wide as those icons, nothing more — and appears when you open an app and disappears when the last one closes.</div></div>
+      <button class="switch" data-k="dock"><span class="k"></span></button></div>
+    <div id="dockOpts">
+      <div class="row sub1"><div><div class="l">When to show it</div></div>
+        <select data-k="dockWhen"><option value="apps">Only while an app is open</option><option value="always">Always (empty dock shows just Start)</option></select></div>
+      <div class="row sub1"><div><div class="l">Show the Start button in the dock</div><div class="d">The Windows key always works either way.</div></div><button class="switch" data-k="dockStart"><span class="k"></span></button></div>
+      <div class="row sub1"><div><div class="l">Peek at the real taskbar</div><div class="d">Push the pointer to the screen edge to slide Windows' taskbar in for a moment — for the clock, tray and notifications. It slides away again when you move off.</div></div><button class="switch" data-k="peek"><span class="k"></span></button></div>
+      <div class="row sub1"><div><div class="l">Show minimised apps</div><div class="d">Minimised windows stay in the dock (dimmed) so you can bring them back.</div></div><button class="switch" data-k="dockMin"><span class="k"></span></button></div>
+      <div class="warn">The dock sits where the taskbar position below says (bottom, top, left or right) and follows alignment and size. Things only the real taskbar has — badges, flashing, jump lists, pinned-but-closed apps — are not in the dock; turn it off to get them back.</div>
+    </div>
+
+    <!-- 2. Windows' own behaviours, same wording and order as the Windows page -->
+    <div class="divider">Windows taskbar behaviours</div>
+    <p class="hint" id="winHint">Windows' own options, shown here so you don't have to open Settings. They are the real Windows settings and stay when Verso is closed.</p>
+    <div id="winOpts">
+      <div class="row" style="display:block"><div class="l">Taskbar position</div><div class="d">Choose where the taskbar is positioned on your screen</div>
+        <div class="posrow" id="posrow">
+          <div class="pos" data-v="b"><div class="th"><i class="b"></i></div>Bottom</div>
+          <div class="pos" data-v="t"><div class="th"><i class="t"></i></div>Top</div>
+          <div class="pos" data-v="l"><div class="th"><i class="l"></i></div>Left</div>
+          <div class="pos" data-v="r"><div class="th"><i class="r"></i></div>Right</div>
+        </div></div>
+      <div class="row"><div><div class="l">Taskbar icon alignment</div><div class="d">Choose how your icons are positioned on the taskbar</div></div>
+        <select data-k="align"><option value="center">Center</option><option value="left">Left</option></select></div>
+      <div class="row"><div><div class="l">Taskbar size</div></div>
+        <select data-k="size"><option value="small">Small</option><option value="medium">Default</option><option value="large">Large</option></select></div>
+      <div class="row" id="rAuto"><div><div class="l">Automatically hide the taskbar</div></div><button class="switch" data-k="auto"><span class="k"></span></button></div>
+      <div class="info" id="autoInfo"><i>i</i>This setting is only available when the taskbar is at the bottom.</div>
+      <div class="row"><div><div class="l">Show badges on taskbar apps</div></div><button class="switch" data-k="badges"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Show flashing on taskbar apps</div></div><button class="switch" data-k="flash"><span class="k"></span></button></div>
+      <div class="row dis"><div><div class="l">Show my taskbar on all displays</div><div class="d">Unavailable — only one display is connected.</div></div><button class="switch" data-k="allmon"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Share any window from my taskbar</div></div><button class="switch" data-k="share"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Select the far corner of the taskbar to show the desktop</div></div><button class="switch" data-k="corner"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Combine taskbar buttons and hide labels</div></div>
+        <select data-k="combine"><option value="always">Always</option><option value="full">When taskbar is full</option><option value="never">Never</option></select></div>
+      <div class="row"><div><div class="l">Show Search</div></div><button class="switch" data-k="search"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Show Task view</div></div><button class="switch" data-k="taskview"><span class="k"></span></button></div>
+      <div class="row"><div><div class="l">Show Widgets</div></div><button class="switch" data-k="widgets"><span class="k"></span></button></div>
+    </div>
+    <div class="warn" id="sizeWarn" hidden>Position and size of the taskbar are newer Windows settings; Verso reads and writes the same values Windows does, and “Reset to Windows defaults” always puts them back.</div>
+
+    <div class="btns">
+      <button class="btn link" id="openWin">Open Windows taskbar settings</button>
+      <button class="btn" id="reset">Reset to Windows defaults</button>
+    </div>
+  </main>
+</div>
+
+<div class="notes">
+  <b>What changed after your screenshot:</b> (1) the group now mirrors Windows' own “Taskbar behaviors” page — same names, same order, same position thumbnails (Bottom / Top / Left / Right), alignment, size (Small / Default / Large), auto-hide (only enabled at the bottom, with the same note), badges, flashing, all displays (greyed out with one monitor), share window, far corner, combine buttons — plus Search / Task view / Widgets. (2) New <b>Compact dock</b>: Windows' bar is hidden and Verso shows a small floating pill with only the open apps, which appears with the first open app and disappears after the last one closes. Use the preview's “+ Open app / − Close app” to see it. When the dock is on, the Windows options below it are greyed out (they would have no visible effect) but keep their values.<br>
+  <b>How the dock would be built (so you can judge it):</b> it must be a real always-on-top window, not part of the wallpaper layer, created without taking focus; it lists top-level windows the way Alt-Tab does (visible, not tool windows, not cloaked), shows each app's real icon, click = bring forward / minimise, middle-click or the usual shortcuts unchanged; the real taskbar is hidden with the same method as today's “Hide taskbar”, and the screen edge peek slides it back for a moment. Honest limits: no badges, no flashing, no jump lists, no pinned-but-closed apps (you asked for open apps only), the system tray and clock are only reachable through the peek, full-screen apps hide the dock like they hide the taskbar, and every Windows update could change how Explorer treats a hidden taskbar — so it needs a spike (S0) before the real build, like the desktop-icon drag had.<br>
+  <b>Before building each Windows option:</b> Verso will first confirm, on this PC, which registry value Windows changes when that option is toggled (position and size are new on this Windows build, so I will not guess the keys). Any option I cannot make reliable stays out and the “Open Windows taskbar settings” button covers it.
+</div>
+
+<div class="toast" id="toast"><span id="toastT"></span><button id="undo">Undo</button></div>
+
+<script>
+const DEF = {hide:false,icons:false,dock:false,dockWhen:'apps',dockStart:true,peek:true,dockMin:true,pos:'b',align:'center',size:'medium',auto:false,badges:true,flash:true,allmon:false,share:true,corner:true,combine:'always',search:true,taskview:true,widgets:true};
+let st = {...DEF}, prev = null, timer, apps = 2;
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const COL = ['#e8b66a','#7ac55c','#5aa9e6','#f08fb0','#b48ae0','#a8a8a8'], NAME = ['Browser','Notes','Mail','Music','Photos','Files'];
+
+function icons(n, act){
+  let h = '';
+  for (let i = 0; i < n; i++) h += `<span class="app ${i === act ? 'act' : ''}"><span class="ic" style="background:${COL[i % 6]}"></span><span class="lb">${NAME[i % 6]}</span></span>`;
+  return h;
+}
+function render(){
+  $$('.switch').forEach(b => b.classList.toggle('on', !!st[b.dataset.k]));
+  $$('select').forEach(s => s.value = st[s.dataset.k]);
+  $$('.pos').forEach(p => p.classList.toggle('on', p.dataset.v === st.pos));
+  const bottom = st.pos === 'b';
+  $('#rAuto').classList.toggle('dis', !bottom || st.dock);
+  $('#autoInfo').style.display = bottom ? 'none' : 'flex';
+  $('#winOpts').style.opacity = st.dock ? .5 : 1; $('#winOpts').style.pointerEvents = st.dock ? 'none' : '';
+  $('#dockOpts').style.display = st.dock ? 'block' : 'none';
+  $('#winHint').textContent = st.dock
+    ? 'The compact dock is on, so Windows’ bar is hidden and these options have no visible effect right now. They keep their values for when the dock is off.'
+    : 'Windows’ own options, shown here so you don’t have to open Settings. They are the real Windows settings and stay when Verso is closed.';
+  $('#sizeWarn').hidden = st.size === 'medium' && st.pos === 'b';
+  $('#appn').textContent = apps + (apps === 1 ? ' app open' : ' apps open');
+
+  const scr = $('#scr');
+  scr.classList.toggle('labels', st.combine !== 'always' && !st.dock);
+  scr.querySelectorAll('.bar,.dock').forEach(e => e.remove());
+  const bar = document.createElement('div');
+  bar.className = `bar ${st.pos} ${st.align} ${st.size}` + (st.auto && bottom ? ' hid' : '') + ((st.hide || st.dock) ? ' off' : '');
+  bar.innerHTML = '<span class="start"></span>' + (st.search ? '<span class="app"><span class="ic" style="background:#d9d9d9;border-radius:99px;width:calc(var(--is)*2.4)"></span></span>' : '') +
+    (st.taskview ? '<span class="app"><span class="ic" style="background:#a7c7a0"></span></span>' : '') + (st.widgets ? '<span class="app"><span class="ic" style="background:#e8b66a"></span></span>' : '') +
+    icons(Math.max(apps, 0) + 1, 0) + '<span class="tray">12:40</span>';
+  scr.appendChild(bar);
+  const dock = document.createElement('div');
+  const show = st.dock && !st.hide && (apps > 0 || st.dockWhen === 'always');
+  dock.className = `dock ${st.pos}` + (show ? '' : ' gone') + (st.dock ? '' : ' off');
+  dock.innerHTML = (st.dockStart ? '<span class="start"></span><span class="sep"></span>' : '') + icons(apps, 0);
+  dock.style.display = st.dock ? 'flex' : 'none';
+  scr.appendChild(dock);
+  $('#pvnote').textContent = st.hide ? 'Taskbar hidden completely (existing switch).'
+    : st.dock ? (apps === 0 && st.dockWhen === 'apps' ? 'No app open: nothing is shown on screen at all.' : 'Dock shows only the open apps' + (st.peek ? '; pushing to the screen edge peeks the real taskbar.' : '.'))
+    : st.auto && bottom ? 'Auto-hide on: only a thin edge is visible until the pointer touches it.' : 'Windows’ own taskbar.';
+}
+function toast(t){ $('#toastT').textContent = t; $('#toast').classList.add('show'); clearTimeout(timer); timer = setTimeout(() => $('#toast').classList.remove('show'), 9000); }
+const names = {hide:'Taskbar hidden',icons:'Desktop icons hidden',dock:'Compact dock',dockWhen:'Dock visibility',dockStart:'Start in dock',peek:'Edge peek',dockMin:'Minimised apps',pos:'Position',align:'Alignment',size:'Size',auto:'Auto-hide',badges:'Badges',flash:'Flashing',share:'Share window',corner:'Show-desktop corner',combine:'Combine buttons',search:'Search',taskview:'Task view',widgets:'Widgets'};
+function set(k, v){ prev = {...st}; st[k] = v; if (k === 'pos' && v !== 'b') st.auto = false; render(); toast(`${names[k]} — applied`); }
+$$('.switch').forEach(b => b.onclick = () => set(b.dataset.k, !st[b.dataset.k]));
+$$('select').forEach(s => s.onchange = () => set(s.dataset.k, s.value));
+$$('.pos').forEach(p => p.onclick = () => set('pos', p.dataset.v));
+$('#open').onclick = () => { apps = Math.min(5, apps + 1); render(); };
+$('#close').onclick = () => { apps = Math.max(0, apps - 1); render(); };
+$('#undo').onclick = () => { if (prev) { st = prev; prev = null; render(); } $('#toast').classList.remove('show'); };
+$('#reset').onclick = () => { prev = {...st}; st = {...DEF, hide: st.hide, icons: st.icons}; render(); toast('Taskbar reset to Windows defaults'); };
+$('#openWin').onclick = () => toast('Would open ms-settings:taskbar');
+$('#mDef').onclick = () => { st = {...DEF}; apps = 2; render(); };
+$('#mDock').onclick = () => { st = {...DEF, dock: true}; apps = 3; render(); };
+render();
+</script>
+</body>
+</html>

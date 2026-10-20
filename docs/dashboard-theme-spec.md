@@ -73,7 +73,12 @@ the desk.
 
 1. Copy `web/dashboard/themes/_template/`, rename the folder.
 2. Fill in every token above.
-3. Set `name`, `description` and `fonts` in `theme.json`.
+3. Set `name`, `description` and `fonts` in `theme.json`. Each `fonts` entry is a stylesheet:
+   a full `https://` URL, or a path relative to the theme's folder. The bundled, offline
+   set (Fraunces, Work Sans, Space Mono, Bricolage Grotesque, Latin subsets) is
+   `"../../fonts/fonts.css"`; prefer it so the dashboard opens without a network.
+   Optionally add `"swatch": ["#...", "#...", "#...", "#..."]` (up to four colours): they show on the theme's card in
+   Settings > Theme. Without it the card shows the theme's initials.
 4. Add the folder name to `web/dashboard/themes/themes.json` if you want
    to see it when `web/dashboard/index.html` is opened directly in a
    plain browser (no native host to list a directory — same reason

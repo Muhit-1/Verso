@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verso app picker</title>
+<link rel="stylesheet" href="../outpost/fonts/fonts.local.css">
+<style>
+  :root { --accent: #ff9e64; --on: #1a0d08; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; background: #2b2b2b; color: #f4f4f4; font-family: 'Inter', system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; border: 2px solid var(--accent); user-select: none; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  .head { display: flex; align-items: center; gap: 12px; padding: 16px 18px 6px; }
+  .head h2 { font-size: 1.05rem; font-weight: 600; flex: 1; }
+  .head .to { font-size: .78rem; color: #aaa; display: flex; align-items: center; gap: 8px; }
+  select { font: inherit; font-size: .8rem; background: #3a3a3a; color: #fff; border: 1px solid #555; border-radius: 8px; padding: 5px 8px; max-width: 170px; }
+  .search { margin: 8px 18px 4px; display: flex; align-items: center; gap: 10px; background: #1f1f1f; border: 1px solid #444; border-radius: 10px; padding: 0 12px; }
+  .search:focus-within { border-color: var(--accent); }
+  .search svg { width: 16px; height: 16px; fill: none; stroke: #999; stroke-width: 2; stroke-linecap: round; flex: none; }
+  .search input { flex: 1; background: none; border: 0; outline: 0; color: #fff; font: inherit; font-size: .95rem; padding: 11px 0; user-select: text; }
+  .chips { display: flex; gap: 6px; padding: 8px 18px; flex: none; }
+  .chip { padding: 5px 12px; border-radius: 999px; font-size: .74rem; background: #383838; color: #ccc; }
+  .chip.on { background: var(--accent); color: var(--on); font-weight: 600; }
+  .list { flex: 1; overflow: auto; padding: 0 8px 6px; scrollbar-width: thin; scrollbar-color: #555 transparent; }
+  .sec { position: sticky; top: 0; background: #2b2b2b; font-size: .68rem; letter-spacing: .14em; color: var(--accent); padding: 8px 12px 4px; font-weight: 600; z-index: 1; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+  .row:hover, .row.hl { background: #383838; }
+  .aico { width: 34px; height: 34px; border-radius: 9px; font-size: .85rem; flex: none; display: grid; place-items: center; font-weight: 700; color: #fff; overflow: hidden; }
+  .aico img { width: 100%; height: 100%; object-fit: contain; }
+  .row .nm { flex: 1; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .tag { font-size: .66rem; color: #999; letter-spacing: .04em; white-space: nowrap; }
+  .row .ck { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #666; display: grid; place-items: center; flex: none; color: transparent; font-size: .8rem; font-weight: 700; }
+  .row.sel .ck { background: var(--accent); border-color: var(--accent); color: var(--on); }
+  .row.added { opacity: .45; cursor: default; }
+  .row.added .ck { border-style: dashed; }
+  .row.added .tag::after { content: " · already added"; }
+  .none { padding: 36px 18px; text-align: center; color: #999; font-size: .9rem; line-height: 1.8; }
+  .foot { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-top: 1px solid #444; background: #262626; flex: none; }
+  .foot .sp { flex: 1; }
+  .foot .cnt { font-size: .8rem; color: #aaa; }
+  .btn { padding: 9px 16px; border-radius: 999px; font-size: .8rem; font-weight: 600; background: #3a3a3a; }
+  .btn:hover { background: #4a4a4a; }
+  .btn.primary { background: var(--accent); color: var(--on); }
+  .btn.primary[disabled] { opacity: .4; cursor: default; }
+  .btn.link { background: none; color: #cfcfcf; font-weight: 500; text-decoration: underline; padding-left: 2px; }
+</style>
+</head>
+<body>
+  <div class="head"><h2>Add apps</h2><div class="to">to <select id="target"></select></div></div>
+  <div class="search">
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" placeholder="Search your installed apps" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="list" id="list"></div>
+  <div class="foot">
+    <button class="btn link" id="browse">Browse for a file…</button>
+    <span class="sp"></span>
+    <span class="cnt" id="cnt">Nothing selected</span>
+    <button class="btn" id="cancel">Cancel</button>
+    <button class="btn primary" id="add" disabled>Add</button>
+  </div>
+
+<script>
+  // The app picker page. The host (AppPickerWindow) opens it over a box; it lists the apps the host found
+  // (Start menu, Store apps, Desktop shortcuts) and sends back the ones that were ticked.
+  const $ = s => document.querySelector(s);
+  const bridge = () => window.chrome?.webview?.hostObjects?.VersoPicker;
+  const post = msg => window.chrome?.webview?.postMessage(msg);
+  const hue = n => [...n].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+  let apps = [];          // [{target, name, source, added}]
+  let loaded = false;
+  let filter = "All";
+  let hl = 0;
+  let selected = new Set();
+  let boxId = "recent";
+  let session = 0;        // bumps on every open, so a slow answer from the previous open is ignored
+  const icons = new Map();
+
+  const sourceLabel = s => s === "Desktop" ? "Desktop shortcut" : s;
+  const chipLabel = f => f === "Desktop" ? "Desktop shortcuts" : f === "Store app" ? "Store apps" : f;
+
+  function visible() {
+    const q = $("#q").value.trim().toLowerCase();
+    return apps.filter(a => (filter === "All" || a.source === filter) && (!q || a.name.toLowerCase().includes(q)));
+  }
+
+  function draw() {
+    $("#chips").innerHTML = ["All", "Start menu", "Store app", "Desktop"]
+      .map(f => `<button class="chip${f === filter ? " on" : ""}" data-f="${f}">${chipLabel(f)}</button>`).join("");
+
+    const list = visible();
+    hl = Math.min(hl, Math.max(0, list.length - 1));
+    let html = "";
+    let last = "";
+
+    if (!loaded) {
+      html = '<div class="none">Reading your installed apps…</div>';
+    } else if (!list.length) {
+      html = `<div class="none">${apps.length ? `No installed app matches “${esc($("#q").value)}”.` : "No installed apps were found."}<br><button class="btn link" id="browse2">Browse for a file instead…</button></div>`;
+    }
+
+    list.forEach((a, i) => {
+      const letter = (a.name[0] || "#").toUpperCase();
+      if (!$("#q").value && letter !== last) {
+        html += `<div class="sec">${esc(letter)}</div>`;
+        last = letter;
+      }
+      html += `<div class="row${selected.has(a.target) ? " sel" : ""}${a.added ? " added" : ""}${i === hl ? " hl" : ""}" data-i="${i}">
+        <div class="aico" data-t="${esc(a.target)}" style="background:hsl(${hue(a.name)} 45% 42%)">${esc(letter)}</div>
+        <span class="nm">${esc(a.name)}</span><span class="tag">${esc(sourceLabel(a.source))}</span><span class="ck">✓</span></div>`;
+    });
+
+    $("#list").innerHTML = html;
+    $("#list").__rows = list;
+    wireIcons();
+
+    const n = selected.size;
+    $("#cnt").textContent = n ? `${n} selected` : "Nothing selected";
+    $("#add").disabled = !n;
+    $("#add").textContent = n ? `Add ${n} app${n > 1 ? "s" : ""}` : "Add";
+  }
+
+  // icons arrive lazily, only for rows that are actually on screen
+  const watcher = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      watcher.unobserve(e.target);
+      setIcon(e.target);
+    }
+  }, { root: null, rootMargin: "200px" });
+
+  function wireIcons() {
+    document.querySelectorAll(".aico[data-t]").forEach(el => {
+      if (icons.has(el.dataset.t) && icons.get(el.dataset.t)) paint(el, icons.get(el.dataset.t));
+      else watcher.observe(el);
+    });
+  }
+
+  function paint(el, url) {
+    if (!url) return;
+    el.textContent = "";
+    el.style.background = "none";
+    const img = document.createElement("img");
+    img.src = url;
+    img.draggable = false;
+    el.appendChild(img);
+  }
+
+  async function setIcon(el) {
+    const target = el.dataset.t;
+    const mine = session;
+    let url = icons.get(target);
+    if (url === undefined) {
+      try { url = await bridge().GetIcon(target); } catch { url = ""; }
+      icons.set(target, url || "");
+    }
+    if (mine === session && el.isConnected) paint(el, url);
+  }
+
+  function toggle(a) {
+    if (!a || a.added) return;
+    if (!selected.delete(a.target)) selected.add(a.target);
+    draw();
+  }
+
+  async function commit() {
+    if (!selected.size) return;
+    const chosen = apps.filter(a => selected.has(a.target)).map(a => ({ target: a.target, name: a.name }));
+    await bridge().Add(JSON.stringify(chosen), $("#target").value);
+    close();
+  }
+
+  const close = () => bridge()?.Close();
+
+  async function open(id) {
+    const mine = ++session;
+    boxId = id || "recent";
+    apps = [];
+    loaded = false;
+    selected = new Set();
+    filter = "All";
+    hl = 0;
+    $("#q").value = "";
+    draw();
+    $("#q").focus();
+
+    try {
+      const boxes = JSON.parse(await bridge().GetBoxes());
+      $("#target").innerHTML = boxes.map(b => `<option value="${esc(b.id)}"${b.id === boxId ? " selected" : ""}>${esc(b.name)}</option>`).join("");
+    } catch { /* the select stays empty; Add falls back to the first box on the host */ }
+
+    // the host reads the Start menu on its own thread; ask until it has the answer
+    for (let tries = 0; tries < 100 && mine === session; tries++) {
+      let json = "";
+      try { json = await bridge().GetApps(); } catch { /* try again */ }
+      if (json) {
+        apps = JSON.parse(json);
+        loaded = true;
+        draw();
+        return;
+      }
+      await new Promise(r => setTimeout(r, 150));
+    }
+    if (mine === session) { loaded = true; draw(); }
+  }
+
+  $("#list").addEventListener("click", e => {
+    if (e.target.id === "browse2") { bridge().Browse($("#target").value); return; }
+    const row = e.target.closest(".row");
+    if (row) toggle($("#list").__rows?.[+row.dataset.i]);
+  });
+  $("#chips").addEventListener("click", e => {
+    const chip = e.target.closest(".chip");
+    if (chip) { filter = chip.dataset.f; hl = 0; draw(); $("#q").focus(); }
+  });
+  $("#q").addEventListener("input", () => { hl = 0; draw(); });
+  $("#add").addEventListener("click", commit);
+  $("#cancel").addEventListener("click", close);
+  $("#browse").addEventListener("click", () => bridge().Browse($("#target").value));
+
+  addEventListener("keydown", e => {
+    const list = visible();
+    if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); hl = Math.min(list.length - 1, hl + 1); draw(); document.querySelector(".row.hl")?.scrollIntoView({ block: "nearest" }); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); hl = Math.max(0, hl - 1); draw(); document.querySelector(".row.hl")?.scrollIntoView({ block: "nearest" }); }
+    else if (e.key === " " && document.activeElement !== $("#q")) { e.preventDefault(); toggle(list[hl]); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (!selected.size && list[hl] && !list[hl].added) selected.add(list[hl].target);
+      commit();
+    }
+  });
+
+  window.chrome?.webview?.addEventListener("message", e => { if (e.data?.type === "init") open(e.data.boxId); });
+  post({ type: "ready" });
+</script>
+</body>
+</html>

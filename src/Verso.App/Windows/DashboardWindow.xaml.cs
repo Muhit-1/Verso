@@ -40,8 +40,8 @@ namespace Verso.App.Windows;
 /// </remarks>
 public sealed partial class DashboardWindow : Window
 {
-    private const string VirtualHost = "verso.local";
-    private const string UserDashboardThemesVirtualHost = "verso.user-dashboard-themes.local";
+    private const string VirtualHost = "verso.example";
+    private const string UserDashboardThemesVirtualHost = "verso.user-dashboard-themes.example";
 
     private readonly DashboardBridge _bridge;
     private Rect? _restoreBounds;
@@ -62,11 +62,14 @@ public sealed partial class DashboardWindow : Window
 
     private async Task InitializeWebViewAsync()
     {
+        Hosting.StartupLog.Mark("dashboard: creating WebView2 environment");
         var environment = await CoreWebView2Environment.CreateAsync(
             browserExecutableFolder: null,
             userDataFolder: VersoPaths.WebViewUserData);
+        Hosting.StartupLog.Mark("dashboard: environment ready; ensuring WebView2");
 
         await Browser.EnsureCoreWebView2Async(environment);
+        Hosting.StartupLog.Mark("dashboard: WebView2 ready");
 
         var core = Browser.CoreWebView2;
 
@@ -104,6 +107,7 @@ public sealed partial class DashboardWindow : Window
 
         core.WebMessageReceived += OnWebMessage;
 
+        core.NavigationCompleted += (_, _) => Hosting.StartupLog.Mark("dashboard: page navigation completed");
         core.Navigate($"https://{VirtualHost}/dashboard/index.html");
     }
 

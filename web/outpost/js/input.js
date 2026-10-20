@@ -12,7 +12,7 @@
       with the position in physical pixels and the raw delta (120 per notch, positive = away).
 ================================================================== */
 
-const HOVERABLE = "button, .chip, .btn, .rbtn, .mi, .tile, .dot";
+const HOVERABLE = "button, .chip, .btn, .rbtn, .mi, .tile, .swatch";
 
 let hovered = null;
 let pending = null;
@@ -48,6 +48,7 @@ export function start() {
     /** The pointer left the bare desktop. */
     leave() {
       setHover(null);
+      window.__verso.emit?.("pointerLeft");
     },
 
     /** A wheel notch at physical (x, y). Gives the page the event, and scrolls if nobody objects. */

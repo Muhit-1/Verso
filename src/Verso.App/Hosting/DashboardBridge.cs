@@ -143,6 +143,38 @@ public sealed class DashboardBridge
 
     public void SetDesktopIconsHidden(bool hide) => _actions.SetDesktopIconsHidden(hide);
 
+    // ---- compact dock ---------------------------------------------------------
+
+    public string GetDock() => JsonSerializer.Serialize(_actions.GetDock());
+
+    /// <summary>name = enabled | showStart | peek | showMinimised ("1"/"0") or when ("apps"/"always"). Returns the new settings.</summary>
+    public string SetDock(string name, string value) => JsonSerializer.Serialize(_actions.SetDock(name, value));
+
+    // ---- Windows taskbar options ----------------------------------------------
+
+    public string GetTaskbar() => JsonSerializer.Serialize(_actions.GetTaskbar());
+
+    /// <summary>Sets one option ("position", "align", "size", "auto", ...) and returns the resulting state.</summary>
+    public string SetTaskbar(string name, int value) => JsonSerializer.Serialize(_actions.SetTaskbar(name, value));
+
+    /// <summary>Puts every option back to how it was before Verso first changed one.</summary>
+    public string RestoreTaskbar() => JsonSerializer.Serialize(_actions.RestoreTaskbar());
+
+    /// <summary>Opens Windows' own taskbar page (for the options Windows does not let other programs change).</summary>
+    public void OpenWindowsTaskbarSettings()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:taskbar") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            StartupLog.Mark("open ms-settings:taskbar failed: " + ex.Message);
+        }
+    }
+
+    public bool HasTaskbarBackup() => _settings.Current.TaskbarOriginal is not null;
+
     // ---- launcher -------------------------------------------------------------
 
     public string GetLauncherEntries()
@@ -168,6 +200,9 @@ public sealed class DashboardBridge
 
     /// <summary>Opens the file picker; new apps land in the given box ("recent" if empty).</summary>
     public void AddApp(string boxId) => _actions.Library.PickAndAdd(boxId, _owner);
+
+    /// <summary>Opens the installed-apps picker (centred on screen) for a box.</summary>
+    public void OpenAppPicker(string boxId) => _actions.Library.RequestPicker(string.IsNullOrWhiteSpace(boxId) ? "recent" : boxId, null);
 
     public void RemoveApp(string id) => _actions.Library.RemoveApp(id);
 

@@ -405,7 +405,7 @@ themes were unreachable in the native app. `ThemeCatalog` found them and
 `theme.js` built a URL for them, but no virtual host ever mapped
 `%APPDATA%\Verso\themes` (or wherever that's been redirected to), so the
 CSS file 404'd. Same fix serves both: `DeskWindow` now maps two narrow
-virtual hosts, `verso.user-themes.local` and `verso.user-widgets.local` —
+virtual hosts, `verso.user-themes.example` and `verso.user-widgets.example` —
 narrow rather than one covering the whole data root, so `settings.json`
 and `tasks.json` are not fetchable by a page that has no business reading
 them.

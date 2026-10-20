@@ -8,7 +8,13 @@
   "stylesheet": "theme.css",
   "preview": null,
   "fonts": [
-    "https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500&family=Work+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap"
+    "../../fonts/fonts.css"
   ],
-  "minShellVersion": "0.1.0"
+  "minShellVersion": "0.1.0",
+  "swatch": [
+    "#F1E9D8",
+    "#FFFDF7",
+    "#B85C38",
+    "#6E7B4F"
+  ]
 }

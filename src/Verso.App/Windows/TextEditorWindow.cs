@@ -34,7 +34,7 @@ namespace Verso.App.Windows;
 /// </remarks>
 internal sealed class TextEditorWindow : Window
 {
-    private const string VirtualHost = "verso.local";
+    private const string VirtualHost = "verso.example";
     private const int MinWidth_ = 240;
     private const int MinHeight_ = 150;
     private const int Parked = -32000;
@@ -57,6 +57,9 @@ internal sealed class TextEditorWindow : Window
     private bool _pageReady;
     private bool _ending;
     private (EditRequest, Action<string>, Action<string>, Action)? _pending;
+
+    /// <summary>The shared WebView2 environment (see <see cref="WarmUp"/>); the app picker uses it too.</summary>
+    internal static Task<CoreWebView2Environment>? SharedEnvironment => _environment;
 
     /// <summary>Creates the shared WebView2 environment ahead of time so the first editor opens quickly.</summary>
     public static void WarmUp() => _environment ??= CoreWebView2Environment.CreateAsync(null, VersoPaths.WebViewUserData);

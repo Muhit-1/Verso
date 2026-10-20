@@ -2,64 +2,71 @@
 
 **A live wallpaper that's also a widget desk.**
 
-Your desktop background plays video, an image, or an interactive page. On
-top of it sit small panels for the things you glance at all day: the time,
-your task list, what's playing.
+Your desktop background plays a video, a GIF, an image or an interactive page,
+*behind* your icons and taskbar. On top of it sit small glass widgets for the
+things you glance at all day: the clock, what's playing, a focus timer, sticky
+notes, boxes of your favourite apps.
 
-Widgets are ordinary web pages, so anyone can write one — including you, in
-an afternoon.
+Everything on the desk is web technology (WebView2), so the look is easy to
+change and the widgets are easy to write.
 
 > *A verso is the left-hand page of an open leaf — one side of a
 > composition, which is exactly what a widget is.*
 
-Windows only, for now. The whole point of the architecture is that reaching
-macOS or Linux means rewriting one project.
+Windows only, for now. The architecture keeps every Windows-specific thing in
+two projects, so reaching macOS or Linux means rewriting those two.
 
 ---
 
 ## Status
 
-**Phases 0-2 done.** Verso runs on your desktop, and you can tick a task off
-it. Verified on Windows 11 build 26200.
+Built and used on **one machine**: Windows 11 build 26300, one 1080p monitor.
+The honest list of what has and has not been tried is kept in the project
+notes; the short version is below.
 
 | | |
 |---|---|
-| Web layer — shell, three themes, host bridge | working |
-| Theme system | working |
-| On the desktop, below every window | working |
-| Desktop icons stay visible and clickable | working |
-| Click and type into widgets | working |
-| Tasks, persisted to `%APPDATA%/Verso/tasks.json` | working |
-| Pause on fullscreen / lock / battery | working |
-| Now playing (SMTC) | **Phase 3, next** |
-| Video wallpaper (libmpv) | **deferred** — see below |
-| Multi-monitor, settings window, installer | Phases 4-5 |
+| Live wallpaper behind icons and taskbar (video, GIF, image, HTML) | working |
+| Pauses itself for full-screen apps, maximised windows, lock, battery | working |
+| Survives Explorer restarts and resolution changes | working |
+| Outpost desk: clock, now playing (Windows media session), Pomodoro, stopwatch, fireflies | working |
+| Sticky notes, typed in a small pop-up editor window | working |
+| App launcher boxes, installed-apps picker, drag a desktop icon onto a box | working |
+| Dashboard: Wallpaper, Widgets, Apps, Settings (Desktop, Theme) | working |
+| Windows taskbar options (position, alignment, size, auto-hide, ...) from the dashboard | working |
+| Compact dock: a small floating dock with only the apps that are open | working, new |
+| The original ("classic") desk with the theme and widget folders | working, kept |
+| Second monitor, DPI other than 100%, sleep/wake | **not tried yet** |
+| Installer | not started |
 
-**One thing did not survive contact with Windows.** The WorkerW technique
-that every live-wallpaper app relies on is dead on this build — Explorer no
-longer splits the desktop, and a window parented into the `WorkerW` reports
-success at every step while drawing nothing. Verso instead runs as a
-bottom-most window reshaped to exactly the panels it draws, which is why your
-icons and wallpaper are still there. Measurements, dead ends and how to
+**How it gets behind the icons.** The old WorkerW trick does not work on
+current Windows 11. Verso parents a layered window into `Progman`, directly
+behind the icon layer, after asking Explorer to create the extra `WorkerW`
+(`0x052C`). Mouse input is mirrored into the page with Raw Input, because the
+icon layer sits in front of the wallpaper. Measurements, dead ends and how to
 re-test after a Windows update: [docs/desktop-layer.md](docs/desktop-layer.md).
 
 ---
 
 ## Try it
 
-**The desk itself:**
-
 ```bash
 dotnet run --project src/Verso.App
 ```
 
-A tray icon appears and the desk lands on your desktop: the minute track
-across the top, the clock, and the task and player panels on the right.
-Click the task field, type, press Enter. Everywhere the panels are not, your
-desktop works exactly as before — icons, drag-select, right-click menu.
+A tray icon appears, the desk lands on your desktop and the dashboard opens.
+Pick a wallpaper in **Wallpaper**, switch widgets on in **Widgets**, add apps
+in **Apps**.
 
-Tray menu: hide/show the desk, reload (after editing a theme), open the data
-and themes folders, exit.
+On the desk, the round **!** button opens a small menu: arrange (move and
+resize widgets), switch palette, switch widgets on and off, new sticky note,
+new app box, hide the taskbar or desktop icons, open the dashboard.
+
+For daily use, build Release (starts noticeably faster than Debug):
+
+```bash
+dotnet publish src/Verso.App -c Release -r win-x64 --self-contained false -p:PublishReadyToRun=true -o artifacts/publish/Verso
+```
 
 **The web layer alone**, in a plain browser — no .NET needed:
 
@@ -67,18 +74,16 @@ and themes folders, exit.
 node tools/serve.mjs
 ```
 
-Then open <http://localhost:5173/shell/index.html>. Press <kbd>T</kbd> to
-cycle themes. It runs on demo data, which is the point: the entire desk can
-be built without the host existing.
+Then open <http://localhost:5173/shell/index.html> (classic desk) or
+`/dashboard/index.html`. They run on demo data, which is the point: the web
+side can be built without the host existing.
 
-**The Phase 0 spike** — re-run this after any Windows feature update:
+**Spikes** — re-run after a Windows feature update:
 
 ```bash
 dotnet run --project tools/Verso.Spike.WorkerW
+dotnet run --project tools/Verso.Spike.Layers -- --web --out spike-out
 ```
-
-It prints which of Explorer's desktop layouts your machine has and whether
-the icons ended up in front. <kbd>Esc</kbd> quits.
 
 ---
 
@@ -91,10 +96,33 @@ the icons ended up in front. <kbd>Esc</kbd> quits.
 | Node | only for the dev server and the icon generator |
 | Git | |
 
-Visual Studio is optional — `dotnet build` does everything. You'd want it
-for the WPF designer and native debugging.
-
 Everything else comes from NuGet on first build.
+
+---
+
+## The dashboard
+
+| Page | What it does |
+|---|---|
+| **Wallpaper** | Choose or clear the video, GIF, image or interactive page. |
+| **Widgets** | One card and one switch per widget. Switching one never touches another. |
+| **Apps** | Your app library, grouped into boxes. New apps land in *Recent*; move them into your own boxes. The same boxes appear on the desk. |
+| **Settings > Desktop** | Hide taskbar / desktop icons; the **Compact dock**; Windows' own taskbar options (position, alignment, size, auto-hide, badges, combine buttons, Search, Task view) with Undo and "Restore how it was before Verso". |
+| **Settings > Theme** | The desk's colour palettes and the dashboard's own look. |
+
+The dashboard works offline: its fonts are bundled (`web/dashboard/fonts/`).
+
+### The compact dock
+
+Windows' full-width taskbar is hidden and a small pill shows **only the apps
+that are open right now**, as wide as their icons. It appears with the first
+open app and disappears after the last. Click an icon to bring the app
+forward, click the front app to minimise it, click again to restore. Hold the
+pointer against the screen edge to slide the real taskbar in for a moment
+(clock, tray, notifications). It hides itself for full-screen apps.
+
+What it does not have: badges, flashing, jump lists, pinned-but-closed apps.
+Turn it off in Settings > Desktop to get the Windows taskbar back.
 
 ---
 
@@ -105,93 +133,89 @@ verso/
 ├── src/
 │   ├── Verso.Core/        contracts and plain data — no Win32, no WPF
 │   ├── Verso.Interop/     every Win32 call, generated by CsWin32
-│   │                        DesktopSurface  our own HWND (WPF won't be layered)
-│   │                        SurfaceRegion   reshapes it to the panels only
-│   │                        DesktopLayer    WorkerW, where it still works
-│   └── Verso.App/         tray app, desk windows, power rules, the bridge
+│   │                        ProgmanSurface / ProgmanLayer  the wallpaper window behind the icons
+│   │                        InputMirror     Raw Input -> the page, without a hook
+│   │                        DesktopChrome   hide the taskbar / desktop icons
+│   │                        TaskbarSettings Windows taskbar options (registry + shell API)
+│   └── Verso.App/         tray app, desk windows, dashboard window, the bridges
+│       ├── Hosting/         ScriptBridge, DashboardBridge, LauncherLibrary, NotesLibrary,
+│       │                    InstalledApps, ShellIcons, PickerBridge
+│       ├── Windows/         DeskWindow, DashboardWindow, TextEditorWindow, AppPickerWindow
+│       └── Dock/            the compact dock
 ├── tools/
-│   ├── Verso.Spike.WorkerW/   Phase 0: the gate
+│   ├── Verso.Spike.WorkerW/   Phase 0: the desktop-layer experiment
+│   ├── Verso.Spike.Layers/    pixel-measuring spike for the wallpaper window
 │   └── serve.mjs              static server for the web layer
 ├── web/
-│   ├── shell/             the desk: ground, composition, complications
-│   ├── themes/            one folder per theme — see below
-│   └── widgets/           one folder per widget
-├── docs/
-│   ├── plan.md            the build plan and its phases
-│   ├── desktop-layer.md   how Verso gets onto the desktop, and what failed
-│   ├── theme-spec.md      the token contract
-│   ├── widget-spec.md     the widget manifest
-│   └── host-api.md        the bridge between the two worlds
-├── design/                the original single-file design, kept for reference
+│   ├── outpost/           the desk: framework, layout engine, widgets, round menu
+│   ├── dashboard/         the dashboard, its themes and bundled fonts
+│   ├── editor/            the pop-up text editor for notes and names
+│   ├── picker/            the installed-apps picker
+│   ├── shell/ themes/ widgets/   the classic desk, its themes and widgets
+│   └── live wallpaper/    a sample interactive wallpaper
+├── docs/                  plan, desktop layer, host API, theme and widget specs
+├── design/                the mockups each feature was approved from
 └── assets/                app icon, and the script that generates it
 ```
 
-**`Verso.App` is the only project that would need rewriting to reach macOS
-or Linux.** Keeping platform knowledge inside it and `Verso.Interop`, and
-contracts inside `Verso.Core`, is what makes that true.
+**`Verso.App` and `Verso.Interop` are the only projects that would need
+rewriting to reach macOS or Linux.**
 
----
-
-## Themes
-
-A theme is a folder with two files, and it contains **no markup, no layout
-and no widget names** — only tokens.
-
-```
-web/themes/my-theme/
-  theme.json    what it is called and what fonts it needs
-  theme.css     one :root block of tokens
-```
-
-To add one: copy `web/themes/_template/`, rename it, fill in the tokens.
-Nothing outside that folder needs to change. Themes also load from
-`%APPDATA%\Verso\themes\`, so a theme can be installed without touching the
-app.
-
-Three ship, and the second two exist to prove the contract holds:
-
-| | | |
-|---|---|---|
-| **Smoked Petrol** | dark | The reference. Petrol ground, gilt indices, pale luminova green for what is live. |
-| **Paper Recto** | light | Warm paper and ink. A light theme is where a design that leaned on glows falls apart. |
-| **Carbon Signal** | dark | Near-black, steel, signal orange. Hard corners and a mono-forward stack — tokens carry geometry and type, not just colour. |
-
-Full reference: [docs/theme-spec.md](docs/theme-spec.md).
+User data lives in `%APPDATA%\Verso\`: `settings.json`, `outpost.json`
+(widget positions), `outpost-notes.json`, `shortcuts\` (Verso's own copies of
+shortcuts you moved into a box), and the folders `themes\`, `widgets\` and
+`dashboard-themes\` for installing your own without touching the app.
 
 ---
 
 ## Widgets
 
-A widget is a folder with an `index.html` and a `widget.json`. Copy
-`web/widgets/_template/` to start one.
+The Outpost desk is built on one rule: **every widget is independent.** A
+widget is a self-contained module (`web/outpost/js/widgets/*.js`) with its own
+element, its own saved state, its own position and its own on/off switch. It
+never reads or writes another widget. The framework starts and stops each one
+inside its own try/catch, so one failing cannot stop the others. See
+`web/outpost/js/framework.js`.
 
-Four rules, and they are not negotiable:
+| Widget | |
+|---|---|
+| Clock | Big clock and date; click AM/PM to switch 12/24 hour. |
+| Now playing | What Windows is playing, with play/pause/skip. |
+| Pomodoro, Stopwatch | Separate cards; they sit side by side by default. |
+| Sticky notes | As many as you like, six colours, resizable, typed in a real pop-up window. |
+| App launcher | See-through boxes of apps; drag a tile between boxes, or out onto the desktop. |
+| Fireflies | Ambience, with its own switch. |
 
-1. Reach the machine **only** through `window.VersoHost`.
-2. Never set a colour, a font or a radius of your own — use the theme tokens.
-3. Don't draw your own panel; the shell draws it around you.
-4. Repaint only when something changed, and declare your rate in `tickMs`.
+**Desktop shortcuts move, they are not copied.** Dropping a desktop icon on a
+box moves the shortcut into Verso's own folder (the icon leaves the desktop);
+dragging a tile out onto the bare desktop puts it back. Both have an Undo.
 
-`index.html` must work when opened directly in a browser. A widget that
-needs the host in order to render is a widget nobody else can develop.
+The **classic desk** (`web/shell`, `web/themes`, `web/widgets`) keeps the
+original theme and widget-folder contract; see
+[docs/theme-spec.md](docs/theme-spec.md) and
+[docs/widget-spec.md](docs/widget-spec.md).
 
-The manifest format is settled; the **loader** that renders these folders
-into the desk lands in Phase 5. Until then the three built-in complications
-are drawn by the shell itself. Widgets written now won't need rewriting.
+---
 
-Full reference: [docs/widget-spec.md](docs/widget-spec.md).
+## Things worth knowing
+
+- **Never serve the web layer from a `.local` host name.** Windows treats it as
+  multicast DNS and every page load waited about two seconds. The virtual
+  hosts use the reserved `.example` suffix (`verso.example`, ...).
+- Web files are copied into the build output, so web edits need a rebuild.
+- `VERSO_TRACE=1` writes a startup timeline to `%APPDATA%\Verso\trace.log`.
+- For tests, start Verso with
+  `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` and drive
+  the pages through the DevTools protocol. Do not ship with that set.
+- A maximised window in front pauses the desk (and its page load) on purpose.
 
 ---
 
 ## The one thing to hold onto
 
-Keep the boundary between host and widgets absolutely clean. It's how this
-eventually reaches Mac and Linux by rewriting only the host, and it's the
-only version of this that has a business in it — because it's the only
-version where other people can write widgets for you.
-
-The wallpaper is what gets people to install it. The widget system is what
-makes it worth money.
+Keep the boundary between host and web layer absolutely clean. It's how this
+eventually reaches Mac and Linux by rewriting only the host, and it's what lets
+other people write widgets and themes.
 
 ---
 

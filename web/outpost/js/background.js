@@ -2,7 +2,7 @@
    VERSO — Outpost background
 
    The user's wallpaper, drawn by this page (it replaces the layer behind it, so it has to). The host
-   maps the picked file's folder to https://verso.bg.local/ and hands back the URL; kind "none" shows
+   maps the picked file's folder to https://verso.bg.example/ and hands back the URL; kind "none" shows
    the palette's own gradient (--stage), so a fresh install still looks right.
 ================================================================== */
 

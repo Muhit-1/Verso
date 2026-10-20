@@ -76,16 +76,23 @@ async function render() {
   try { widgets = await host.getOutpostWidgets(); } catch { /* the menu still works without the list */ }
   let palettes = [];
   try { palettes = await host.getOutpostThemes(); } catch { /* the dots are optional */ }
+  let cleanup = { hideTaskbar: false, hideDesktopIcons: false };
+  try { cleanup = await host.getDesktopCleanup(); } catch { /* the switches show "off" */ }
   const theme = document.body.dataset.theme;
+  const themeName = palettes.find(p => p.id === theme)?.name ?? "";
   const hidden = document.body.classList.contains("hide-ui");
 
   menu.innerHTML = `
     <button class="mi" data-a="arrange">${ICON.move}<span>Arrange (move / resize)</span></button>
     <div class="sep1"></div>
-    <h4>Theme</h4>
-    <div class="dots">${palettes.map(p => `<i class="dot${p.id === theme ? " on" : ""}" data-t="${p.id}" title="${p.name}" style="background:linear-gradient(90deg,${p.from},${p.to})"></i>`).join("")}</div>
+    <h4>Theme <span class="tname">${themeName}</span></h4>
+    <div class="swatches">${palettes.map(p => `<button class="swatch${p.id === theme ? " on" : ""}" data-t="${p.id}" data-name="${p.name}" title="${p.name}" style="background:linear-gradient(135deg,${p.from},${p.to})"></button>`).join("")}</div>
     <div class="sep1"></div>
-    <h4>Widgets — each is independent</h4>
+    <h4>Desktop</h4>
+    <button class="mi" data-d="taskbar"><span>Hide taskbar</span><span class="r"><i class="sw${cleanup.hideTaskbar ? " on" : ""}"></i></span></button>
+    <button class="mi" data-d="icons"><span>Hide desktop icons</span><span class="r"><i class="sw${cleanup.hideDesktopIcons ? " on" : ""}"></i></span></button>
+    <div class="sep1"></div>
+    <h4>Widgets</h4>
     ${widgets.map(w => `<button class="mi" data-w="${w.id}"><span>${w.name}</span><span class="r"><i class="sw${w.enabled ? " on" : ""}"></i></span></button>`).join("")}
     <div class="sep1"></div>
     <button class="mi" data-a="newnote">${ICON.plus}<span>New sticky note</span></button>
@@ -97,6 +104,16 @@ async function render() {
     Core.applyPalette(dot.dataset.t);
     host.setOutpostTheme(dot.dataset.t);
     menu.querySelectorAll("[data-t]").forEach(d => d.classList.toggle("on", d === dot));
+    const label = menu.querySelector(".tname");
+    if (label) label.textContent = dot.dataset.name;
+  }));
+
+  menu.querySelectorAll("[data-d]").forEach(row => row.addEventListener("click", () => {
+    const sw = row.querySelector(".sw");
+    const on = !sw.classList.contains("on");
+    sw.classList.toggle("on", on);
+    if (row.dataset.d === "taskbar") host.setTaskbarHidden(on);
+    else host.setDesktopIconsHidden(on);
   }));
 
   menu.querySelectorAll("[data-w]").forEach(row => row.addEventListener("click", async () => {

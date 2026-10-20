@@ -37,8 +37,13 @@ public sealed class ThemeManifest
     [JsonPropertyName("preview")]
     public string? Preview { get; set; }
 
+    /// <summary>Up to four colours shown on the theme's card in the dashboard (dashboard themes only).</summary>
+    [JsonPropertyName("swatch")]
+    public string[] Swatch { get; set; } = [];
+
     /// <summary>
-    /// Stylesheet URLs to inject before the theme (Google Fonts, typically).
+    /// Stylesheet URLs to inject before the theme: full https URLs, or paths relative to the theme's folder
+    /// (dashboard themes: "../../fonts/fonts.css" is the bundled offline set).
     /// Empty for offline-only themes; every theme must still declare local
     /// fallbacks in its font stacks.
     /// </summary>

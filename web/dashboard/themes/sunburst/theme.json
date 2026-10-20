@@ -8,7 +8,13 @@
   "stylesheet": "theme.css",
   "preview": null,
   "fonts": [
-    "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Work+Sans:wght@400;500;600;700&display=swap"
+    "../../fonts/fonts.css"
   ],
-  "minShellVersion": "0.1.0"
+  "minShellVersion": "0.1.0",
+  "swatch": [
+    "#FFFBF2",
+    "#E8A93A",
+    "#D9622B",
+    "#1F6F6B"
+  ]
 }
