@@ -32,6 +32,8 @@ namespace Verso.App.Power;
 internal sealed class PowerGate : IPowerGate
 {
     private readonly DispatcherTimer _poll;
+    private readonly Dispatcher _ui = Dispatcher.CurrentDispatcher;
+    private bool _disposed;
     private PowerSettings _settings;
     private PauseReason _current;
 
@@ -51,6 +53,9 @@ internal sealed class PowerGate : IPowerGate
     public PauseReason Current => _current;
 
     public event EventHandler<PauseReason>? Changed;
+
+    /// <summary>The PC woke from sleep or hibernation. Raised on the UI thread.</summary>
+    public event Action? Resumed;
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -78,19 +83,51 @@ internal sealed class PowerGate : IPowerGate
     private bool _userPaused;
     private bool _sessionLocked;
 
+    // SystemEvents raises its events from its own thread. Evaluate() ends in window and WebView2 calls, which
+    // belong to the UI thread, so both handlers hop over before touching anything.
     private void OnSessionSwitch(object sender, SessionSwitchEventArgs e)
     {
-        _sessionLocked = e.Reason switch
+        bool? locked = e.Reason switch
         {
             SessionSwitchReason.SessionLock or SessionSwitchReason.SessionLogoff => true,
             SessionSwitchReason.SessionUnlock or SessionSwitchReason.SessionLogon => false,
-            _ => _sessionLocked
+            _ => null
         };
 
-        Evaluate();
+        _ui.InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            if (locked is { } value)
+            {
+                _sessionLocked = value;
+            }
+
+            Evaluate();
+        });
     }
 
-    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e) => Evaluate();
+    private void OnPowerModeChanged(object sender, PowerModeChangedEventArgs e)
+    {
+        var resumed = e.Mode == PowerModes.Resume;
+
+        _ui.InvokeAsync(() =>
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            Evaluate();
+            if (resumed)
+            {
+                Resumed?.Invoke();
+            }
+        });
+    }
 
     private void Evaluate()
     {
@@ -146,6 +183,7 @@ internal sealed class PowerGate : IPowerGate
 
     public void Dispose()
     {
+        _disposed = true;
         _poll.Stop();
         SystemEvents.SessionSwitch -= OnSessionSwitch;
         SystemEvents.PowerModeChanged -= OnPowerModeChanged;
