@@ -37,7 +37,8 @@ notes; the short version is below.
 | Compact dock: a small floating dock with only the apps that are open | working, new |
 | The original ("classic") desk with the theme and widget folders | working, kept |
 | Second monitor, DPI other than 100%, sleep/wake | **not tried yet** |
-| Installer | not started |
+| Installer (per-user, self-contained) | written, **not yet run on Windows** |
+| Tests and CI | storage, sanitising, launch/navigation rules, web manifests and CSP; CI on every push |
 
 **How it gets behind the icons.** The old WorkerW trick does not work on
 current Windows 11. Verso parents a layered window into `Progman`, directly
@@ -77,6 +78,17 @@ node tools/serve.mjs
 Then open <http://localhost:5173/shell/index.html> (classic desk) or
 `/dashboard/index.html`. They run on demo data, which is the point: the web
 side can be built without the host existing.
+
+**Tests**
+
+```bash
+npm test                                  # web layer: manifests, links, CSP — Node only
+dotnet test tests/Verso.App.Tests         # host logic — needs Windows
+```
+
+CI runs both ([.github/workflows/ci.yml](.github/workflows/ci.yml)). Building the installer and shipping a release:
+[docs/releasing.md](docs/releasing.md). How untrusted wallpapers and widgets are kept away from the host:
+[docs/security.md](docs/security.md).
 
 **Spikes** — re-run after a Windows feature update:
 
@@ -142,7 +154,12 @@ verso/
 │       │                    InstalledApps, ShellIcons, PickerBridge
 │       ├── Windows/         DeskWindow, DashboardWindow, TextEditorWindow, AppPickerWindow
 │       └── Dock/            the compact dock
+├── tests/
+│   ├── Verso.App.Tests/   xunit: storage, sanitising, launch and navigation rules
+│   └── web/               node --test: manifests, links, Content-Security-Policy
+├── installer/             Inno Setup script and build.ps1
 ├── tools/
+│   ├── probe-wallpaper/   a wallpaper that reports whether it can reach the host
 │   ├── Verso.Spike.WorkerW/   Phase 0: the desktop-layer experiment
 │   ├── Verso.Spike.Layers/    pixel-measuring spike for the wallpaper window
 │   └── serve.mjs              static server for the web layer
@@ -203,6 +220,8 @@ original theme and widget-folder contract; see
   multicast DNS and every page load waited about two seconds. The virtual
   hosts use the reserved `.example` suffix (`verso.example`, ...).
 - Web files are copied into the build output, so web edits need a rebuild.
+- The application log is `%APPDATA%\Verso\logs\verso-YYYYMMDD.log` (tray: *Open logs folder*). If a settings or
+  notes file is damaged, it is renamed `*.corrupt` and the last good copy `*.bak` is used.
 - `VERSO_TRACE=1` writes a startup timeline to `%APPDATA%\Verso\trace.log`.
 - For tests, start Verso with
   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` and drive

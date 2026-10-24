@@ -280,6 +280,8 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
 
         ApplyBackgroundMapping();
 
+        Hosting.WebViewGuard.Apply(core, "desk");
+
         // The entire host integration, in one line.
         core.AddHostObjectToScript("VersoHost", _bridge);
 

@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using H.NotifyIcon;
+using Microsoft.Web.WebView2.Core;
 using Verso.App.Hosting;
 using Verso.App.Media;
 using Verso.App.Storage;
@@ -32,6 +33,7 @@ public partial class App : Application
     private MenuItem? _styleItem;
     private MenuItem? _taskbarItem;
     private MenuItem? _iconsItem;
+    private MenuItem? _autostartItem;
     private LauncherLibrary? _library;
     private NotesLibrary? _notes;
     private TextEditorWindow? _editor;
@@ -51,9 +53,31 @@ public partial class App : Application
     /// </summary>
     private bool _isPrimaryInstance;
 
+    /// <summary>Evergreen WebView2 runtime bootstrapper (Microsoft's own stable short link).</summary>
+    private const string WebView2DownloadUrl = "https://go.microsoft.com/fwlink/p/?LinkId=2124703";
+
+    /// <summary>
+    /// Command line: <c>--restore-desktop</c> puts the taskbar and desktop icons back and exits. The uninstaller runs it
+    /// after stopping Verso, because a process that is killed cannot undo what it hid.
+    /// </summary>
+    private const string RestoreDesktopArgument = "--restore-desktop";
+
+    private int _dispatcherFaults;
+    private DateTime _faultWindowStart = DateTime.MinValue;
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (e.Args.Contains(RestoreDesktopArgument, StringComparer.OrdinalIgnoreCase))
+        {
+            DesktopChrome.SetTaskbarVisible(true);
+            DesktopChrome.SetDesktopIconsVisible(true);
+            Shutdown();
+            return;
+        }
+
+        RegisterCrashHandlers();
 
         // One desk per machine. A second copy would fight the first for the
         // bottom of the Z-order and you would get flicker rather than an error.
@@ -64,8 +88,15 @@ public partial class App : Application
             return;
         }
 
+        if (!EnsureWebView2Runtime())
+        {
+            Shutdown();
+            return;
+        }
+
         _isPrimaryInstance = true;
 
+        Log.Info($"Verso {typeof(App).Assembly.GetName().Version} starting (data: {VersoPaths.DataRoot})");
         StartupLog.Mark("OnStartup begins (process is up)");
         VersoPaths.EnsureCreated();
 
@@ -125,6 +156,97 @@ public partial class App : Application
         OpenSettingsWindow();
     }
 
+    /// <summary>
+    /// Without the WebView2 runtime nothing on the desk can draw. Say so, once, with the way to fix it — rather than
+    /// failing later inside a window nobody can see.
+    /// </summary>
+    private static bool EnsureWebView2Runtime()
+    {
+        try
+        {
+            if (!string.IsNullOrEmpty(CoreWebView2Environment.GetAvailableBrowserVersionString()))
+            {
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error("WebView2 runtime check failed", ex);
+        }
+
+        Log.Error("WebView2 runtime is not installed");
+        var answer = MessageBox.Show(
+            "Verso needs the Microsoft Edge WebView2 Runtime, which is not installed on this PC.\n\nOpen the download page now?",
+            "Verso",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (answer == MessageBoxResult.Yes)
+        {
+            Process.Start(new ProcessStartInfo(WebView2DownloadUrl) { UseShellExecute = true });
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// A wallpaper app that dies must not leave the user without a taskbar. Every unhandled error is logged; an
+    /// error on the UI thread is survived (one widget misbehaving is not worth the desk), unless they come in a flood.
+    /// </summary>
+    private void RegisterCrashHandlers()
+    {
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Log.Error("unhandled error on the UI thread", args.Exception);
+
+            var now = DateTime.UtcNow;
+            if (now - _faultWindowStart > TimeSpan.FromSeconds(10))
+            {
+                _faultWindowStart = now;
+                _dispatcherFaults = 0;
+            }
+
+            if (++_dispatcherFaults > 10)
+            {
+                Log.Error("too many UI errors in a row; shutting down");
+                RestoreDesktopChrome();
+                Shutdown(1);
+            }
+
+            args.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            Log.Error("fatal unhandled error", args.ExceptionObject as Exception);
+            RestoreDesktopChrome();
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log.Error("unobserved task error", args.Exception);
+            args.SetObserved();
+        };
+    }
+
+    private void RestoreDesktopChrome()
+    {
+        if (!_isPrimaryInstance)
+        {
+            return;
+        }
+
+        try
+        {
+            DesktopChrome.SetTaskbarVisible(true);
+            DesktopChrome.SetDesktopIconsVisible(true);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("could not restore the taskbar and desktop icons", ex);
+        }
+    }
+
     private TaskbarIcon BuildTrayIcon()
     {
         var menu = new ContextMenu();
@@ -147,13 +269,22 @@ public partial class App : Application
         _iconsItem = CheckableMenuItem(
             "Hide desktop icons", _settings.Current.DesktopCleanup.HideDesktopIcons,
             hide => _actions?.SetDesktopIconsHidden(hide));
+        _autostartItem = CheckableMenuItem(
+            "Start with Windows", Autostart.IsEnabled(),
+            on =>
+            {
+                Autostart.Set(on);
+                _settings!.Update(s => s.StartWithWindows = on);
+            });
         menu.Items.Add(_styleItem);
         menu.Items.Add(_taskbarItem);
         menu.Items.Add(_iconsItem);
+        menu.Items.Add(_autostartItem);
         // these three can also be changed from the dashboard and the desk menu; show the truth whenever the tray opens
         menu.Opened += (_, _) => SyncTrayChecks();
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Open data folder", () => OpenInExplorer(VersoPaths.DataRoot)));
+        menu.Items.Add(MenuItem("Open logs folder", () => OpenInExplorer(VersoPaths.LogDirectory)));
         menu.Items.Add(MenuItem("Open themes folder", () => OpenInExplorer(VersoPaths.UserThemes)));
         menu.Items.Add(new Separator());
         menu.Items.Add(MenuItem("Exit", Shutdown));
@@ -323,6 +454,7 @@ public partial class App : Application
         if (_styleItem is not null) _styleItem.IsChecked = _settings.Current.DeskStyle == "outpost";
         if (_taskbarItem is not null) _taskbarItem.IsChecked = _settings.Current.DesktopCleanup.HideTaskbar;
         if (_iconsItem is not null) _iconsItem.IsChecked = _settings.Current.DesktopCleanup.HideDesktopIcons;
+        if (_autostartItem is not null) _autostartItem.IsChecked = Autostart.IsEnabled();
     }
 
     private static MenuItem CheckableMenuItem(string header, bool isChecked, Action<bool> onToggle)
@@ -345,11 +477,7 @@ public partial class App : Application
         // still-running instance deliberately hid.
         _dock?.Dispose();
 
-        if (_isPrimaryInstance)
-        {
-            DesktopChrome.SetTaskbarVisible(true);
-            DesktopChrome.SetDesktopIconsVisible(true);
-        }
+        RestoreDesktopChrome();
 
         _desk?.Dispose();
         _tray?.Dispose();

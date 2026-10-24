@@ -119,6 +119,7 @@ internal sealed class AppPickerWindow : Window
         _browser.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x2b, 0x2b, 0x2b);
 
         core.SetVirtualHostNameToFolderMapping(VirtualHost, VersoPaths.ResolveWebRoot(), CoreWebView2HostResourceAccessKind.Allow);
+        Hosting.WebViewGuard.Apply(core, "picker");
         core.AddHostObjectToScript("VersoPicker", _bridge);
         core.WebMessageReceived += (_, e) =>
         {
