@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests for the logic in Verso.App that does not need a screen: storage, sanitising, the launch and navigation
+    rules. Needs Windows (the app targets net10.0-windows), which is what the CI job runs on.
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Verso.App.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Verso.App\Verso.App.csproj" />
+    <ProjectReference Include="..\..\src\Verso.Core\Verso.Core.csproj" />
+  </ItemGroup>
+
+</Project>

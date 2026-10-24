@@ -168,9 +168,10 @@ internal sealed class DockWindowList
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // fall back to the generic tile
+            Hosting.Log.Warn($"dock: no icon for {entry.Key}", ex);
         }
 
         _icons[entry.Key] = icon;

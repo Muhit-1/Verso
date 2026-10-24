@@ -51,6 +51,9 @@ export function start() {
     stage.appendChild(img);
   } else if (background.kind === "interactive") {
     const frame = document.createElement("iframe");
+    // someone else's page: no popups, no navigating the desk away, no referrer
+    frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+    frame.referrerPolicy = "no-referrer";
     frame.src = background.url;
     frame.title = "Background";
     stage.appendChild(frame);

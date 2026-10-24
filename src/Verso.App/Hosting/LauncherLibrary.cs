@@ -389,6 +389,26 @@ internal sealed class LauncherLibrary(SettingsStore settings)
         .SelectMany(e => string.IsNullOrEmpty(e.From) ? new[] { e.Path } : new[] { e.Path, e.From })
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Whether a stored target is a kind of thing Verso is willing to start: a full path, or a Store/Start-menu app
+    /// address. Nothing else — not a web address, a relative path or an arbitrary <c>shell:</c> verb — so an edited
+    /// settings file cannot turn a launcher tile into "run whatever this says".
+    /// </summary>
+    internal static bool IsAllowedTarget(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return false;
+        }
+
+        if (path.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+        {
+            return path.StartsWith(@"shell:AppsFolder\", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return System.IO.Path.IsPathFullyQualified(path);
+    }
+
     /// <summary>Whether something launchable is still there: a file, a folder, or a shell address (Store apps).</summary>
     public static bool Exists(string path)
         => !string.IsNullOrWhiteSpace(path)

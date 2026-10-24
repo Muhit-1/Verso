@@ -185,6 +185,7 @@ internal sealed class TextEditorWindow : Window
         _browser.DefaultBackgroundColor = System.Drawing.Color.FromArgb(0x2b, 0x2b, 0x2b);
 
         core.SetVirtualHostNameToFolderMapping(VirtualHost, VersoPaths.ResolveWebRoot(), CoreWebView2HostResourceAccessKind.Allow);
+        Hosting.WebViewGuard.Apply(core, "editor");
         core.WebMessageReceived += OnMessage;
         core.Navigate($"https://{VirtualHost}/editor/index.html");
     }

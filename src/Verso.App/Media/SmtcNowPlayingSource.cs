@@ -180,8 +180,9 @@ internal sealed class SmtcNowPlayingSource : INowPlayingSource
             var light = $"#{Shade(r, 1.35, 30):X2}{Shade(g, 1.35, 30):X2}{Shade(b, 1.35, 30):X2}";
             return [dark, light];
         }
-        catch
+        catch (Exception ex)
         {
+            Hosting.Log.Warn("now playing: could not sample the artwork colours", ex);
             return fallback;
         }
     }

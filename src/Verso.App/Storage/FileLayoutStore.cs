@@ -44,12 +44,26 @@ internal sealed class FileLayoutStore
                 }
 
                 var text = File.ReadAllText(_path).Trim();
-                return string.IsNullOrEmpty(text) ? "{}" : text;
+                if (string.IsNullOrEmpty(text))
+                {
+                    return "{}";
+                }
+
+                if (JsonFile.IsValidJson(text))
+                {
+                    return text;
+                }
+
+                // truncated by a crash or a full disk: keep the evidence, fall back to the last good copy
+                Hosting.Log.Warn($"{Path.GetFileName(_path)} is not valid JSON; trying the backup");
+                JsonFile.SetAside(_path);
+                return LoadBackup();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // A layout we cannot read is a layout the user re-drags in
                 // ten seconds. Never a reason to fail to start.
+                Hosting.Log.Warn($"cannot read {Path.GetFileName(_path)}", ex);
                 return "{}";
             }
         }
@@ -72,14 +86,38 @@ internal sealed class FileLayoutStore
                 // than the file. Same rule as JsonFile.
                 var temp = _path + ".tmp";
                 File.WriteAllText(temp, json);
+                JsonFile.Backup(_path);
                 File.Move(temp, _path, overwrite: true);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 // Losing a drag is survivable; throwing into a COM call from
                 // script is not.
+                Hosting.Log.Warn($"cannot save {Path.GetFileName(_path)}", ex);
             }
         }
+    }
+
+    private string LoadBackup()
+    {
+        var backup = _path + JsonFile.BackupSuffix;
+        try
+        {
+            if (File.Exists(backup))
+            {
+                var text = File.ReadAllText(backup).Trim();
+                if (JsonFile.IsValidJson(text))
+                {
+                    return text;
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Hosting.Log.Warn($"cannot read {Path.GetFileName(backup)}", ex);
+        }
+
+        return "{}";
     }
 
     /// <summary>Forgets the saved layout, so the desk falls back to its default composition.</summary>
@@ -96,6 +134,7 @@ internal sealed class FileLayoutStore
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                Hosting.Log.Warn($"cannot reset {Path.GetFileName(_path)}", ex);
             }
         }
     }

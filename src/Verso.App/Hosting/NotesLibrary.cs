@@ -128,8 +128,9 @@ internal sealed partial class NotesLibrary(Storage.SettingsStore settings, FileL
 
             return JsonSerializer.Deserialize<List<Note>>(text, Json) ?? [];
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Log.Warn("outpost-notes.json is not readable; showing no notes", ex);
             return [];
         }
     }

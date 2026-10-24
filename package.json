@@ -1,0 +1,12 @@
+{
+  "name": "verso",
+  "private": true,
+  "type": "module",
+  "description": "Dev tooling only. The app itself has no Node dependency; the web layer has no build step.",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "test:web": "node --test tests/web/web.test.mjs",
+    "test": "node --test tests/web/web.test.mjs"
+  },
+  "engines": { "node": ">=20" }
+}

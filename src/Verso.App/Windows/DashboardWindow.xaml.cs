@@ -101,6 +101,8 @@ public sealed partial class DashboardWindow : Window
             VersoPaths.UserDashboardThemes,
             CoreWebView2HostResourceAccessKind.Allow);
 
+        Hosting.WebViewGuard.Apply(core, "dashboard");
+
         // The dashboard gets its own bridge — never VersoHost, the widget
         // contract. See the remarks on IVersoDashboard for why.
         core.AddHostObjectToScript("VersoDashboard", _bridge);

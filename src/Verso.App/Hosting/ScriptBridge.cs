@@ -226,6 +226,12 @@ public sealed class ScriptBridge : IDisposable
             return "missing";
         }
 
+        if (!LauncherLibrary.IsAllowedTarget(entry.Path))
+        {
+            Log.Warn($"launch refused: {entry.Name} points at something that is not a program path");
+            return "missing";
+        }
+
         var path = entry.Path;
         var thread = new Thread(() =>
         {

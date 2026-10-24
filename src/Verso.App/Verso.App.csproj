@@ -28,6 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Verso.App.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Verso.Core\Verso.Core.csproj" />
     <ProjectReference Include="..\Verso.Interop\Verso.Interop.csproj" />
   </ItemGroup>

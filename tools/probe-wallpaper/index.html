@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Verso probe wallpaper</title>
+<style>
+  body { margin: 0; background: #101418; color: #d8e0e8; font: 15px/1.6 Consolas, monospace; padding: 40px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  p { margin: 0 0 20px; color: #8a97a5; }
+  .row { display: flex; gap: 12px; }
+  .pass { color: #6fcf97; } .fail { color: #eb5757; } .info { color: #f2c94c; }
+</style>
+</head>
+<body>
+<h1>Verso probe wallpaper</h1>
+<p>Pick this folder's index.html as an <b>interactive</b> background. Every line below should say PASS.
+A FAIL means an untrusted wallpaper page can do something it must not. Look at the desk, not the dashboard.</p>
+<div id="out"></div>
+<script>
+  const out = document.getElementById("out");
+  const line = (state, text) => {
+    const d = document.createElement("div");
+    d.className = "row";
+    d.innerHTML = `<span class="${state}">${state === "pass" ? "PASS" : state === "fail" ? "FAIL" : "INFO"}</span><span></span>`;
+    d.lastChild.textContent = text;
+    out.appendChild(d);
+  };
+  const expectBlocked = (text, fn) => {
+    try { fn() ? line("fail", text + " — was possible") : line("pass", text + " — not possible"); }
+    catch { line("pass", text + " — not possible"); }
+  };
+
+  // 1. the host bridges must not exist in this frame
+  const objs = window.chrome?.webview?.hostObjects;
+  for (const name of ["VersoHost", "VersoDashboard", "VersoPicker"]) {
+    let present = false;
+    try { present = !!objs && typeof objs[name] !== "undefined" && objs[name] !== null; } catch { present = false; }
+    present ? line("fail", `window.chrome.webview.hostObjects.${name} is reachable from the wallpaper`) : line("pass", `${name} is not reachable`);
+  }
+
+  // 2. the page must not be able to reach into the desk page that contains it
+  expectBlocked("reading parent.document", () => !!parent.document.body);
+  expectBlocked("parent.chrome.webview.hostObjects", () => !!parent.chrome.webview.hostObjects.VersoHost);
+
+  // 3. nor move the window away
+  try { top.location = "https://example.com/"; line("info", "top.location assignment ran; check that the desk did NOT navigate"); }
+  catch { line("pass", "top.location assignment — blocked"); }
+
+  // 4. nor open windows
+  const w = window.open("https://example.com/");
+  w ? line("fail", "window.open returned a window") : line("pass", "window.open — blocked");
+
+  // 5. the network is the wallpaper's own business, but report it
+  fetch("https://example.com/", { mode: "no-cors" })
+    .then(() => line("info", "the wallpaper can reach the internet (allowed: many web wallpapers need it)"))
+    .catch(() => line("info", "the wallpaper has no internet access"));
+</script>
+</body>
+</html>

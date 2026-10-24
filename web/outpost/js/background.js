@@ -30,6 +30,9 @@ export function start() {
   } else if (kind === "interactive") {
     // Look-only: the mouse is not mirrored into an interactive wallpaper, and the widgets are on top.
     const frame = document.createElement("iframe");
+    // someone else's page: no popups, no navigating the desk away, no referrer
+    frame.setAttribute("sandbox", "allow-scripts allow-same-origin");
+    frame.referrerPolicy = "no-referrer";
     frame.src = url;
     frame.title = "Wallpaper";
     bg.appendChild(frame);
