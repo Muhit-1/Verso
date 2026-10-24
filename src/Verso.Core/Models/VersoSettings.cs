@@ -112,7 +112,7 @@ public sealed class PowerSettings
 
 /// <summary>
 /// The compact dock: Windows' taskbar is hidden and a small floating dock shows only
-/// the apps that are open right now. See CLAUDE.md, "taskbar spike S0".
+/// the apps that are open right now. See the project notes, "taskbar spike S0".
 /// </summary>
 public sealed class DockSettings
 {

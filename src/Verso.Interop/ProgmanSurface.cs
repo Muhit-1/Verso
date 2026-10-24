@@ -19,7 +19,7 @@ public static class ProgmanLayer
     /// <remarks>
     /// Required, not optional: a freshly started Explorer has no such child,
     /// and a <see cref="ProgmanSurface"/> placed without it is invisible
-    /// (measured — see CLAUDE.md, "Step 1b result"). Explorer creates it in
+    /// (measured — see the project notes, "Step 1b result"). Explorer creates it in
     /// well under a frame once asked.
     /// </remarks>
     public static async Task<bool> PrepareAsync(int timeoutMs = 3000)

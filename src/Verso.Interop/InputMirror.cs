@@ -32,7 +32,7 @@ public interface IInputTarget
 /// </summary>
 /// <remarks>
 /// <para>
-/// Proven by <c>tools/Verso.Spike.Layers --input</c> on build 26300 (see CLAUDE.md, "W0 result"). The
+/// Proven by <c>tools/Verso.Spike.Layers --input</c> on build 26300 (see the project notes, "W0 result"). The
 /// mechanism is a <b>Raw Input</b> listener registered with <c>RIDEV_INPUTSINK</c> — passive: no
 /// <c>WH_MOUSE_LL</c> hook, nothing is swallowed, Explorer still receives every click — plus
 /// <c>PostMessage</c> of the matching <c>WM_MOUSE*</c> messages to the page's
