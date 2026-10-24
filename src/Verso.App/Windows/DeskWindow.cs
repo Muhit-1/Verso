@@ -304,9 +304,7 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
         if (_mode == DeskMode.Outpost)
         {
             // The usable area (not under the taskbar), relative to this monitor, in physical pixels.
-            var work = Monitors.WorkAreaOf(_bounds);
-            var wa = $"{work.Left - _bounds.Left},{work.Top - _bounds.Top},{work.Width},{work.Height}";
-            core.Navigate($"https://{VirtualHost}/outpost/index.html?wa={wa}&mo={_bounds.Left},{_bounds.Top}");
+            NavigateOutpost(Monitors.WorkAreaOf(_bounds));
         }
         else
         {
@@ -315,6 +313,47 @@ internal sealed class DeskWindow : IDisposable, IInputTarget
 
         _controller.IsVisible = true;
         ReassertPlacement();
+    }
+
+    private Rectangle _workArea;
+    private Rectangle? _pendingWorkArea;
+
+    private void NavigateOutpost(Rectangle work)
+    {
+        _workArea = work;
+        var wa = $"{work.Left - _bounds.Left},{work.Top - _bounds.Top},{work.Width},{work.Height}";
+        _controller!.CoreWebView2.Navigate($"https://{VirtualHost}/outpost/index.html?wa={wa}&mo={_bounds.Left},{_bounds.Top}");
+    }
+
+    /// <summary>
+    /// The Outpost page is told the usable area (the screen minus the taskbar) once, in its address. Moving or
+    /// resizing the taskbar, or the compact dock taking it away, changes that without changing the monitor, so
+    /// nothing else would notice. A new value has to be seen twice in a row before the page is reloaded with it: an
+    /// auto-hiding taskbar passes through several sizes while it slides.
+    /// </summary>
+    public void RefreshWorkAreaIfChanged()
+    {
+        if (_mode != DeskMode.Outpost || _disposed || _controller is null || !_rendering || _workArea.IsEmpty)
+        {
+            return;
+        }
+
+        var work = Monitors.WorkAreaOf(_bounds);
+        if (work == _workArea)
+        {
+            _pendingWorkArea = null;
+            return;
+        }
+
+        if (_pendingWorkArea != work)
+        {
+            _pendingWorkArea = work;
+            return;
+        }
+
+        _pendingWorkArea = null;
+        Hosting.Log.Info($"usable area changed on {_bounds}: {_workArea} -> {work}; reloading the desk page");
+        NavigateOutpost(work);
     }
 
     /// <summary>

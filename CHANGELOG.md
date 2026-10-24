@@ -12,7 +12,15 @@ All notable changes. Format follows [Keep a Changelog](https://keepachangelog.co
 - "Start with Windows" in the tray menu.
 - `--restore-desktop` command line switch: puts the taskbar and desktop icons back and exits.
 - `tools/probe-wallpaper`: a wallpaper page that reports whether it can reach the host bridge.
-- `docs/security.md`.
+- `docs/security.md`, `docs/performance.md`, `docs/platform-checks.md`, `tools/perf-sample.ps1`.
+
+### Fixed
+- Display-change, sleep/wake and lock events were handled on the thread Windows raised them on; they now hop to the
+  UI thread before touching windows or WebView2.
+- After waking from sleep the desk is checked and rebuilt if the desktop changed underneath it.
+- The desk now follows taskbar changes (moved, resized, auto-hide, compact dock): widgets are re-fitted to the usable
+  area instead of keeping the one from startup.
+- While paused, the placement timer no longer does anything.
 
 ### Changed
 - Every WebView2 window is locked to Verso's own pages: no foreign navigation, new windows, downloads or permission

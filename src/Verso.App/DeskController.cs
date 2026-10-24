@@ -48,6 +48,7 @@ internal sealed class DeskController : IDisposable
     private readonly Dictionary<Rectangle, DeskWindow> _panelWindows = [];
     private readonly Dictionary<Rectangle, DeskWindow> _backgroundWindows = [];
     private readonly DispatcherTimer _reassert;
+    private readonly Dispatcher _ui = Dispatcher.CurrentDispatcher;
 
     private ShellRestartWatcher? _shellWatcher;
     private InputMirror? _inputMirror;
@@ -64,6 +65,7 @@ internal sealed class DeskController : IDisposable
         _settings = settings;
         _power = new PowerGate(settings.Current.Power);
         _power.Changed += OnPauseChanged;
+        _power.Resumed += OnResumed;
         _bridge.OutpostWidgetsChanged += NotifyWidgetsChanged;
         _bridge.OutpostThemeChanged += NotifyThemeChanged;
         _bridge.AppsChanged += NotifyAppsChanged;
@@ -80,6 +82,17 @@ internal sealed class DeskController : IDisposable
         };
         _reassert.Tick += (_, _) =>
         {
+            // Nothing is on screen while paused, and resuming re-asserts placement itself.
+            if (_power.Current != PauseReason.None)
+            {
+                return;
+            }
+
+            foreach (var window in _backgroundWindows.Values)
+            {
+                window.RefreshWorkAreaIfChanged();
+            }
+
             // Background first, then panels — PinToBottom moves whichever is
             // pinned last to the very bottom, so this order keeps the panel
             // window just above the background window, exactly where it
@@ -97,7 +110,7 @@ internal sealed class DeskController : IDisposable
             // whose Explorer has gone is rebuilt here instead.
             if (_started && _backgroundWindows.Values.Any(w => !w.IsSurfaceAlive))
             {
-                _ = ReconcileAsync();
+                _ = ReconcileSafeAsync("a lost wallpaper surface");
             }
         };
     }
@@ -380,17 +393,46 @@ internal sealed class DeskController : IDisposable
 
         // Let the new shell finish building the desktop before touching it.
         await Task.Delay(600);
-        await ReconcileAsync();
+        await ReconcileSafeAsync("an Explorer restart");
     }
 
-    private async void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    // SystemEvents raises this from its own thread; the windows and WebView2 belong to the UI thread.
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+        => _ui.InvokeAsync(async () =>
+        {
+            if (_started)
+            {
+                await ReconcileSafeAsync("a display change");
+            }
+        });
+
+    /// <summary>
+    /// After sleep the monitors can come back in a different state, Explorer may have rebuilt the desktop, and the
+    /// display-change event is not guaranteed to have fired. Reconcile is a diff, so doing it once more is free when
+    /// nothing changed. The wait is for the displays to finish waking.
+    /// </summary>
+    private async void OnResumed()
     {
         if (!_started)
         {
             return;
         }
 
-        await ReconcileAsync();
+        await Task.Delay(2500);
+        await ReconcileSafeAsync("waking from sleep");
+    }
+
+    /// <summary>Reconcile for callers that nobody awaits: an error here is logged, never thrown into an event.</summary>
+    private async Task ReconcileSafeAsync(string why)
+    {
+        try
+        {
+            await ReconcileAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"updating the desk after {why} failed", ex);
+        }
     }
 
     private async void OnPauseChanged(object? sender, PauseReason reason)
@@ -466,6 +508,7 @@ internal sealed class DeskController : IDisposable
 
         _reassert.Stop();
         _power.Changed -= OnPauseChanged;
+        _power.Resumed -= OnResumed;
         _power.Dispose();
 
         foreach (var window in _panelWindows.Values)
