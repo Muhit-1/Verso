@@ -52,7 +52,7 @@ internal enum DeskMode
     /// the whole desk — the user's wallpaper <i>and</i> every widget (clock, now playing, dock, panels),
     /// drawn together with real transparency and blur. There is no overlay window beside it. Because the
     /// icon layer sits in front and takes all input, the mouse is mirrored in with
-    /// <see cref="InputMirror"/>. See CLAUDE.md, "WIDGETS".
+    /// <see cref="InputMirror"/>. See the project notes, "WIDGETS".
     /// </summary>
     Outpost
 }

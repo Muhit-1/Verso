@@ -88,7 +88,7 @@ public static class DesktopLayer
         /// <see cref="ProgmanSurface"/> needs. A layered child of Progman placed
         /// directly behind <c>SHELLDLL_DefView</c> is genuinely visible and
         /// genuinely behind the icons here. Measured on Windows 11 build 26300
-        /// (see CLAUDE.md, "Step 1 result"): with the child present a WebView2
+        /// (see the project notes, "Step 1 result"): with the child present a WebView2
         /// video wallpaper shows with the icons and taskbar on top; without it
         /// the same window is invisible. This is the layout where a live
         /// wallpaper works.

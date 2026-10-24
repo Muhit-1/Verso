@@ -19,7 +19,7 @@ internal sealed class DockEntry
 /// <summary>
 /// The list of "apps that are open right now": what Alt-Tab shows, grouped per program, in a stable order
 /// (the order they first appeared — z-order would shuffle the dock every time you switch window).
-/// Measured against the real taskbar: same windows (CLAUDE.md, "taskbar spike S0").
+/// Measured against the real taskbar: same windows (project notes, "taskbar spike S0").
 /// </summary>
 internal sealed class DockWindowList
 {

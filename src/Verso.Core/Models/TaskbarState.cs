@@ -5,7 +5,7 @@ namespace Verso.Core.Models;
 /// <summary>
 /// The Windows taskbar options Verso can read and write, as the Windows
 /// Settings page shows them. Values follow what was measured on this Windows
-/// build (see CLAUDE.md, "taskbar spike S0").
+/// build (see the project notes, "taskbar spike S0").
 /// </summary>
 public sealed class TaskbarState
 {

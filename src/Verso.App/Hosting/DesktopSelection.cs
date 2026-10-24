@@ -9,7 +9,7 @@ namespace Verso.App.Hosting;
 /// Dragging a desktop icon onto a launcher box never reaches Verso as a drag-and-drop — Explorer's icons are in front and
 /// receive the drop themselves (and move the icon). What Verso does see is the mouse (mirrored into the page), and what
 /// Explorer has selected: pressing an icon selects it at once, and the selection stays readable during and after the drag.
-/// Spike result in CLAUDE.md ("S0 part B").
+/// Spike result in the project notes ("S0 part B").
 /// </remarks>
 internal static class DesktopSelection
 {

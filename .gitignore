@@ -37,7 +37,7 @@ node_modules/
 /settings.json
 /tasks.json
 
-# ---- Local Claude guide (kept out of git on purpose) ----
+# ---- Local project notes (kept out of git on purpose) ----
 /CLAUDE.md
 
 # ---- Installer output ----

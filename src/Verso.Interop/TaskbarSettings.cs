@@ -11,7 +11,7 @@ namespace Verso.Interop;
 /// auto-hide, badges, ...) — the same values Windows' own Settings page edits.
 /// </summary>
 /// <remarks>
-/// Measured on this machine (CLAUDE.md, "taskbar spike S0"): Explorer watches
+/// Measured on this machine (project notes, "taskbar spike S0"): Explorer watches
 /// the Advanced key and applies position, size, alignment, Task view and Search
 /// live, with no broadcast needed. Auto-hide goes through the shell's own app-bar
 /// message. The Widgets button (<c>TaskbarDa</c>) is write-protected by Windows,

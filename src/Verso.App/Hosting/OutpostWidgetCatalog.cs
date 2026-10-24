@@ -8,7 +8,7 @@ namespace Verso.App.Hosting;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The Independent Widget contract (CLAUDE.md, "ROUND 2"): every widget has its own entry here, its
+/// The Independent Widget contract (project notes, "ROUND 2"): every widget has its own entry here, its
 /// own on/off flag in <see cref="VersoSettings.OutpostWidgets"/>, and — on the web side — its own module,
 /// element, position and saved state. Nothing here couples one widget to another; switching one on or
 /// off never touches the rest.

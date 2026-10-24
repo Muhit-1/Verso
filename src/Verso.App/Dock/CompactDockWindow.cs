@@ -9,7 +9,7 @@ namespace Verso.App.Dock;
 
 /// <summary>
 /// The compact dock: a small floating pill that is exactly as wide as the open apps' icons. A real top-most
-/// window that never takes focus (measured: showing it did not change the foreground window, CLAUDE.md "S0").
+/// window that never takes focus (measured: showing it did not change the foreground window, project notes "S0").
 /// </summary>
 internal sealed class CompactDockWindow : Window
 {
